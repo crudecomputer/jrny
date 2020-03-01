@@ -28,13 +28,13 @@ Journey can interact with any directory that includes a config file and revision
 
 ```bash
 # Set up a new project...
-$ jrny new path-to-new-project
+$ jrny start path-to-new-project
 
 # ... or from existing
 $ cd path-to-project
 
 # Generate a timestamp/keyed SQL file
-$ jrny step create admin table
+$ jrny revise create-admin-table
 
 # Inspect current version and determine which to apply
 $ jrny review
