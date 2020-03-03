@@ -6,16 +6,17 @@ migration tools that execute changes via Python, Java, etc.
 
 Primary opinions include...
 
-- Plain SQL - DSLs are nice but hard to use for anything complicated
-- History is one-way - no down migrations
+- Plain SQL: DSLs are nice but hard to use for anything complicated
+- History is one-way: down migrations get complicated and are very easy to miss something (eg. an index)
 - Compiled applications are easier to manage than language runtimes
-- Database management should be isolated from applications
+- Encourage stress-free revisions: database management should be isolated from applications
 
 
 ## Proposed features
 
-- One-way
-- Plan feature with proposed costs, a la Terraform
+- Plan feature with estimated costs for each migration
+- Live progress (statements executed, active vs. blocked, etc)
+- Revision statistics in table
 - Explicit commit confirmation
 - Schema output file
 - Schema validation relative to database

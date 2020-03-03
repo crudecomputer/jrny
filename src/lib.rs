@@ -2,7 +2,7 @@ pub mod executor;
 
 use crate::executor::{Executor, PostgresExecutor};
 use serde::{Deserialize};
-use std::{env, fs};
+use std::{env, fs, path::{Path}};
 
 
 const CONF: &str = "jrny.toml";
@@ -10,12 +10,19 @@ const CONF: &str = "jrny.toml";
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
-    pub executor: String,
-    pub database: DatabaseConfig,
+    pub app: AppConfig,
+    pub connection: ConnectionConfig,
 }
 
 #[derive(Clone, Debug, Deserialize)]
-pub struct DatabaseConfig {
+pub struct AppConfig {
+    pub executor: String,
+    pub schema: String,
+    pub table: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ConnectionConfig {
     pub host: String,
     pub name: String,
     pub port: u16,
@@ -34,6 +41,8 @@ impl<E: Executor> Jrny<E> {
     }
 
     pub fn review(&self, ) {
+        // Summarize existing,  eg.  version in database, e tc.
+        // Find new revisions
         println!("Reviewing available revisions");
     }
 
@@ -56,14 +65,34 @@ pub fn connect() -> Jrny<impl Executor> {
             .expect(&format!("Could not parse {}", CONF))
     };
 
-    let executor = match config.executor.as_ref() {
-        "postgres" => PostgresExecutor::from(config.database.clone()),
+    let executor = match config.app.executor.as_ref() {
+        "postgres" => PostgresExecutor::from(config.connection.clone()),
         _ => panic!("Invalid executor"),
     };
 
     Jrny { config, executor }
 }
 
-pub fn start(dirpath: &str) {
-    println!("Setting up project at {}", dirpath);
+pub fn start(path: &str) -> Result<(), String> {
+    println!("Setting up project at {}", path);
+    let dirpath = Path::new(path);
+
+    if dirpath.exists() {
+        if !dirpath.is_dir() {
+            return Err(format!("{} is not a directory", path));
+        }
+    } else {
+        // does dir need to explicitly be created?
+        //match fs.create_dir
+    }
+
+    let confpath = dirpath.join(CONF);
+    let confpath = confpath.as_path();
+
+
+    if confpath.exists() {
+        return Err(format!("{} already exists in given directory", CONF));
+    }
+
+    Ok(())
 }

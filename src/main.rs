@@ -17,6 +17,11 @@ fn main() {
             (@arg name: +required "Name of the revision step")
         )
 
+        (@subcommand revise =>
+            (about: "Generates a new versioned SQL revision from within project directory")
+            (@arg name: +required "Name of the revision step")
+        )
+
         (@subcommand review =>
             (about: "Determines the necessary revisions to apply from within project directory")
         )
@@ -26,11 +31,15 @@ fn main() {
         )
     }.get_matches();
 
-    match appm.subcommand() {
+    let result = match appm.subcommand() {
         ("start", Some(subm)) => jrny::start(subm.value_of("dirpath").unwrap()),
-        ("revise", Some(subm)) => jrny::connect().revise(subm.value_of("name").unwrap()),
-        ("review", Some(_subm)) => jrny::connect().review(),
-        ("embark", Some(_subm)) => jrny::connect().embark(),
-        _ => unreachable!(),
+        //("revise", Some(subm)) => jrny::connect().revise(subm.value_of("name").unwrap()),
+        //("review", Some(_)) => jrny::connect().review(),
+        //("embark", Some(_)) => jrny::connect().embark(),
+        _ => panic!(),
+    };
+
+    if let Err(e) = result {
+        eprintln!("Error: {:?}", e);
     }
 }

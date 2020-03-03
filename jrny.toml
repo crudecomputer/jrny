@@ -1,8 +1,11 @@
+[app]
 executor = "postgres"
+schema = "jrny"
+table = "jrny_revisions"
 
 # A more resilient strategy will be simply specifying a strategy
 # to locate credentials, rather than including them here
-[database]
+[connection]
 host = "localhost"
 port = 5432
 name = "jrny_test"

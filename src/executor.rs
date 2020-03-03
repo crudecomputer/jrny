@@ -1,8 +1,8 @@
-use crate::DatabaseConfig;
+use crate::ConnectionConfig;
 use postgres::{Client, NoTls};
 use std::time::Duration;
 
-pub trait Executor: From<DatabaseConfig> {
+pub trait Executor: From<ConnectionConfig> {
     fn execute(&self);
 }
 
@@ -10,15 +10,15 @@ pub struct PostgresExecutor {
     client: Client,
 }
 
-impl From<DatabaseConfig> for PostgresExecutor {
-    fn from(db: DatabaseConfig) -> Self {
+impl From<ConnectionConfig> for PostgresExecutor {
+    fn from(conf: ConnectionConfig) -> Self {
         let client = Client::configure()
             .application_name("jrny")
             .connect_timeout(Duration::new(30, 0))
-            .host(&db.host)
-            .port(db.port)
-            .dbname(&db.name)
-            .user(&db.user)
+            .host(&conf.host)
+            .port(conf.port)
+            .dbname(&conf.name)
+            .user(&conf.user)
             .connect(NoTls)
             .expect("Could not connect to PostgreSQL");
 
