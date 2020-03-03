@@ -73,12 +73,17 @@ pub fn connect() -> Jrny<impl Executor> {
     Jrny { config, executor }
 }
 
+
+/// This is gross but it does things.
 pub fn start(path: &str) -> Result<(), String> {
     let dir_path = Path::new(path);
+    let mut created_dir = false;
 
     if !dir_path.exists() {
         fs::create_dir(&dir_path)
             .map_err(|e| e.to_string())?;
+
+        created_dir = true;
     } else if !dir_path.is_dir() {
         return Err(format!("{} is not a directory", path));
     }
@@ -129,9 +134,15 @@ pub fn start(path: &str) -> Result<(), String> {
                 .map_err(|e| e.to_string())?;
         }
 
+        if  created_dir {
+            fs::remove_dir(&dir_path)
+                .map_err(|e| e.to_string())?;
+        }
+
         return Err(e);
     }
 
+    println!("New project has been set up");
     Ok(())
 }
 
