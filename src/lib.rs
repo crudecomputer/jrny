@@ -85,9 +85,10 @@ pub fn start(path: &str) -> Result<(), String> {
 
     let rev_path = dir_path.join("revisions");
     let rev_path = rev_path.as_path();
+    let mut created_revisions = false;
 
     if !rev_path.exists() {
-        // TODO remove this if later fails
+        created_revisions = true;
         fs::create_dir(&rev_path)
             .map_err(|e| e.to_string())?;
     } else if !is_empty_dir(&rev_path) {
@@ -101,12 +102,36 @@ pub fn start(path: &str) -> Result<(), String> {
         return Err(format!("{} already exists in given directory", CONF));
     }
 
-    fs::File::create(&conf_path)
-        .map_err(|e| e.to_string())?
-        .write_all(conf_template().as_bytes())
-        .map_err(|e| e.to_string())?;
+    let mut created_conf = false;
+    let mut err = None;
 
-    println!("Setting up project at {}", path);
+    match fs::File::create(&conf_path) {
+        Ok(mut f) => {
+            created_conf = true;
+
+            if let Err(e) = f.write_all(conf_template().as_bytes()) {
+                err = Some(e.to_string());
+            }
+        },
+        Err(e) => {
+            err = Some(e.to_string());
+        },
+    }
+
+    if let Some(e) = err {
+        if created_revisions {
+            fs::remove_dir(&rev_path)
+                .map_err(|e| e.to_string())?;
+        }
+
+        if created_conf {
+            fs::remove_file(&conf_path)
+                .map_err(|e| e.to_string())?;
+        }
+
+        return Err(e);
+    }
+
     Ok(())
 }
 
