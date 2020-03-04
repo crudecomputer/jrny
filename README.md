@@ -9,7 +9,7 @@ Primary opinions include...
 - Plain SQL: DSLs are nice but hard to use for anything complicated
 - History is one-way: down migrations get complicated and are very easy to miss something (eg. an index)
 - Compiled applications are easier to manage than language runtimes
-- Encourage stress-free revisions: database management should be isolated from applications
+- Encourage stress-free revisions: database management should be untangled from application deploys
 
 
 ## Proposed features
@@ -46,7 +46,11 @@ $ jrny embark
 $ jrny embark --step
 ```
 
-## Planned improvements
+## Planned improvements, or "the things that are missing"
+
+### Tests
+
+No description necessary.
 
 ### Actual docstrings
 
@@ -65,6 +69,6 @@ In fact, the output often doesn't even really confirm much of what's happened.
 
 ### Error handling
 
-The error handling is ugly.
+The error handling is comically ugly.
 There are no custom types or anything classy like that yet,
 everything just gets the ol' `.map(|e| e.to_string())?` and `Result<(), String>` treatment.

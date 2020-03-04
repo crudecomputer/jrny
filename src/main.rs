@@ -1,9 +1,8 @@
 use clap::clap_app;
 use jrny;
 
-
 fn main() {
-    let mut app = clap_app!{jrny =>
+    let mut app = clap_app! {jrny =>
         (about: "Simple PostgreSQL schema management")
         (version: "0.1.0")
 
@@ -35,7 +34,7 @@ fn main() {
         _ => {
             app.print_help().expect("Failed to print help");
             Ok(())
-        },
+        }
     };
 
     if let Err(e) = result {

@@ -1,13 +1,11 @@
 pub mod executor;
 
 use crate::executor::{Executor, PostgresExecutor};
-use serde::{Deserialize};
-use std::{env, fs, io::prelude::*, path::{Path}};
-
+use serde::Deserialize;
+use std::{env, fs, io::prelude::*, path::Path};
 
 const CONF: &str = "jrny.toml";
-const CONF_TEMPLATE: &[u8] =
-r#"# jrny.toml
+const CONF_TEMPLATE: &[u8] = r#"# jrny.toml
 
 [app]
 executor = "postgres"
@@ -19,8 +17,8 @@ host = "localhost"
 port = 5432
 name = "dbname"
 user = "dbrole"
-"#.as_bytes();
-
+"#
+.as_bytes();
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
@@ -41,7 +39,6 @@ pub struct ConnectionConfig {
     pub name: String,
     pub port: u16,
     pub user: String,
-
 }
 
 pub struct Jrny<E: Executor> {
@@ -54,13 +51,13 @@ impl<E: Executor> Jrny<E> {
         println!("Creating revision for {}", name);
     }
 
-    pub fn review(&self, ) {
+    pub fn review(&self) {
         // Summarize existing,  eg.  version in database, e tc.
         // Find new revisions
         println!("Reviewing available revisions");
     }
 
-    pub fn embark(&self, ) {
+    pub fn embark(&self) {
         println!("Applying available revisions");
     }
 }
@@ -68,15 +65,13 @@ impl<E: Executor> Jrny<E> {
 /// Looks for config TOML file in current working directory and parses
 /// to set up new Jrny instance, creating the appropriate database executor
 pub fn connect() -> Jrny<impl Executor> {
-    let currdir = env::current_dir()
-        .expect("There was an error accessing the current directory");
+    let currdir = env::current_dir().expect("There was an error accessing the current directory");
 
     let config: Config = {
         let contents = fs::read_to_string(currdir.as_path().join(CONF))
             .expect(&format!("Could not open {}", CONF));
 
-        toml::from_str(&contents)
-            .expect(&format!("Could not parse {}", CONF))
+        toml::from_str(&contents).expect(&format!("Could not parse {}", CONF))
     };
 
     let executor = match config.app.executor.as_ref() {
@@ -87,15 +82,13 @@ pub fn connect() -> Jrny<impl Executor> {
     Jrny { config, executor }
 }
 
-
 /// This is gross but it does things.
 pub fn start(path: &str) -> Result<(), String> {
     let dir_path = Path::new(path);
     let mut created_dir = false;
 
     if !dir_path.exists() {
-        fs::create_dir(&dir_path)
-            .map_err(|e| e.to_string())?;
+        fs::create_dir(&dir_path).map_err(|e| e.to_string())?;
 
         created_dir = true;
     } else if !dir_path.is_dir() {
@@ -108,10 +101,12 @@ pub fn start(path: &str) -> Result<(), String> {
 
     if !rev_path.exists() {
         created_revisions = true;
-        fs::create_dir(&rev_path)
-            .map_err(|e| e.to_string())?;
+        fs::create_dir(&rev_path).map_err(|e| e.to_string())?;
     } else if !is_empty_dir(&rev_path) {
-        return Err(format!("{} is not an empty directory", rev_path.to_str().unwrap()));
+        return Err(format!(
+            "{} is not an empty directory",
+            rev_path.to_str().unwrap()
+        ));
     }
 
     let conf_path = dir_path.join(CONF);
@@ -131,26 +126,23 @@ pub fn start(path: &str) -> Result<(), String> {
             if let Err(e) = f.write_all(CONF_TEMPLATE) {
                 err = Some(e.to_string());
             }
-        },
+        }
         Err(e) => {
             err = Some(e.to_string());
-        },
+        }
     }
 
     if let Some(e) = err {
         if created_revisions {
-            fs::remove_dir(&rev_path)
-                .map_err(|e| e.to_string())?;
+            fs::remove_dir(&rev_path).map_err(|e| e.to_string())?;
         }
 
         if created_conf {
-            fs::remove_file(&conf_path)
-                .map_err(|e| e.to_string())?;
+            fs::remove_file(&conf_path).map_err(|e| e.to_string())?;
         }
 
-        if  created_dir {
-            fs::remove_dir(&dir_path)
-                .map_err(|e| e.to_string())?;
+        if created_dir {
+            fs::remove_dir(&dir_path).map_err(|e| e.to_string())?;
         }
 
         return Err(e);
