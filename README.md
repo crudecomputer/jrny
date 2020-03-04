@@ -45,3 +45,26 @@ $ jrny review --budget
 $ jrny embark
 $ jrny embark --step
 ```
+
+## Planned improvements
+
+### Actual docstrings
+
+Doc strings like this...
+
+```rust
+/// This is gross but it does things.
+```
+
+I mean, just no.
+
+### Better output
+
+The output isn't very descriptive (at all), and there aren't any pretty colors.
+In fact, the output often doesn't even really confirm much of what's happened.
+
+### Error handling
+
+The error handling is ugly.
+There are no custom types or anything classy like that yet,
+everything just gets the ol' `.map(|e| e.to_string())?` and `Result<(), String>` treatment.
