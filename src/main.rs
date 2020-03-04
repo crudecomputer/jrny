@@ -1,9 +1,8 @@
 use clap::clap_app;
 use jrny;
 
-
 fn main() {
-    let appm = clap_app!{jrny =>
+    let mut app = clap_app! {jrny =>
         (about: "Simple PostgreSQL schema management")
         (version: "0.1.0")
 
@@ -24,13 +23,21 @@ fn main() {
         (@subcommand embark =>
             (about: "Applies the necessary revisions from within project directory")
         )
-    }.get_matches();
+    };
 
-    match appm.subcommand() {
+    // TODO How to print helpp in absence of subcommand without cloning?
+    let result = match app.clone().get_matches().subcommand() {
         ("start", Some(subm)) => jrny::start(subm.value_of("dirpath").unwrap()),
-        ("revise", Some(subm)) => jrny::connect().revise(subm.value_of("name").unwrap()),
-        ("review", Some(_subm)) => jrny::connect().review(),
-        ("embark", Some(_subm)) => jrny::connect().embark(),
-        _ => unreachable!(),
+        //("revise", Some(subm)) => jrny::connect().revise(subm.value_of("name").unwrap()),
+        //("review", Some(_)) => jrny::connect().review(),
+        //("embark", Some(_)) => jrny::connect().embark(),
+        _ => {
+            app.print_help().expect("Failed to print help");
+            Ok(())
+        }
+    };
+
+    if let Err(e) = result {
+        eprintln!("Error: {:?}", e);
     }
 }

@@ -6,16 +6,17 @@ migration tools that execute changes via Python, Java, etc.
 
 Primary opinions include...
 
-- Plain SQL - DSLs are nice but hard to use for anything complicated
-- History is one-way - no down migrations
+- Plain SQL: DSLs are nice but hard to use for anything complicated
+- History is one-way: down migrations get complicated and are very easy to miss something (eg. an index)
 - Compiled applications are easier to manage than language runtimes
-- Database management should be isolated from applications
+- Encourage stress-free revisions: database management should be untangled from application deploys
 
 
 ## Proposed features
 
-- One-way
-- Plan feature with proposed costs, a la Terraform
+- Plan feature with estimated costs for each migration
+- Live progress (statements executed, active vs. blocked, etc)
+- Revision statistics in table
 - Explicit commit confirmation
 - Schema output file
 - Schema validation relative to database
@@ -44,3 +45,30 @@ $ jrny review --budget
 $ jrny embark
 $ jrny embark --step
 ```
+
+## Planned improvements, or "the things that are missing"
+
+### Tests
+
+No description necessary.
+
+### Actual docstrings
+
+Doc strings like this...
+
+```rust
+/// This is gross but it does things.
+```
+
+I mean, just no.
+
+### Better output
+
+The output isn't very descriptive (at all), and there aren't any pretty colors.
+In fact, the output often doesn't even really confirm much of what's happened.
+
+### Error handling
+
+The error handling is comically ugly.
+There are no custom types or anything classy like that yet,
+everything just gets the ol' `.map(|e| e.to_string())?` and `Result<(), String>` treatment.
