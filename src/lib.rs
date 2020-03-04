@@ -6,6 +6,20 @@ use std::{env, fs, io::prelude::*, path::{Path}};
 
 
 const CONF: &str = "jrny.toml";
+const CONF_TEMPLATE: &[u8] =
+r#"# jrny.toml
+
+[app]
+executor = "postgres"
+schema = "public"
+table = "jrny_revisions"
+
+[connection]
+host = "localhost"
+port = 5432
+name = "dbname"
+user = "dbrole"
+"#.as_bytes();
 
 
 #[derive(Clone, Debug, Deserialize)]
@@ -114,7 +128,7 @@ pub fn start(path: &str) -> Result<(), String> {
         Ok(mut f) => {
             created_conf = true;
 
-            if let Err(e) = f.write_all(conf_template().as_bytes()) {
+            if let Err(e) = f.write_all(CONF_TEMPLATE) {
                 err = Some(e.to_string());
             }
         },
@@ -144,22 +158,6 @@ pub fn start(path: &str) -> Result<(), String> {
 
     println!("New project has been set up");
     Ok(())
-}
-
-fn conf_template() -> &'static str {
-r#"# jrny.toml
-
-[app]
-executor = "postgres"
-schema = "public"
-table = "jrny_revisions"
-
-[connection]
-host = "localhost"
-port = 5432
-name = "dbname"
-user = "dbrole"
-"#
 }
 
 fn is_empty_dir(p: &Path) -> bool {
