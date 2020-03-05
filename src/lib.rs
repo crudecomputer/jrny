@@ -2,7 +2,7 @@ pub mod executor;
 
 use crate::executor::{Executor, PostgresExecutor};
 use serde::Deserialize;
-use std::{env, fs, io::prelude::*, path::Path};
+use std::{env, fs, io::prelude::*, path::{Path, PathBuf}, time::{Duration, SystemTime}};
 
 const CONF: &str = "jrny.toml";
 const CONF_TEMPLATE: &[u8] = r#"# jrny.toml
@@ -47,8 +47,27 @@ pub struct Jrny<E: Executor> {
 }
 
 impl<E: Executor> Jrny<E> {
-    pub fn revise(&self, name: &str) {
-        println!("Creating revision for {}", name);
+
+    /// Creates a new timestamped revision file relative
+    /// to current working directory.
+    pub fn revise(&self, name: &str) -> Result<(), String> {
+        // Non-monotonic clock should be fine since precision isn't important.
+        let timestamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or_else(|_| Duration::new(0, 0))
+            .as_secs();
+
+        let rev_path = format!("revisions/{}-{}.sql", timestamp, name);
+        let rev_path = Path::new(&rev_path);
+
+        fs::File::create(&rev_path)
+            .map_err(|e| e.to_string())?
+            .write_all(format!("-- {} \n-- bleh bleh", rev_path.display()).as_bytes())
+            .map_err(|e| e.to_string())?;
+
+        println!("Created {}", rev_path.display());
+
+        Ok(())
     }
 
     pub fn review(&self) {

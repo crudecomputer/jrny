@@ -28,7 +28,7 @@ fn main() {
     // TODO How to print helpp in absence of subcommand without cloning?
     let result = match app.clone().get_matches().subcommand() {
         ("begin", Some(subm)) => jrny::begin(subm.value_of("dirpath").unwrap()),
-        //("revise", Some(subm)) => jrny::connect().revise(subm.value_of("name").unwrap()),
+        ("revise", Some(subm)) => jrny::connect().revise(subm.value_of("name").unwrap()),
         //("review", Some(_)) => jrny::connect().review(),
         //("embark", Some(_)) => jrny::connect().embark(),
         _ => {
