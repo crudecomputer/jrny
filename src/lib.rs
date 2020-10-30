@@ -3,7 +3,6 @@
 //use crate::executor::{Executor, PostgresExecutor};
 //use serde::Deserialize;
 use std::{
-     env,
     fs,
     io::prelude::*,
     path::{Path, PathBuf},
@@ -87,8 +86,9 @@ user = "dbrole"
     //Jrny { config, executor }
 //}
 
-/// Accepts a name for the migration file and adds a timestamped SQL
-/// file within the revisions directory.
+/// Accepts a name for the migration file and an optional path to a config file.
+/// If no path is provided, it will add a timestamped SQL file relative to current
+/// working directory; otherwise it will add file in a directory relative to config.
 pub fn revise(name: &str, conf_path: Option<&str>) -> Result<(), String> {
     // Non-monotonic clock should be fine since precision isn't important.
     let timestamp = SystemTime::now()
@@ -106,7 +106,7 @@ pub fn revise(name: &str, conf_path: Option<&str>) -> Result<(), String> {
 
             conf_path
         },
-        None => env::current_dir().map_err(|e| e.to_string())?,
+        None => PathBuf::new(),
     };
 
     let filename = format!("{}-{}.sql", timestamp, name);
