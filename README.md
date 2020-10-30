@@ -24,6 +24,13 @@ statement via a query builder's almost-arcane methods
 
 Basically, since we already know SQL, let's keep things simple (if sometimes verbose) and JUSQL.
 
+### User should decide on transactions
+
+Some ORMs and migration tools decide for themselves whether or not (and even how) migrations
+should be run within transactions, and that decision is often difficult to override.
+
+By using raw SQL, the user can manage transactions during migrations in the standard way: `begin` and `commit`.
+
 ### Time moves in one direction
 
 Down-migrations are often useful while writing and testing migrations, but they often shouldn't be
