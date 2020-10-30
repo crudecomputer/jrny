@@ -169,7 +169,7 @@ pub fn begin(path: &str) -> Result<(), String> {
         return Err(e);
     }
 
-    println!("New project has been set up:");
+    println!("The journey has begun:");
 
     let print_file = |prefix: &str, created: bool, path: &Path| println!(
         "  {}{}{}",
