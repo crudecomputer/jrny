@@ -1,25 +1,7 @@
-use crate::ProjectPaths;
+use crate::{CONF, CONF_TEMPLATE, ProjectPaths};
 
 use std::io::Write;
 use std::fs;
-
-
-const CONF: &str = "jrny.toml";
-const CONF_TEMPLATE: &[u8] = r#"# jrny.toml
-
-[app]
-executor = "postgres"
-schema = "public"
-table = "jrny_revisions"
-
-[connection]
-host = "localhost"
-port = 5432
-name = "dbname"
-user = "dbrole"
-"#
-.as_bytes();
-
 
 pub struct Begin {
     pub paths: ProjectPaths,

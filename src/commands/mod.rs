@@ -9,6 +9,9 @@ use std::{
 mod begin;
 use begin::Begin;
 
+mod review;
+pub use review::review;
+
 
 /// Accepts a path string targeting a directory to set up project files:
 /// The directory will be created if it does not exist or will fail if

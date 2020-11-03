@@ -7,6 +7,17 @@ pub struct PathWithName {
     pub name: String,
 }
 
+impl PathWithName {
+    pub fn new(debug_name: &str, path: PathBuf) -> Result<Self, String> {
+        Ok(Self {
+            name: path.to_str()
+                .expect(format!("Could not generate name for {}", debug_name).as_str())
+                .to_string(),
+            path,
+        })
+    }
+}
+
 pub struct ProjectPaths {
     pub conf: PathWithName,
     pub revisions: PathWithName,
@@ -14,29 +25,15 @@ pub struct ProjectPaths {
 }
 
 impl ProjectPaths {
-    pub fn for_new_project(path: &str, conf_name: &str) -> Result<Self, String> {
-        let root = PathBuf::from(path);
+    pub fn for_new_project(root_dir: &str, conf_name: &str) -> Result<Self, String> {
+        let root = PathBuf::from(root_dir);
         let revisions = root.join("revisions");
         let conf = root.join(conf_name);
 
         let paths = ProjectPaths {
-            conf: PathWithName {
-                name: conf.to_str()
-                    .expect("Could not generate name for config file")
-                    .to_string(),
-                path: conf,
-            },
-            revisions: PathWithName {
-                name: revisions.to_str()
-                    .expect("Could not generate name for revisions path")
-                    .to_string(),
-                path: revisions,
-            },
-            root: PathWithName {
-                name: path.to_string(),
-                path: root,
-            },
-
+            conf:      PathWithName::new("config file", conf)?,
+            revisions: PathWithName::new("revisions directory", revisions)?,
+            root:      PathWithName::new(root_dir, root)?,
         };
 
         paths.valid_for_new()?;
