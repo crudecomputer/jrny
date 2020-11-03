@@ -1,5 +1,5 @@
 use clap::clap_app;
-use jrny;
+use jrny::{self, commands};
 
 fn main() {
     let mut app = clap_app! {jrny =>
@@ -28,7 +28,7 @@ fn main() {
 
     // TODO How to print helpp in absence of subcommand without cloning?
     let result = match app.clone().get_matches().subcommand() {
-        ("begin", Some(subm)) => jrny::begin(subm.value_of("dirpath").unwrap()),
+        ("begin", Some(subm)) => commands::Begin::new_project(subm.value_of("dirpath").unwrap()),
         ("revise", Some(subm)) => jrny::revise(
             subm.value_of("name").unwrap(),
             subm.value_of("config"),
