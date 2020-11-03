@@ -21,12 +21,11 @@ user = "dbrole"
 .as_bytes();
 
 
-
 pub struct Begin {
-    paths: ProjectPaths,
-    created_conf: bool,
-    created_revisions: bool,
-    created_root: bool,
+    pub paths: ProjectPaths,
+    pub created_conf: bool,
+    pub created_revisions: bool,
+    pub created_root: bool,
 }
 
 impl Begin {
@@ -36,31 +35,18 @@ impl Begin {
     /// that there is an empty `revisions` directory nested within it or
     /// create it if not already present. If any error occurs, any changes
     /// to the file system will be attempted to be reversed.
-    pub fn new_project(p: &str) -> Result<(), String> {
-        let cmmd =
-            Begin {
-                paths: ProjectPaths::for_new_project(p, CONF)?,
-                created_conf: false,
-                created_revisions: false,
-                created_root: false,
-            }
-            .create_root()?
-            .create_revisions()?
-            .create_conf()?;
-
-        println!("The journey has begun");
-
-        print_path("  ",     cmmd.created_root,      &cmmd.paths.root.name);
-        print_path("  ├── ", cmmd.created_revisions, &cmmd.paths.revisions.name);
-        print_path("  └── ", cmmd.created_conf,      &cmmd.paths.conf.name);
-        println!("");
-
-        Ok(())
+    pub fn new_project(p: &str) -> Result<Self, String> {
+        Ok(Self {
+            paths: ProjectPaths::for_new_project(p, CONF)?,
+            created_conf: false,
+            created_revisions: false,
+            created_root: false,
+        })
     }
 
     /// Attempts to create the project root directory if it doesn't exist,
     /// marking created as true if newly created.
-    fn create_root(mut self) -> Result<Self, String> {
+    pub fn create_root(mut self) -> Result<Self, String> {
         if !self.paths.root.path.exists() {
             fs::create_dir(&self.paths.root.path).map_err(|e| e.to_string())?;
             self.created_root = true;
@@ -71,7 +57,7 @@ impl Begin {
 
     /// Attempts to create the revisions directory if it doesn't exist,
     /// marking created as true if newly created.
-    fn create_revisions(mut self) -> Result<Self, String> {
+    pub fn create_revisions(mut self) -> Result<Self, String> {
         if !self.paths.revisions.path.exists() {
             if let Err(e) = fs::create_dir(&self.paths.revisions.path) {
                 self.revert()?;
@@ -87,7 +73,7 @@ impl Begin {
 
     /// Attempts to create the default configuration file. If a failure occurs,
     /// it will attempt to clean up any directory or file created during the command.
-    fn create_conf(mut self) -> Result<Self, String> {
+    pub fn create_conf(mut self) -> Result<Self, String> {
         let mut err = None;
 
         match fs::File::create(&self.paths.conf.path) {
@@ -128,15 +114,4 @@ impl Begin {
 
         Ok(())
     }
-}
-
-/// Attempts to convert path to printable string and then prints with optional
-/// prefix and "created" suffix if the created condition is true.
-fn print_path(prefix: &str, created: bool, path_name: &str) {
-    println!(
-        "{}{}{}",
-        prefix,
-        path_name,
-        if created { " [created]" } else { "" },
-    );
 }

@@ -7,13 +7,6 @@ pub use paths::ProjectPaths;
 
 //use crate::executor::{Executor, PostgresExecutor};
 //use serde::Deserialize;
-use std::{
-    fs,
-    io::prelude::*,
-    path::PathBuf,
-    time::SystemTime,
-    str::FromStr,
-};
 
 //#[derive(Clone, Debug, Deserialize)]
 //pub struct Config {
@@ -75,39 +68,3 @@ use std::{
     //Jrny { config, executor }
 //}
 
-/// Accepts a name for the migration file and an optional path to a config file.
-/// If no path is provided, it will add a timestamped SQL file relative to current
-/// working directory; otherwise it will add file in a directory relative to config.
-pub fn revise(name: &str, conf_path: Option<&str>) -> Result<(), String> {
-    // Non-monotonic clock should be fine since precision isn't important.
-    let timestamp = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-
-    let mut revision_path = match conf_path {
-        Some(cp) => {
-            let mut conf_path = PathBuf::from_str(cp).map_err(|e| e.to_string())?;
-
-            if !conf_path.pop() {
-                return Err("Config filepath is not valid".to_string());
-            }
-
-            conf_path
-        },
-        None => PathBuf::new(),
-    };
-
-    let filename = format!("{}-{}.sql", timestamp, name);
-    revision_path.push("revisions");
-    revision_path.push(&filename);
-
-    fs::File::create(&revision_path)
-        .map_err(|e| e.to_string())?
-        .write_all(format!("-- Journey revision\n--\n-- {}\n--\n\n", filename).as_bytes())
-        .map_err(|e| e.to_string())?;
-
-    println!("Created {}", revision_path.display());
-
-    Ok(())
-}

@@ -11,7 +11,7 @@ fn main() {
             (@arg dirpath: +required "The directory in which to set up new project files - will be created if does not exist")
         )
 
-        (@subcommand revise =>
+        (@subcommand plan =>
             (about: "Generates a timestamped SQL revision plan")
             (@arg name: +required "Name of the revision")
             (@arg config: -c --config [FILE] +takes_value "Sets a custom config file")
@@ -26,17 +26,19 @@ fn main() {
         //)
     };
 
-    // TODO How to print helpp in absence of subcommand without cloning?
     let result = match app.clone().get_matches().subcommand() {
-        ("begin", Some(subm)) => commands::Begin::new_project(subm.value_of("dirpath").unwrap()),
-        ("revise", Some(subm)) => jrny::revise(
+        ("begin", Some(subm)) => commands::begin(subm.value_of("dirpath").unwrap()),
+        ("plan", Some(subm)) => commands::plan(
             subm.value_of("name").unwrap(),
             subm.value_of("config"),
         ),
         //("review", Some(_)) => jrny::connect().review(),
         //("embark", Some(_)) => jrny::connect().embark(),
+
+        // TODO How to print help in absence of subcommand without cloning?
         _ => {
             app.print_help().expect("Failed to print help");
+            println!("");
             Ok(())
         }
     };
