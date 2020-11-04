@@ -37,7 +37,7 @@ pub fn begin(p: &str) -> Result<(), String> {
 /// Accepts a name for the migration file and an optional path to a config file.
 /// If no path is provided, it will add a timestamped SQL file relative to current
 /// working directory; otherwise it will add file in a directory relative to config.
-pub fn plan(name: &str, conf_path: Option<&str>) -> Result<(), String> {
+pub fn revise(name: &str, conf_path: Option<&str>) -> Result<(), String> {
     // Non-monotonic clock should be fine since precision isn't important.
     let timestamp = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)

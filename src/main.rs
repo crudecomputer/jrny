@@ -11,8 +11,8 @@ fn main() {
             (@arg dirpath: +required "The directory in which to set up new project files - will be created if does not exist")
         )
 
-        (@subcommand plan =>
-            (about: "Generates a timestamped SQL revision plan")
+        (@subcommand revise =>
+            (about: "Generates a timestamped SQL revision")
             (@arg name: +required "Name of the revision")
             (@arg config: -c --config [FILE] +takes_value "Sets a custom config file")
         )
@@ -31,7 +31,7 @@ fn main() {
         ("begin", Some(cmd)) => commands::begin(
             cmd.value_of("dirpath").unwrap(),
         ),
-        ("plan", Some(cmd)) => commands::plan(
+        ("revise", Some(cmd)) => commands::revise(
             cmd.value_of("name").unwrap(),
             cmd.value_of("config"),
         ),
