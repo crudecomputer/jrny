@@ -7,8 +7,8 @@ a free, flexible, native, **opinionated**, and SQL-based alternative to contempo
 (and sometimes proprietary) migration tools that execute changes via Python, Java, etc.
 or via YAML files.
 
-> <sup>1</sup> While Postgres is the only current target, the attempt is to design `jrny`
-> in a way that proves reasonably extensible to other databases in the future.
+> <sup>1</sup> While Postgres is the only current target, it could theoretically be extended
+> in the future to support other databases, though extensibility is not an immediate goal.
 
 ## Primary Opinions
 

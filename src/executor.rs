@@ -1,80 +1,66 @@
-use crate::ConnectionConfig;
-use postgres::{Client, NoTls};
-use std::time::Duration;
+use postgres::Client;
+use std::convert::TryFrom;
 
-pub trait Executor: From<ConnectionConfig> {
-    fn execute(&self);
+use crate::config::Config;
 
-    fn connect(&mut self);
+const EXISTS: &str =
+"SELECT EXISTS (
+   SELECT FROM pg_tables
+   WHERE schemaname = $1 AND tablename  = $2
+)";
+
+const CREATE: &str =
+"CREATE TABLE $$schema$$.$$table$$ (
+    id          SERIAL       PRIMARY KEY,
+    timestamp   TIMESTAMPTZ  NOT NULL,
+    applied_on  TIMESTAMPTZ  NOT NULL,
+    filename    TEXT         NOT NULL,
+    checksum    TEXT         NOT NULL,
+
+    unique (timestamp, filename)
+)";
+
+pub struct Executor {
+    config: Config,
+    client: Client,
 }
 
-pub struct PostgresExecutor {
-    host: String,
-    port: u16,
-    name: String,
-    user: String,
-    pass: Option<String>,
-    client: Option<Client>,
-}
+impl Executor {
+    pub fn new(conf_path_name: Option<&str>) -> Result<Self, String> {
+        let config = Config::new(conf_path_name)?;
+        let client = Client::try_from(&config)?;
 
-impl From<ConnectionConfig> for PostgresExecutor {
-    fn from(conf: ConnectionConfig) -> Self {
-        PostgresExecutor {
-            host: conf.host,
-            port: conf.port,
-            name: conf.name,
-            user: conf.user,
-            pass: conf.pass,
-            client: None,
-        }
-    }
-}
-
-impl Executor for PostgresExecutor {
-    fn connect(&mut self) {
-        let mut client = Client::configure();
-
-        client.application_name("jrny")
-            .connect_timeout(Duration::new(30, 0))
-            .host(&self.host)
-            .port(self.port)
-            .dbname(&self.name)
-            .user(&self.user);
-
-        if let Some(password) = &self.pass {
-            client.password(password);
-        }
-
-        self.client = Some(client
-            .connect(NoTls)
-            .expect("Could not connect to PostgreSQL"));
+        Ok(Self { config , client })
     }
 
-    fn execute(&self) {
-        /*
-        client.batch_execute("
-            CREATE TABLE person (
-                id      SERIAL PRIMARY KEY,
-                name    TEXT NOT NULL,
-                data    BYTEA
-            )
-        ")?;
-
-
-        let name = "Ferris";
-        let data = None::<&[u8]>;
-        client.execute(
-            "INSERT INTO person (name, data) VALUES ($1, $2)",
-            &[&name, &data],
-        )?;
-
-        for row in client.query("SELECT id, name, data FROM person", &[])? {
-            let id: i32 = row.get(0);
-            let name: &str = row.get(1);
-            let data: Option<&[u8]> = row.get(2);
-
-            println!("found person: {} {} {:?}", id, name, data);
+    pub fn ensure_table_exists(&mut self) -> Result<(), String> {
+        if !self.table_exists()? {
+            println!("Creating table \"{}\"", self.qualified_table());
+            self.create_table()?;
         }
-        */
+
+        Ok(())
+    }
+
+    fn table_exists(&mut self) -> Result<bool, String> {
+        let row = self.client.query_one(EXISTS, &[
+            &self.config.app.schema, 
+            &self.config.app.table, 
+        ]).map_err(|e| e.to_string())?;
+
+        Ok(row.get("exists"))
+    }
+
+    fn create_table(&mut self) -> Result<(), String> {
+        let create = CREATE
+            .replace("$$schema$$", &self.config.app.schema)
+            .replace("$$table$$", &self.config.app.table);
+
+        self.client.execute(create.as_str(), &[]).map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    fn qualified_table(&self) -> String {
+        format!("{}.{}", &self.config.app.schema.clone(), self.config.app.table.clone())
     }
 }

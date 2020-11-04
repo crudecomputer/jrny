@@ -1,4 +1,4 @@
-use crate::Jrny;
+use crate::Executor;
 
 // connect to database
 //
@@ -10,7 +10,9 @@ use crate::Jrny;
 //     timestamp file last updated
 //     checksum
 pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
-    let jrny = Jrny::from_config(conf_path_name)?;
+    let mut exec = Executor::new(conf_path_name)?;
+
+    exec.ensure_table_exists()?;
 
     Ok(())
 }
