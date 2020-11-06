@@ -1,8 +1,8 @@
-use std::fs::{self, DirEntry};
+use sha2::{Digest, Sha256};
+use std::fs;
 use std::path::PathBuf;
 
-use crate::Config;
-
+#[derive(Debug)]
 pub struct FileRevision {
     applied: bool,
     checksum: String,
@@ -33,9 +33,14 @@ impl FileRevision {
 
         Ok(Self {
             applied: false,
-            checksum: "asdjhlakjsdhflkaj".to_string(),
+            checksum: to_checksum(&contents),
             name: "name".to_string(),
             timestamp: "timestamp".to_string(),
         })
     }
+}
+
+fn to_checksum(s: &str) -> String {
+    // See: https://users.rust-lang.org/t/sha256-result-to-string/49391/3
+    format!("{:x}", Sha256::digest(s.as_bytes()))
 }
