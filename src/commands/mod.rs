@@ -47,15 +47,19 @@ pub fn revise(name: &str, conf_path_name: Option<&str>) -> Result<(), String> {
         .unwrap()
         .as_secs();
 
-    let filename = format!("{}-{}.sql", timestamp, name);
-    let revision_path = config.paths.revisions.join(&filename);
+    let revision_path = config.paths.revisions
+        .join(format!("{}-{}.sql", timestamp, name));
+    let filename = revision_path.display();
 
     fs::File::create(&revision_path)
         .map_err(|e| e.to_string())?
-        .write_all(format!("-- Journey revision\n--\n-- {}\n--\n\n", filename).as_bytes())
+        .write_all(format!(
+            "-- Journey revision\n--\n-- {}\n--\n\n",
+            filename,
+        ).as_bytes())
         .map_err(|e| e.to_string())?;
 
-    println!("Created {}", revision_path.display());
+    println!("Created {}", filename);
 
     Ok(())
 }
