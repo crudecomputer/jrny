@@ -1,7 +1,7 @@
 use postgres::Client;
 use std::convert::TryFrom;
 
-use crate::config::Config;
+use crate::Config;
 
 const CREATE_SCHEMA: &str =
 "CREATE SCHEMA $$schema$$";
@@ -30,16 +30,20 @@ const SCHEMA_EXISTS: &str =
 )";
 
 pub struct Executor {
-    config: Config,
     client: Client,
+    schema: String,
+    table: String,
 }
 
 impl Executor {
-    pub fn new(conf_path_name: Option<&str>) -> Result<Self, String> {
-        let config = Config::new(conf_path_name)?;
-        let client = Client::try_from(&config)?;
+    pub fn new(config: &Config) -> Result<Self, String> {
+        let client = Client::try_from(config)?;
 
-        Ok(Self { config , client })
+        Ok(Self {
+            client,
+            schema: config.settings.table.schema.clone(),
+            table: config.settings.table.name.clone(),
+        })
     }
 
     pub fn ensure_table_exists(&mut self) -> Result<(), String> {
@@ -51,8 +55,8 @@ impl Executor {
 
     fn table_exists(&mut self) -> Result<bool, String> {
         let row = self.client.query_one(TABLE_EXISTS, &[
-            &self.config.settings.table.schema,
-            &self.config.settings.table.name,
+            &self.schema,
+            &self.table,
         ]).map_err(|e| e.to_string())?;
 
         Ok(row.get("exists"))
@@ -60,30 +64,25 @@ impl Executor {
 
     fn schema_exists(&mut self) -> Result<bool, String> {
         let row = self.client.query_one(SCHEMA_EXISTS, &[
-            &self.config.settings.table.schema,
+            &self.schema,
         ]).map_err(|e| e.to_string())?;
 
         Ok(row.get("exists"))
     }
 
     fn create_schema(&mut self) -> Result<(), String> {
-        println!("Creating schema {}", self.config.settings.table.schema);
-        let create = CREATE_SCHEMA
-            .replace("$$schema$$", &self.config.settings.table.schema);
+        println!("Creating schema {}", self.schema);
+        let create = CREATE_SCHEMA.replace("$$schema$$", &self.schema);
 
         self.client.execute(create.as_str(), &[]).map_err(|e| e.to_string())?;
         Ok(())
     }
 
     fn create_table(&mut self) -> Result<(), String> {
-        println!(
-            "Creating table {}.{}",
-            self.config.settings.table.schema,
-            self.config.settings.table.name,
-        );
+        println!("Creating table {}.{}", self.schema, self.table);
         let create = CREATE_TABLE
-            .replace("$$schema$$", &self.config.settings.table.schema)
-            .replace("$$table$$", &self.config.settings.table.name);
+            .replace("$$schema$$", &self.schema)
+            .replace("$$table$$", &self.table);
 
         self.client.execute(create.as_str(), &[]).map_err(|e| e.to_string())?;
         Ok(())

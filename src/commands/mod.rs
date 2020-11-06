@@ -5,7 +5,7 @@ use std::{
     time::SystemTime,
 };
 
-use crate::{Config, Executor};
+use crate::{Config, Executor, FileRevision};
 
 mod begin;
 use begin::Begin;
@@ -65,18 +65,13 @@ pub fn revise(name: &str, conf_path_name: Option<&str>) -> Result<(), String> {
 }
 
 
-//struct FileRevision {
-    //applied: bool,
-    //checksum: String,
-    //name: String,
-    //timestamp: String,
-//}
-
-
 pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
-    let mut exec = Executor::new(conf_path_name)?;
+    let config = Config::new(conf_path_name)?;
+    let mut exec = Executor::new(&config)?;
 
     exec.ensure_table_exists()?;
+
+    let file_revisions = FileRevision::all_from_disk(&config.paths.revisions);
 
     /*
      * Load all revisions from disk and hash each

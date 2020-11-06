@@ -5,10 +5,12 @@ mod client;
 mod config;
 mod executor;
 mod paths;
+mod revision;
 
 pub use paths::ProjectPaths;
 use config::Config;
 use executor::Executor;
+use revision::FileRevision;
 
 const CONF: &str = "jrny.toml";
 const CONF_TEMPLATE: &[u8] =
