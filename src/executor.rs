@@ -4,11 +4,10 @@ use std::convert::TryFrom;
 use crate::config::Config;
 
 const CREATE_SCHEMA: &str =
-"CREATE SCHEMA IF NOT EXISTS $$schema$$";
+"CREATE SCHEMA $$schema$$";
 
 const CREATE_TABLE: &str =
-"CREATE TABLE IF NOT EXISTS
-$$schema$$.$$table$$ (
+"CREATE TABLE $$schema$$.$$table$$ (
     id          SERIAL       PRIMARY KEY,
     timestamp   TIMESTAMPTZ  NOT NULL,
     applied_on  TIMESTAMPTZ  NOT NULL,
@@ -18,17 +17,17 @@ $$schema$$.$$table$$ (
     UNIQUE (timestamp, filename)
 )";
 
-//const TABLE_EXISTS: &str =
-//"SELECT EXISTS (
-   //SELECT FROM pg_tables
-   //WHERE schemaname = $1 AND tablename  = $2
-//)";
+const TABLE_EXISTS: &str =
+"SELECT EXISTS (
+   SELECT FROM pg_tables
+   WHERE schemaname = $1 AND tablename  = $2
+)";
 
-//const SCHEMA_EXISTS: &str =
-//"SELECT EXISTS (
-    //SELECT FROM information_schema.schemata
-    //WHERE schema_name = '$$schema$$'
-//)";
+const SCHEMA_EXISTS: &str =
+"SELECT EXISTS (
+    SELECT FROM information_schema.schemata
+    WHERE schema_name = $1
+)";
 
 pub struct Executor {
     config: Config,
@@ -44,12 +43,31 @@ impl Executor {
     }
 
     pub fn ensure_table_exists(&mut self) -> Result<(), String> {
-        self.create_schema()?;
-        self.create_table()?;
+        if !self.schema_exists()? { self.create_schema()?; }
+        if !self.table_exists()? { self.create_table()?; }
+
         Ok(())
     }
 
+    fn table_exists(&mut self) -> Result<bool, String> {
+        let row = self.client.query_one(TABLE_EXISTS, &[
+            &self.config.settings.table.schema,
+            &self.config.settings.table.name,
+        ]).map_err(|e| e.to_string())?;
+
+        Ok(row.get("exists"))
+    }
+
+    fn schema_exists(&mut self) -> Result<bool, String> {
+        let row = self.client.query_one(SCHEMA_EXISTS, &[
+            &self.config.settings.table.schema,
+        ]).map_err(|e| e.to_string())?;
+
+        Ok(row.get("exists"))
+    }
+
     fn create_schema(&mut self) -> Result<(), String> {
+        println!("Creating schema {}", self.config.settings.table.schema);
         let create = CREATE_SCHEMA
             .replace("$$schema$$", &self.config.settings.table.schema);
 
@@ -58,6 +76,11 @@ impl Executor {
     }
 
     fn create_table(&mut self) -> Result<(), String> {
+        println!(
+            "Creating table {}.{}",
+            self.config.settings.table.schema,
+            self.config.settings.table.name,
+        );
         let create = CREATE_TABLE
             .replace("$$schema$$", &self.config.settings.table.schema)
             .replace("$$table$$", &self.config.settings.table.name);
@@ -65,21 +88,4 @@ impl Executor {
         self.client.execute(create.as_str(), &[]).map_err(|e| e.to_string())?;
         Ok(())
     }
-
-    //fn table_exists(&mut self) -> Result<bool, String> {
-        //let row = self.client.query_one(EXISTS, &[
-            //&self.config.settings.table.schema,
-            //&self.config.settings.table.name,
-        //]).map_err(|e| e.to_string())?;
-
-        //Ok(row.get("exists"))
-    //}
-
-    //fn qualified_table(&self) -> String {
-        //format!(
-            //"{}.{}",
-            //self.config.settings.table.schema.clone(),
-            //self.config.settings.table.name.clone(),
-        //)
-    //}
 }

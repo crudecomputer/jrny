@@ -14,14 +14,14 @@ const CONF: &str = "jrny.toml";
 const CONF_TEMPLATE: &[u8] =
 r#"# jrny.toml
 
-[table]
-schema = "public"
-name = "jrny_plan"
-
 [connection]
 host = "localhost"
 port = 5432
 name = "dbname"
 user = "dbrole"
+
+[table]
+schema = "jrny"
+name = "plan"
 "#
 .as_bytes();
