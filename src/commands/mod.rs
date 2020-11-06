@@ -1,12 +1,11 @@
 use std::{
+    fmt::Display,
     fs,
     io::prelude::*,
-    path::PathBuf,
     time::SystemTime,
-    str::FromStr,
 };
 
-use crate::Executor;
+use crate::{Config, Executor};
 
 mod begin;
 use begin::Begin;
@@ -29,9 +28,9 @@ pub fn begin(p: &str) -> Result<(), String> {
 
     println!("The journey has begun");
 
-    print_path("  ",     cmmd.created_root,      &cmmd.paths.root.name);
-    print_path("  ├── ", cmmd.created_revisions, &cmmd.paths.revisions.name);
-    print_path("  └── ", cmmd.created_conf,      &cmmd.paths.conf.name);
+    print_path("  ",     cmmd.created_root,      &cmmd.paths.root.display());
+    print_path("  ├── ", cmmd.created_revisions, &cmmd.paths.revisions.display());
+    print_path("  └── ", cmmd.created_conf,      &cmmd.paths.conf.display());
 
     Ok(())
 }
@@ -39,29 +38,17 @@ pub fn begin(p: &str) -> Result<(), String> {
 /// Accepts a name for the migration file and an optional path to a config file.
 /// If no path is provided, it will add a timestamped SQL file relative to current
 /// working directory; otherwise it will add file in a directory relative to config.
-pub fn revise(name: &str, conf_path: Option<&str>) -> Result<(), String> {
+pub fn revise(name: &str, conf_path_name: Option<&str>) -> Result<(), String> {
+    let config = Config::new(conf_path_name)?;
+
     // Non-monotonic clock should be fine since precision isn't important.
     let timestamp = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
         .as_secs();
 
-    let mut revision_path = match conf_path {
-        Some(cp) => {
-            let mut conf_path = PathBuf::from_str(cp).map_err(|e| e.to_string())?;
-
-            if !conf_path.pop() {
-                return Err("Config filepath is not valid".to_string());
-            }
-
-            conf_path
-        },
-        None => PathBuf::new(),
-    };
-
     let filename = format!("{}-{}.sql", timestamp, name);
-    revision_path.push("revisions");
-    revision_path.push(&filename);
+    let revision_path = config.paths.revisions.join(&filename);
 
     fs::File::create(&revision_path)
         .map_err(|e| e.to_string())?
@@ -102,10 +89,9 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
     Ok(())
 }
 
-
 /// Prints path string with optional prefix and "[created]" suffix if the created
 /// condition is true.
-fn print_path(prefix: &str, created: bool, path_name: &str) {
+fn print_path(prefix: &str, created: bool, path_name: impl Display) {
     println!(
         "{}{}{}",
         prefix,

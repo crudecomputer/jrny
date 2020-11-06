@@ -6,7 +6,7 @@ mod config;
 mod executor;
 mod paths;
 
-pub use paths::{PathWithName, ProjectPaths};
+pub use paths::ProjectPaths;
 use config::Config;
 use executor::Executor;
 
