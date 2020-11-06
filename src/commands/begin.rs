@@ -1,4 +1,4 @@
-use crate::{CONF, CONF_TEMPLATE, ProjectPaths};
+use crate::{CONF_TEMPLATE, ProjectPaths};
 
 use std::io::Write;
 use std::fs;
@@ -19,7 +19,7 @@ impl Begin {
     /// to the file system will be attempted to be reversed.
     pub fn new_project(p: &str) -> Result<Self, String> {
         Ok(Self {
-            paths: ProjectPaths::for_new_project(p, CONF)?,
+            paths: ProjectPaths::for_new_project(p)?,
             created_conf: false,
             created_revisions: false,
             created_root: false,

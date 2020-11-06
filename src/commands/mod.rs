@@ -6,11 +6,13 @@ use std::{
     str::FromStr,
 };
 
+use crate::Executor;
+
 mod begin;
 use begin::Begin;
 
-mod review;
-pub use review::review;
+//mod review;
+//pub use review::review;
 
 
 /// Accepts a path string targeting a directory to set up project files:
@@ -72,8 +74,37 @@ pub fn revise(name: &str, conf_path: Option<&str>) -> Result<(), String> {
 }
 
 
-/// Attempts to convert path to printable string and then prints with optional
-/// prefix and "created" suffix if the created condition is true.
+//struct FileRevision {
+    //applied: bool,
+    //checksum: String,
+    //name: String,
+    //timestamp: String,
+//}
+
+
+pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
+    let mut exec = Executor::new(conf_path_name)?;
+
+    exec.ensure_table_exists()?;
+
+    /*
+     * Load all revisions from disk and hash each
+     *
+     * Load all revisions from database
+     *
+     * Verify all applied are still present on disk
+     *
+     * Verify all applied have same hash as from file
+     *
+     * Mark which disk revisions have not been applied
+    */
+
+    Ok(())
+}
+
+
+/// Prints path string with optional prefix and "[created]" suffix if the created
+/// condition is true.
 fn print_path(prefix: &str, created: bool, path_name: &str) {
     println!(
         "{}{}{}",

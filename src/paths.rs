@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use crate::CONF;
+
 /// Stores a path with a displayable string to ensure that such a path
 /// can always be printed without error.
 pub struct PathWithName {
@@ -25,20 +27,36 @@ pub struct ProjectPaths {
 }
 
 impl ProjectPaths {
-    pub fn for_new_project(root_dir: &str, conf_name: &str) -> Result<Self, String> {
+    pub fn for_new_project(root_dir: &str) -> Result<Self, String> {
         let root = PathBuf::from(root_dir);
         let revisions = root.join("revisions");
-        let conf = root.join(conf_name);
+        let conf = root.join(CONF);
 
-        let paths = ProjectPaths {
-            conf:      PathWithName::new("config file", conf)?,
-            revisions: PathWithName::new("revisions directory", revisions)?,
-            root:      PathWithName::new(root_dir, root)?,
-        };
+        let paths = ProjectPaths::new(conf, revisions, root)?;
 
         paths.valid_for_new()?;
 
         Ok(paths)
+    }
+
+    pub fn from_conf_path(conf_path_name: Option<&str>) -> Result<Self, String> {
+        let conf = PathBuf::from(conf_path_name.unwrap_or(CONF));
+
+        let root = conf.parent()
+            .ok_or_else(|| "Config filepath is not valid".to_string())?
+            .to_path_buf();
+
+        let revisions = root.join("revisions");
+
+        Ok(ProjectPaths::new(conf, revisions, root)?)
+    }
+
+    fn new(conf: PathBuf, revisions: PathBuf, root: PathBuf) -> Result<Self, String> {
+        Ok(Self {
+            conf:      PathWithName::new("config file", conf)?,
+            revisions: PathWithName::new("revisions directory", revisions)?,
+            root:      PathWithName::new("target directory", root)?,
+        })
     }
 
     fn valid_for_new(&self) -> Result<(), String> {

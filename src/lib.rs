@@ -11,11 +11,12 @@ use config::Config;
 use executor::Executor;
 
 const CONF: &str = "jrny.toml";
-const CONF_TEMPLATE: &[u8] = r#"# jrny.toml
+const CONF_TEMPLATE: &[u8] =
+r#"# jrny.toml
 
-[app]
+[table]
 schema = "public"
-table = "jrny_plan"
+name = "jrny_plan"
 
 [connection]
 host = "localhost"
