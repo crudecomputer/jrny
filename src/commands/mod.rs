@@ -1,8 +1,8 @@
+use chrono::{DateTime, Utc};
 use std::{
     fmt::Display,
     fs,
     io::prelude::*,
-    time::SystemTime,
 };
 
 use crate::{Config, Executor, FileRevision};
@@ -41,14 +41,11 @@ pub fn begin(p: &str) -> Result<(), String> {
 pub fn revise(name: &str, conf_path_name: Option<&str>) -> Result<(), String> {
     let config = Config::new(conf_path_name)?;
 
-    // Non-monotonic clock should be fine since precision isn't important.
-    let timestamp = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
+    let utc: DateTime<Utc> = Utc::now();
+    let timestamp = utc.timestamp();
 
     let revision_path = config.paths.revisions
-        .join(format!("{}-{}.sql", timestamp, name));
+        .join(format!("{}.{}.sql", timestamp, name));
     let filename = revision_path.display();
 
     fs::File::create(&revision_path)

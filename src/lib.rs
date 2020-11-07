@@ -24,6 +24,6 @@ user = "dbrole"
 
 [table]
 schema = "jrny"
-name = "plan"
+name = "revision"
 "#
 .as_bytes();
