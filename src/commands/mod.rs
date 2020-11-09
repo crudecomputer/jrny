@@ -69,10 +69,11 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
     exec.ensure_table_exists()?;
 
     let file_revisions = FileRevision::all_from_disk(&config.paths.revisions)?;
+    let db_revisions = exec.load_revisions()?;
 
-    for fv in file_revisions {
-        println!("{:?}", fv);
-    }
+    for fv in file_revisions { println!("{:?}", fv); }
+    println!("");
+    for dv in db_revisions { println!("{:?}", dv); }
 
     /*
      * Load all revisions from disk and hash each

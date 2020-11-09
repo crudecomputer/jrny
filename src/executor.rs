@@ -1,7 +1,7 @@
 use postgres::Client;
 use std::convert::TryFrom;
 
-use crate::Config;
+use crate::{Config, DatabaseRevision};
 
 const CREATE_SCHEMA: &str =
 "CREATE SCHEMA $$schema$$";
@@ -29,6 +29,16 @@ const SCHEMA_EXISTS: &str =
     WHERE schema_name = $1
 )";
 
+const SELECT_REVISIONS: &str =
+"SELECT
+    timestamp,
+    filename,
+    checksum,
+    applied_on
+FROM $$schema$$.$$table$$
+ORDER BY timestamp ASC
+";
+
 pub struct Executor {
     client: Client,
     schema: String,
@@ -51,6 +61,26 @@ impl Executor {
         if !self.table_exists()? { self.create_table()?; }
 
         Ok(())
+    }
+
+    pub fn load_revisions(&mut self) -> Result<Vec<DatabaseRevision>, String> {
+        let stmt = SELECT_REVISIONS
+            .replace("$$schema$$", &self.schema)
+            .replace("$$table$$", &self.table);
+
+        let rows = self.client.query(stmt.as_str(), &[])
+            .map_err(|e| e.to_string())?;
+
+        let revisions = rows.iter()
+            .map(|r| DatabaseRevision {
+                applied_on: r.get("applied_on"),
+                checksum: r.get("checksum"),
+                name: r.get("filename"),
+                timestamp: r.get("timestamp"),
+            })
+            .collect();
+
+        Ok(revisions)
     }
 
     fn table_exists(&mut self) -> Result<bool, String> {

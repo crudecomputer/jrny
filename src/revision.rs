@@ -5,6 +5,14 @@ use std::fs;
 use std::path::PathBuf;
 
 #[derive(Debug)]
+pub struct DatabaseRevision {
+    pub applied_on: DateTime<Utc>,
+    pub checksum: String,
+    pub name: String,
+    pub timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug)]
 pub struct FileRevision {
     applied: bool,
     checksum: String,
