@@ -1,11 +1,12 @@
 use chrono::{DateTime, Utc};
 use std::{
+    collections::HashMap,
     fmt::Display,
     fs,
     io::prelude::*,
 };
 
-use crate::{Config, Executor, FileRevision};
+use crate::{Config, Executor, DatabaseRevision, FileRevision};
 
 mod begin;
 use begin::Begin;
@@ -61,6 +62,68 @@ pub fn revise(name: &str, conf_path_name: Option<&str>) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(Debug, Eq, Hash, PartialEq)]
+struct RevisionIdentifier(String);
+
+impl From<Rc<FileRevision>> for RevisionIdentifier {
+    fn from(fr: Rc<FileRevision>) -> Self {
+        Self(fr.filename.clone())
+    }
+}
+
+impl From<Rc<DatabaseRevision>> for RevisionIdentifier {
+    fn from(dr: Rc<DatabaseRevision>) -> Self {
+        Self(dr.filename.clone())
+    }
+}
+
+
+use std::rc::Rc;
+
+#[derive(Debug)]
+struct Reviewer {
+    files: Vec<Rc<FileRevision>>,
+    records: Vec<Rc<DatabaseRevision>>,
+    files_map: HashMap<RevisionIdentifier, Rc<FileRevision>>,
+    records_map: HashMap<RevisionIdentifier, Rc<DatabaseRevision>>,
+}
+
+impl Reviewer {
+    fn new(mut files: Vec<FileRevision>, mut records: Vec<DatabaseRevision>) -> Self {
+        let files: Vec<Rc<FileRevision>> = files
+            .drain(..)
+            .map(|fr| Rc::new(fr))
+            .collect();
+
+        let files_map = files.iter()
+            .map(|fr| (RevisionIdentifier(fr.filename.clone()), fr.clone()))
+            .collect();
+
+        let records: Vec<Rc<DatabaseRevision>> = records
+            .drain(..)
+            .map(|dr| Rc::new(dr))
+            .collect();
+
+        let records_map = records.iter()
+            .map(|dr| (RevisionIdentifier(dr.filename.clone()), dr.clone()))
+            .collect();
+
+        Self { files, files_map, records, records_map }
+    }
+
+    /// Checks whether the revision has been applied and, if so, whether the
+    /// checksums match.
+    fn check_revision_files(self) -> Self {
+        self
+    }
+
+    /// Checks that each revision database record still has a corresponding
+    /// revision file.
+    fn check_revision_records(self) -> Self {
+        self
+    }
+}
+
 
 pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
     let config = Config::new(conf_path_name)?;
@@ -68,17 +131,22 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
 
     exec.ensure_table_exists()?;
 
+    // Load all revisions from disk and hash each
     let file_revisions = FileRevision::all_from_disk(&config.paths.revisions)?;
+
+    // Load all revisions from database
     let db_revisions = exec.load_revisions()?;
 
-    for fv in file_revisions { println!("{:?}", fv); }
-    println!("");
-    for dv in db_revisions { println!("{:?}", dv); }
+    let reviewer = Reviewer::new(file_revisions, db_revisions)
+        .check_revision_files()
+        .check_revision_records();
+
+    println!("{:#?}", reviewer);
+
+    //compare
 
     /*
-     * Load all revisions from disk and hash each
      *
-     * Load all revisions from database
      *
      * Verify all applied are still present on disk
      *

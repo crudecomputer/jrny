@@ -8,17 +8,20 @@ use std::path::PathBuf;
 pub struct DatabaseRevision {
     pub applied_on: DateTime<Utc>,
     pub checksum: String,
-    pub name: String,
-    pub timestamp: DateTime<Utc>,
+    pub filename: String,
+    pub on_disk: Option<bool>,
+    //pub name: String,
+    //pub timestamp: DateTime<Utc>,
 }
 
 #[derive(Debug)]
 pub struct FileRevision {
-    applied: bool,
-    checksum: String,
-    contents: String,
-    name: String,
-    timestamp: DateTime<Utc>,
+    pub applied: Option<bool>,
+    pub checksum: String,
+    pub contents: String,
+    pub filename: String,
+    //pub name: String,
+    //pub timestamp: DateTime<Utc>,
 }
 
 impl FileRevision {
@@ -49,19 +52,19 @@ impl TryFrom<&PathBuf> for FileRevision {
             .flatten()
             .ok_or_else(|| format!("{} is not a valid file", p.display()))?;
 
-        let parts: Vec<&str> = filename.splitn(2, ".").collect();
+        //let parts: Vec<&str> = filename.splitn(2, ".").collect();
 
-        let err = || format!(
-            "Invalid revision name {}: expected <timestamp>.<name>.sql",
-            filename,
-        );
+        //let err = || format!(
+            //"Invalid revision name {}: expected <timestamp>.<name>.sql",
+            //filename,
+        //);
 
-        let (seconds, name) = match (parts.get(0), parts.get(1)) {
-            (Some(seconds), Some(name)) => (seconds, name),
-            _ => return Err(err()),
-        };
-        let seconds: i64 = seconds.parse().map_err(|_| err())?;
-        let timestamp = Utc.timestamp(seconds, 0);
+        //let (seconds, name) = match (parts.get(0), parts.get(1)) {
+            //(Some(seconds), Some(name)) => (seconds, name),
+            //_ => return Err(err()),
+        //};
+        //let seconds: i64 = seconds.parse().map_err(|_| err())?;
+        //let timestamp = Utc.timestamp(seconds, 0);
 
         let contents = fs::read_to_string(p)
             .map_err(|e| format!(
@@ -71,11 +74,12 @@ impl TryFrom<&PathBuf> for FileRevision {
             ))?;
 
         Ok(Self {
-            applied: false,
+            applied: None,
             checksum: to_checksum(&contents),
             contents,
-            name: name.to_string(),
-            timestamp,
+            filename: filename.to_string(),
+            //name: name.to_string(),
+            //timestamp,
         })
     }
 }

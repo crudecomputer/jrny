@@ -71,12 +71,18 @@ impl Executor {
         let rows = self.client.query(stmt.as_str(), &[])
             .map_err(|e| e.to_string())?;
 
+        use chrono::{DateTime, Utc};
+
         let revisions = rows.iter()
             .map(|r| DatabaseRevision {
                 applied_on: r.get("applied_on"),
                 checksum: r.get("checksum"),
-                name: r.get("filename"),
-                timestamp: r.get("timestamp"),
+                filename: format!(
+                    "{}.{}",
+                    r.get::<&str, DateTime<Utc>>("timestamp").timestamp(),
+                    r.get::<&str, String>("filename"),
+                ),
+                on_disk: None,
             })
             .collect();
 

@@ -1,5 +1,3 @@
-//pub mod executor;
-
 pub mod commands;
 mod client;
 mod config;
