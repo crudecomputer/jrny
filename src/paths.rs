@@ -1,60 +1,50 @@
 use std::path::PathBuf;
 
-/// Stores a path with a displayable string to ensure that such a path
-/// can always be printed without error.
-pub struct PathWithName {
-    pub path: PathBuf,
-    pub name: String,
-}
+use crate::CONF;
+
 
 pub struct ProjectPaths {
-    pub conf: PathWithName,
-    pub revisions: PathWithName,
-    pub root: PathWithName,
+    pub conf: PathBuf,
+    pub revisions: PathBuf,
+    pub root: PathBuf,
 }
 
 impl ProjectPaths {
-    pub fn for_new_project(path: &str, conf_name: &str) -> Result<Self, String> {
-        let root = PathBuf::from(path);
+    pub fn for_new_project(root_dir: &str) -> Result<Self, String> {
+        let root = PathBuf::from(root_dir);
         let revisions = root.join("revisions");
-        let conf = root.join(conf_name);
+        let conf = root.join(CONF);
 
-        let paths = ProjectPaths {
-            conf: PathWithName {
-                name: conf.to_str()
-                    .expect("Could not generate name for config file")
-                    .to_string(),
-                path: conf,
-            },
-            revisions: PathWithName {
-                name: revisions.to_str()
-                    .expect("Could not generate name for revisions path")
-                    .to_string(),
-                path: revisions,
-            },
-            root: PathWithName {
-                name: path.to_string(),
-                path: root,
-            },
-
-        };
+        let paths = ProjectPaths { conf, revisions, root };
 
         paths.valid_for_new()?;
 
         Ok(paths)
     }
 
+    pub fn from_conf_path(conf_path_name: Option<&str>) -> Result<Self, String> {
+        let conf = PathBuf::from(conf_path_name.unwrap_or(CONF));
+
+        let root = conf.parent()
+            .ok_or_else(|| "Config filepath is not valid".to_string())?
+            .to_path_buf();
+
+        let revisions = root.join("revisions");
+
+        Ok(ProjectPaths { conf, revisions, root })
+    }
+
     fn valid_for_new(&self) -> Result<(), String> {
-        if self.root.path.exists() && !self.root.path.is_dir() {
-            return Err(format!("{} is not a directory", self.root.name));
+        if self.root.exists() && !self.root.is_dir() {
+            return Err(format!("{} is not a directory", self.root.display()));
         }
 
-        if self.revisions.path.exists() && !Self::is_empty_dir(&self.revisions.path)? {
-            return Err(format!("{} is not an empty directory", self.revisions.name));
+        if self.revisions.exists() && !Self::is_empty_dir(&self.revisions)? {
+            return Err(format!("{} is not an empty directory", self.revisions.display()));
         }
 
-        if self.conf.path.exists() {
-            return Err(format!("{} already exists", self.conf.name));
+        if self.conf.exists() {
+            return Err(format!("{} already exists", self.conf.display()));
         }
 
         Ok(())

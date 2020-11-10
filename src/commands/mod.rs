@@ -1,13 +1,17 @@
+use chrono::{DateTime, Utc};
 use std::{
+    fmt::Display,
     fs,
     io::prelude::*,
-    path::PathBuf,
-    time::SystemTime,
-    str::FromStr,
 };
+
+use crate::{Config, Executor, FileRevision};
 
 mod begin;
 use begin::Begin;
+
+mod review;
+use review::Review;
 
 
 /// Accepts a path string targeting a directory to set up project files:
@@ -24,9 +28,9 @@ pub fn begin(p: &str) -> Result<(), String> {
 
     println!("The journey has begun");
 
-    print_path("  ",     cmmd.created_root,      &cmmd.paths.root.name);
-    print_path("  ├── ", cmmd.created_revisions, &cmmd.paths.revisions.name);
-    print_path("  └── ", cmmd.created_conf,      &cmmd.paths.conf.name);
+    print_path("  ",     cmmd.created_root,      &cmmd.paths.root.display());
+    print_path("  ├── ", cmmd.created_revisions, &cmmd.paths.revisions.display());
+    print_path("  └── ", cmmd.created_conf,      &cmmd.paths.conf.display());
 
     Ok(())
 }
@@ -34,44 +38,73 @@ pub fn begin(p: &str) -> Result<(), String> {
 /// Accepts a name for the migration file and an optional path to a config file.
 /// If no path is provided, it will add a timestamped SQL file relative to current
 /// working directory; otherwise it will add file in a directory relative to config.
-pub fn plan(name: &str, conf_path: Option<&str>) -> Result<(), String> {
-    // Non-monotonic clock should be fine since precision isn't important.
-    let timestamp = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
+pub fn revise(name: &str, conf_path_name: Option<&str>) -> Result<(), String> {
+    let config = Config::new(conf_path_name)?;
 
-    let mut revision_path = match conf_path {
-        Some(cp) => {
-            let mut conf_path = PathBuf::from_str(cp).map_err(|e| e.to_string())?;
+    let utc: DateTime<Utc> = Utc::now();
+    let timestamp = utc.timestamp();
 
-            if !conf_path.pop() {
-                return Err("Config filepath is not valid".to_string());
-            }
-
-            conf_path
-        },
-        None => PathBuf::new(),
-    };
-
-    let filename = format!("{}-{}.sql", timestamp, name);
-    revision_path.push("revisions");
-    revision_path.push(&filename);
+    let revision_path = config.paths.revisions
+        .join(format!("{}.{}.sql", timestamp, name));
+    let filename = revision_path.display();
 
     fs::File::create(&revision_path)
         .map_err(|e| e.to_string())?
-        .write_all(format!("-- Journey revision\n--\n-- {}\n--\n\n", filename).as_bytes())
+        .write_all(format!(
+            "-- Journey revision\n--\n-- {}\n--\n\n",
+            filename,
+        ).as_bytes())
         .map_err(|e| e.to_string())?;
 
-    println!("Created {}", revision_path.display());
+    println!("Created {}", filename);
 
     Ok(())
 }
 
+pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
+    let config = Config::new(conf_path_name)?;
+    let mut exec = Executor::new(&config)?;
 
-/// Attempts to convert path to printable string and then prints with optional
-/// prefix and "created" suffix if the created condition is true.
-fn print_path(prefix: &str, created: bool, path_name: &str) {
+    exec.ensure_table_exists()?;
+
+    let files = FileRevision::all_from_disk(&config.paths.revisions)?;
+    let records = exec.load_revisions()?;
+    let annotated = Review::annotate(files, records);
+
+    if annotated.len() == 0 {
+        println!("No revisions found. Create your first revision with `jrny revise <some-revision-name>`.");
+
+        return Ok(());
+    }
+
+    println!("The journey thus far\n");
+    println!("{:50}{:50}{}", "Revision name", "Applied on", "Error");
+
+    for anno in annotated {
+        println!(
+            "{:50}{:50}{}",
+            anno.filename,
+            if let Some(a) = anno.applied_on {
+                a.to_string()
+            } else {
+                "[Not Applied]".to_string()
+            },
+            if let Some(false) = anno.checksums_match {
+                "The file has changed after being applied"
+            } else if !anno.on_disk {
+                "No corresponding file could not be found"
+            } else {
+                ""
+            },
+        );
+    }
+
+    Ok(())
+}
+
+/// Prints path string with optional prefix and "[created]" suffix if the created
+/// condition is true.
+fn print_path(prefix: &str, created: bool, path_name: impl Display) {
     println!(
         "{}{}{}",
         prefix,

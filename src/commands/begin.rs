@@ -1,25 +1,7 @@
-use crate::ProjectPaths;
+use crate::{CONF_TEMPLATE, ProjectPaths};
 
 use std::io::Write;
 use std::fs;
-
-
-const CONF: &str = "jrny.toml";
-const CONF_TEMPLATE: &[u8] = r#"# jrny.toml
-
-[app]
-executor = "postgres"
-schema = "public"
-table = "jrny_revisions"
-
-[connection]
-host = "localhost"
-port = 5432
-name = "dbname"
-user = "dbrole"
-"#
-.as_bytes();
-
 
 pub struct Begin {
     pub paths: ProjectPaths,
@@ -37,7 +19,7 @@ impl Begin {
     /// to the file system will be attempted to be reversed.
     pub fn new_project(p: &str) -> Result<Self, String> {
         Ok(Self {
-            paths: ProjectPaths::for_new_project(p, CONF)?,
+            paths: ProjectPaths::for_new_project(p)?,
             created_conf: false,
             created_revisions: false,
             created_root: false,
@@ -47,8 +29,8 @@ impl Begin {
     /// Attempts to create the project root directory if it doesn't exist,
     /// marking created as true if newly created.
     pub fn create_root(mut self) -> Result<Self, String> {
-        if !self.paths.root.path.exists() {
-            fs::create_dir(&self.paths.root.path).map_err(|e| e.to_string())?;
+        if !self.paths.root.exists() {
+            fs::create_dir(&self.paths.root).map_err(|e| e.to_string())?;
             self.created_root = true;
         }
 
@@ -58,8 +40,8 @@ impl Begin {
     /// Attempts to create the revisions directory if it doesn't exist,
     /// marking created as true if newly created.
     pub fn create_revisions(mut self) -> Result<Self, String> {
-        if !self.paths.revisions.path.exists() {
-            if let Err(e) = fs::create_dir(&self.paths.revisions.path) {
+        if !self.paths.revisions.exists() {
+            if let Err(e) = fs::create_dir(&self.paths.revisions) {
                 self.revert()?;
 
                 return Err(e.to_string());
@@ -76,7 +58,7 @@ impl Begin {
     pub fn create_conf(mut self) -> Result<Self, String> {
         let mut err = None;
 
-        match fs::File::create(&self.paths.conf.path) {
+        match fs::File::create(&self.paths.conf) {
             Ok(mut f) => {
                 self.created_conf = true;
 
@@ -101,15 +83,15 @@ impl Begin {
     /// Attempts to remove any directories or files created during command execution.
     fn revert(&self) -> Result<(), String> {
         if self.created_conf {
-            fs::remove_file(&self.paths.conf.path).map_err(|e| e.to_string())?;
+            fs::remove_file(&self.paths.conf).map_err(|e| e.to_string())?;
         }
 
         if self.created_revisions {
-            fs::remove_dir(&self.paths.revisions.path).map_err(|e| e.to_string())?;
+            fs::remove_dir(&self.paths.revisions).map_err(|e| e.to_string())?;
         }
 
         if self.created_root {
-            fs::remove_dir(&self.paths.root.path).map_err(|e| e.to_string())?;
+            fs::remove_dir(&self.paths.root).map_err(|e| e.to_string())?;
         }
 
         Ok(())

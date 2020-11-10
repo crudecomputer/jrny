@@ -11,15 +11,16 @@ fn main() {
             (@arg dirpath: +required "The directory in which to set up new project files - will be created if does not exist")
         )
 
-        (@subcommand plan =>
-            (about: "Generates a timestamped SQL revision plan")
+        (@subcommand revise =>
+            (about: "Generates a timestamped SQL revision")
             (@arg name: +required "Name of the revision")
             (@arg config: -c --config [FILE] +takes_value "Sets a custom config file")
         )
 
-        //(@subcommand review =>
-            //(about: "Determines the necessary revisions to apply from within project directory")
-        //)
+        (@subcommand review =>
+            (about: "Reviews which plans need to be applied, which have been applied and when, and whether or not plans already applied appear to differ from the plan file")
+            (@arg config: -c --config [FILE] +takes_value "Sets a custom config file")
+        )
 
         //(@subcommand embark =>
             //(about: "Applies the necessary revisions from within project directory")
@@ -27,12 +28,16 @@ fn main() {
     };
 
     let result = match app.clone().get_matches().subcommand() {
-        ("begin", Some(subm)) => commands::begin(subm.value_of("dirpath").unwrap()),
-        ("plan", Some(subm)) => commands::plan(
-            subm.value_of("name").unwrap(),
-            subm.value_of("config"),
+        ("begin", Some(cmd)) => commands::begin(
+            cmd.value_of("dirpath").unwrap(),
         ),
-        //("review", Some(_)) => jrny::connect().review(),
+        ("revise", Some(cmd)) => commands::revise(
+            cmd.value_of("name").unwrap(),
+            cmd.value_of("config"),
+        ),
+        ("review", Some(cmd)) => commands::review(
+            cmd.value_of("config"),
+        ),
         //("embark", Some(_)) => jrny::connect().embark(),
 
         // TODO How to print help in absence of subcommand without cloning?
