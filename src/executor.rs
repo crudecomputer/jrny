@@ -9,12 +9,12 @@ const CREATE_SCHEMA: &str =
 const CREATE_TABLE: &str =
 "CREATE TABLE $$schema$$.$$table$$ (
     id          SERIAL       PRIMARY KEY,
-    timestamp   TIMESTAMPTZ  NOT NULL,
     applied_on  TIMESTAMPTZ  NOT NULL,
+    created_at  TIMESTAMPTZ  NOT NULL,
     filename    TEXT         NOT NULL,
     checksum    TEXT         NOT NULL,
 
-    UNIQUE (timestamp, filename)
+    UNIQUE (created_at, filename)
 )";
 
 const TABLE_EXISTS: &str =
@@ -31,12 +31,12 @@ const SCHEMA_EXISTS: &str =
 
 const SELECT_REVISIONS: &str =
 "SELECT
-    timestamp,
+    created_at,
     filename,
     checksum,
     applied_on
 FROM $$schema$$.$$table$$
-ORDER BY timestamp ASC
+ORDER BY created_at ASC
 ";
 
 pub struct Executor {
@@ -79,10 +79,9 @@ impl Executor {
                 checksum: r.get("checksum"),
                 filename: format!(
                     "{}.{}",
-                    r.get::<&str, DateTime<Utc>>("timestamp").timestamp(),
+                    r.get::<&str, DateTime<Utc>>("created_at").timestamp(),
                     r.get::<&str, String>("filename"),
                 ),
-                on_disk: None,
             })
             .collect();
 

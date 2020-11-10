@@ -9,14 +9,12 @@ pub struct DatabaseRevision {
     pub applied_on: DateTime<Utc>,
     pub checksum: String,
     pub filename: String,
-    pub on_disk: Option<bool>,
     //pub name: String,
     //pub timestamp: DateTime<Utc>,
 }
 
 #[derive(Debug)]
 pub struct FileRevision {
-    pub applied: Option<bool>,
     pub checksum: String,
     pub contents: String,
     pub filename: String,
@@ -74,7 +72,6 @@ impl TryFrom<&PathBuf> for FileRevision {
             ))?;
 
         Ok(Self {
-            applied: None,
             checksum: to_checksum(&contents),
             contents,
             filename: filename.to_string(),
