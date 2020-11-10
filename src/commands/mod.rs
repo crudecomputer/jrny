@@ -71,9 +71,13 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
     let records = exec.load_revisions()?;
     let annotated = Review::annotate(files, records);
 
-    //println!("{:#?}", annotated);
+    if annotated.len() == 0 {
+        println!("No revisions found. Create your first revision with `jrny revise <some-revision-name>`.");
 
-    println!("The journey thus far");
+        return Ok(());
+    }
+
+    println!("The journey thus far\n");
     println!("{:50}{:50}{}", "Revision name", "Applied on", "Error");
 
     for anno in annotated {
@@ -83,7 +87,7 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
             if let Some(a) = anno.applied_on {
                 a.to_string()
             } else {
-                "Not applied".to_string()
+                "[Not Applied]".to_string()
             },
             if let Some(false) = anno.checksums_match {
                 "The file has changed after being applied"
