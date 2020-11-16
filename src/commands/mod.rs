@@ -81,22 +81,19 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
     println!("{:50}{:50}{}", "Revision name", "Applied on", "Error");
 
     for anno in annotated {
-        println!(
-            "{:50}{:50}{}",
-            anno.filename,
-            if let Some(a) = anno.applied_on {
-                a.to_string()
-            } else {
-                "[Not Applied]".to_string()
-            },
-            if let Some(false) = anno.checksums_match {
-                "The file has changed after being applied"
-            } else if !anno.on_disk {
-                "No corresponding file could not be found"
-            } else {
-                ""
-            },
-        );
+        let applied_on = match anno.applied_on {
+            Some(a) => a.to_string(),
+            _ => "[Not Applied]".to_string(),
+        };
+        let error = if let Some(false) = anno.checksums_match {
+            "The file has changed after being applied"
+        } else if !anno.on_disk {
+            "No corresponding file could not be found"
+        } else {
+            ""
+        };
+
+        println!("{:50}{:50}{}", anno.filename, applied_on, error);
     }
 
     Ok(())
