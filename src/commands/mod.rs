@@ -35,6 +35,11 @@ pub fn begin(p: &str) -> Result<(), String> {
     Ok(())
 }
 
+pub fn on(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> {
+    println!("{:?}, {:?}", conf_path_name, commit);
+    Ok(())
+}
+
 /// Accepts a name for the migration file and an optional path to a config file.
 /// If no path is provided, it will add a timestamped SQL file relative to current
 /// working directory; otherwise it will add file in a directory relative to config.
