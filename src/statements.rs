@@ -23,7 +23,9 @@ impl StatementGroup {
 fn parse(text: &str) -> Result<Vec<Statement>, String> {
     let mut parser = Parser::new();
 
-    //for c in text.trim().chars() {
+    // TODO how bad is using `chars` for non-UTF char sets, of which there
+    // are a ton supported by postgres?
+    // See: https://www.postgresql.org/docs/13/multibyte.html#MULTIBYTE-CHARSET-SUPPORTED
     for c in text.chars() {
         parser.accept(c);
     }
@@ -154,31 +156,54 @@ mod tests {
     }
 
     #[test]
+    fn test_quoted_with_semicolons() {
+        assert_eq!(
+            parse(r#" '";'"  "#).unwrap(),
+            vec![
+                Statement(r#"'";'""#.to_string()),
+            ]
+        );
+        assert_eq!(
+            parse(r#" '"';"  "#).unwrap(),
+            vec![
+                Statement(r#"'"'"#.to_string()),
+                Statement(r#"""#.to_string()),
+            ]
+        );
+        assert_eq!(
+            parse(r#" a ';' b ";" c '";"' d "';'" e    "#).unwrap(),
+            vec![
+                Statement(r#"a ';' b ";" c '";"' d "';'" e"#.to_string()),
+            ]
+        );
+    }
+
+    #[test]
     fn test_errors_from_transaction_commands() {
         let err = |cmd| Err(format!(
             "{} command is not supported in a revision",
             cmd,
         ));
 
-        assert_eq!(parse(" beGIN "), err("BEGIN"));
+        assert_eq!(parse(" beGIN "),         err("BEGIN"));
         assert_eq!(parse("one; begin; two"), err("BEGIN"));
         assert_eq!(parse("ONE; BEGIN; TWO"), err("BEGIN"));
 
-        assert_eq!(parse("  savEPOint "), err("SAVEPOINT"));
+        assert_eq!(parse("  savEPOint "),        err("SAVEPOINT"));
         assert_eq!(parse("one; savepoint; two"), err("SAVEPOINT"));
         assert_eq!(parse("ONE; SAVEPOINT; TWO"), err("SAVEPOINT"));
 
-        assert_eq!(parse("  rOLLBack "), err("ROLLBACK"));
+        assert_eq!(parse("  rOLLBack "),        err("ROLLBACK"));
         assert_eq!(parse("one; rollback; two"), err("ROLLBACK"));
         assert_eq!(parse("ONE; ROLLBACK; TWO"), err("ROLLBACK"));
 
-        assert_eq!(parse("  coMMIt "), err("COMMIT"));
+        assert_eq!(parse("  coMMIt "),        err("COMMIT"));
         assert_eq!(parse("one; commit; two"), err("COMMIT"));
         assert_eq!(parse("ONE; COMMIT; TWO"), err("COMMIT"));
 
         assert_eq!(parse("begin; rollback; savepoint; commit"), err("BEGIN"));
         assert_eq!(parse("rollback; begin; savepoint; commit"), err("ROLLBACK"));
         assert_eq!(parse("savepoint; begin; rollback; commit"), err("SAVEPOINT"));
-        assert_eq!(parse("commit; begin; rollback; commit"), err("COMMIT"));
+        assert_eq!(parse("commit; begin; rollback; commit"),    err("COMMIT"));
     }
 }
