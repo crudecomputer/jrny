@@ -4,6 +4,7 @@ mod config;
 mod executor;
 mod paths;
 mod revision;
+mod statements;
 
 pub use paths::ProjectPaths;
 use config::Config;

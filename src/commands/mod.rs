@@ -26,7 +26,7 @@ pub fn begin(p: &str) -> Result<(), String> {
         .create_revisions()?
         .create_conf()?;
 
-    println!("The journey has begun");
+    println!("A journey has begun");
 
     print_path("  ",     cmmd.created_root,      &cmmd.paths.root.display());
     print_path("  ├── ", cmmd.created_revisions, &cmmd.paths.revisions.display());
@@ -37,6 +37,9 @@ pub fn begin(p: &str) -> Result<(), String> {
 
 pub fn on(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> {
     println!("{:?}, {:?}", conf_path_name, commit);
+
+    // Review revisions
+
     Ok(())
 }
 
