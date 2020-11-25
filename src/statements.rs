@@ -23,15 +23,39 @@ impl StatementGroup {
 fn parse(text: &str) -> Result<Vec<Statement>, String> {
     let mut parser = Parser::new();
 
-    for c in text.trim().chars() {
+    //for c in text.trim().chars() {
+    for c in text.chars() {
         parser.accept(c);
     }
 
-    Ok(parser.statements
-        .drain(..)
-        .filter(|stmt| !stmt.0.is_empty())
+    // If the parser handled white-space better, the extra allocations
+    // here would not be necessary... TODO
+    let statements: Vec<Statement> = parser.statements.iter()
         .map(|stmt| Statement(stmt.0.trim().to_string()))
-        .collect())
+        .filter(|stmt| !stmt.0.is_empty())
+        .collect();
+
+    // Transaction-management commands should cause immediate errors,
+    // and thankfully it's just exact keyword matching at the start
+    // (provided the string is TRIMMED) and it doesn't matter if
+    // they're embedded inside a string or delimited identifier at all.
+    for s in &statements {
+        let lowered = s.0.chars()
+            .take(10)
+            .collect::<String>()
+            .to_lowercase();
+
+        for command in ["begin", "savepoint", "rollback", "commit"].iter() {
+            if lowered.starts_with(command) {
+                return Err(format!(
+                    "{} command is not supported in a revision",
+                    command.to_uppercase(),
+                ));
+            }
+        }
+    }
+
+    Ok(statements)
 }
 
 struct Parser {
@@ -90,11 +114,12 @@ mod tests {
 
     #[test]
     fn test_parse_empty() {
-        let expected: Vec<Statement> = vec![];
+        let empty: Vec<Statement> = vec![];
 
-        assert_eq!(parse("").unwrap(), expected);
-        assert_eq!(parse("  ").unwrap(), expected);
-        assert_eq!(parse("  \n  \n  ").unwrap(), expected);
+        assert_eq!(parse("").unwrap(), empty);
+        assert_eq!(parse("  ").unwrap(), empty);
+        assert_eq!(parse("  \n  \n  ").unwrap(), empty);
+        assert_eq!(parse(" ;; ; ;  ;").unwrap(), empty);
     }
 
     #[test]
@@ -126,5 +151,34 @@ mod tests {
                 Statement("two things".to_string()),
             ],
         );
+    }
+
+    #[test]
+    fn test_errors_from_transaction_commands() {
+        let err = |cmd| Err(format!(
+            "{} command is not supported in a revision",
+            cmd,
+        ));
+
+        assert_eq!(parse(" beGIN "), err("BEGIN"));
+        assert_eq!(parse("one; begin; two"), err("BEGIN"));
+        assert_eq!(parse("ONE; BEGIN; TWO"), err("BEGIN"));
+
+        assert_eq!(parse("  savEPOint "), err("SAVEPOINT"));
+        assert_eq!(parse("one; savepoint; two"), err("SAVEPOINT"));
+        assert_eq!(parse("ONE; SAVEPOINT; TWO"), err("SAVEPOINT"));
+
+        assert_eq!(parse("  rOLLBack "), err("ROLLBACK"));
+        assert_eq!(parse("one; rollback; two"), err("ROLLBACK"));
+        assert_eq!(parse("ONE; ROLLBACK; TWO"), err("ROLLBACK"));
+
+        assert_eq!(parse("  coMMIt "), err("COMMIT"));
+        assert_eq!(parse("one; commit; two"), err("COMMIT"));
+        assert_eq!(parse("ONE; COMMIT; TWO"), err("COMMIT"));
+
+        assert_eq!(parse("begin; rollback; savepoint; commit"), err("BEGIN"));
+        assert_eq!(parse("rollback; begin; savepoint; commit"), err("ROLLBACK"));
+        assert_eq!(parse("savepoint; begin; rollback; commit"), err("SAVEPOINT"));
+        assert_eq!(parse("commit; begin; rollback; commit"), err("COMMIT"));
     }
 }
