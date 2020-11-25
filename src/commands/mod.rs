@@ -89,13 +89,29 @@ pub fn on(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> {
     }
 
     // TODO confirm..? or allow "auto confirm" option..?
+    // Parse all files into statements before printing or applying any
+    /*let groups = to_apply.iter()*/
+        /*.map(|rev| (rev.filename.clone(), StatementGroup::new(rev.contents.as_ref().unwrap())))*/
+        /*.collect::<Result<Vec<(String, StatementGroup)>, String>>()?;*/
 
-    for revision in &to_apply {
-        let group = StatementGroup::new(revision.contents.as_ref().unwrap())?;
+    let mut groups = vec![];
 
-        println!("\nApplying \"{}\"\n", revision.filename);
+    for revision in to_apply.iter() {
+        match StatementGroup::new(revision.contents.as_ref().unwrap()) {
+            Ok(group) => {
+                groups.push((revision.filename.clone(), group));
+            },
+            Err(e) => {
+                eprintln!("\nFound error in \"{}\"", revision.filename);
+                return Err(e);
+            },
+        }
+    }
 
-        for statement in group.statements {
+    for (filename, group) in &groups {
+        println!("\nApplying \"{}\"\n", filename);
+
+        for statement in &group.statements {
             let preview = statement.0.lines()
                 .take(3)
                 .fold(String::new(), |a, b| a + b.trim() + " ")
