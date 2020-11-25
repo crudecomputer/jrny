@@ -7,16 +7,17 @@ use crate::{DatabaseRevision, FileRevision};
 
 #[derive(Debug, Eq)]
 pub struct AnnotatedRevision {
-    pub contents: Option<String>,
-    pub filename: String,
     pub applied_on: Option<DateTime<Utc>>,
+    pub contents: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub filename: String,
     pub checksums_match: Option<bool>,
     pub on_disk: bool,
 }
 
 impl Ord for AnnotatedRevision {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.filename.cmp(&other.filename)
+        (&self.created_at, &self.filename).cmp(&(&other.created_at, &other.filename))
     }
 }
 
@@ -28,7 +29,7 @@ impl PartialOrd for AnnotatedRevision {
 
 impl PartialEq for AnnotatedRevision {
     fn eq(&self, other: &Self) -> bool {
-        self.filename == other.filename
+        self.created_at == other.created_at && self.filename == other.filename
     }
 }
 
@@ -59,7 +60,8 @@ impl Review {
             .collect();
 
         let files_map = files.iter()
-            .map(|fr| (fr.filename.clone(), fr.clone()))
+            // TODO clean this stuff up
+            .map(|fr| (format!("{}.{}.sql", fr.created_at.timestamp(), fr.filename), fr.clone()))
             .collect();
 
         let records: Vec<Rc<DatabaseRevision>> = records
@@ -68,7 +70,7 @@ impl Review {
             .collect();
 
         let records_map = records.iter()
-            .map(|dr| (dr.filename.clone(), dr.clone()))
+            .map(|dr| (format!("{}.{}.sql", dr.created_at.timestamp(), dr.filename), dr.clone()))
             .collect();
 
         Self { annotated: vec![], files, files_map, records, records_map }
@@ -81,10 +83,11 @@ impl Review {
     pub fn annotate_revisions(mut self) -> Self {
         for file in self.files.iter() {
             let mut anno = AnnotatedRevision {
-                contents: Some(file.contents.clone()),
-                filename: file.filename.clone(),
                 applied_on: None,
                 checksums_match: None,
+                contents: Some(file.contents.clone()),
+                created_at: file.created_at.clone(),
+                filename: file.filename.clone(),
                 on_disk: true,
             };
 
@@ -102,10 +105,11 @@ impl Review {
             }
 
             let anno = AnnotatedRevision {
-                contents: None,
-                filename: record.filename.clone(),
                 applied_on: Some(record.applied_on),
                 checksums_match: None,
+                contents: None,
+                created_at: record.created_at,
+                filename: record.filename.clone(),
                 on_disk: false,
             };
 

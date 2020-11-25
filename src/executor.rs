@@ -1,7 +1,7 @@
 use postgres::Client;
 use std::convert::TryFrom;
 
-use crate::{Config, DatabaseRevision};
+use crate::{Config, DatabaseRevision, FileRevision};
 
 const CREATE_SCHEMA: &str =
 "CREATE SCHEMA $$schema$$";
@@ -31,12 +31,21 @@ const SCHEMA_EXISTS: &str =
 
 const SELECT_REVISIONS: &str =
 "SELECT
-    created_at,
-    filename,
+    applied_on,
     checksum,
-    applied_on
+    created_at,
+    filename
 FROM $$schema$$.$$table$$
 ORDER BY created_at ASC
+";
+
+const INSERT_REVISION: &str =
+"INSERT INTO $$schema$$.$$table$$ (
+    filename,
+    checksum,
+    created_at,
+    applied_on
+) VALUES ($1, $2, $3, now())
 ";
 
 pub struct Executor {
@@ -77,6 +86,7 @@ impl Executor {
             .map(|r| DatabaseRevision {
                 applied_on: r.get("applied_on"),
                 checksum: r.get("checksum"),
+                created_at: r.get("created_at"),
                 filename: format!(
                     "{}.{}",
                     r.get::<&str, DateTime<Utc>>("created_at").timestamp(),
@@ -122,4 +132,15 @@ impl Executor {
         self.client.execute(create.as_str(), &[]).map_err(|e| e.to_string())?;
         Ok(())
     }
+
+    //fn insert_revision(&mut self, revision: &FileRevision) -> Result<(), String> {
+        //let insert = INSERT_REVISION
+            //.replace("$$schema$$", &self.schema)
+            //.replace("$$table$$", &self.table);
+            
+        //let row = self.client.execute(insert, &[
+            //&self.schema,
+            //&self.table,
+        //]).map_err(|e| e.to_string())?;
+    //}
 }
