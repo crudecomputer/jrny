@@ -6,6 +6,7 @@ use std::{
 };
 
 use crate::{Config, Executor, FileRevision};
+use crate::statements::StatementGroup;
 
 mod begin;
 use begin::Begin;
@@ -36,9 +37,73 @@ pub fn begin(p: &str) -> Result<(), String> {
 }
 
 pub fn on(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> {
-    println!("{:?}, {:?}", conf_path_name, commit);
+    // FIXME this is SO much copy/paste with `review`
+    let config = Config::new(conf_path_name)?;
+    let mut exec = Executor::new(&config)?;
 
     // Review revisions
+    let files = FileRevision::all_from_disk(&config.paths.revisions)?;
+    let records = exec.load_revisions()?;
+    let annotated = Review::annotate(files, records);
+
+    // If checksum comparison is missing, it hasn't been applied so ignore it
+    let changed: Vec<_> = annotated.iter()
+        .filter(|anno| !anno.checksums_match.unwrap_or(true))
+        .collect();
+
+    let missing: Vec<_> = annotated.iter()
+        .filter(|anno| !anno.on_disk)
+        .collect();
+
+    if changed.len() > 0 || missing.len() > 0 {
+        let mut msg = "Failed to run revisions".to_string();
+
+        if changed.len() > 0 {
+            msg.push_str(&format!("{} have changed since being applied", changed.len()));
+        }
+
+        if missing.len() > 0 {
+            msg.push_str(&format!("{} are no longer present on disk", changed.len()));
+        }
+
+        return Err(msg);
+    }
+
+    let to_apply: Vec<_> = annotated.iter()
+        .filter(|anno|
+            anno.on_disk &&
+            anno.applied_on.is_none()
+        )
+        .collect();
+
+    if to_apply.len() == 0 {
+        println!("No revisions to apply");
+        return Ok(())
+
+    }
+
+    println!("Found {} revision(s) to apply", to_apply.len());
+
+    for revision in &to_apply {
+        println!("\t{}", revision.filename);
+    }
+
+    // TODO confirm..? or allow "auto confirm" option..?
+
+    for revision in &to_apply {
+        let group = StatementGroup::new(revision.contents.as_ref().unwrap())?;
+
+        println!("\nApplying \"{}\"\n", revision.filename);
+
+        for statement in group.statements {
+            let preview = statement.0.lines()
+                .take(3)
+                .fold(String::new(), |a, b| a + b.trim() + " ")
+                + "...";
+
+            println!("\t{}", preview);
+        }
+    }
 
     Ok(())
 }

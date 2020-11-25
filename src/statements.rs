@@ -5,28 +5,32 @@
 use std::mem;
 
 #[derive(Debug, Default, PartialEq)]
-struct Statement(String);
+pub struct Statement(pub String);
 
 #[derive(Debug)]
-struct StatementGroup {
-    statements: Vec<Statement>,
+pub struct StatementGroup {
+    pub statements: Vec<Statement>,
 }
 
 impl StatementGroup {
-    fn new(text: &str) -> Result<Self, String> {
+    pub fn new(text: &str) -> Result<Self, String> {
         Ok(Self {
             statements: parse(text)?,
         })
     }
 }
 
-fn parse(text: &str) -> Result<Vec<Statement>, String> {
+pub fn parse(text: &str) -> Result<Vec<Statement>, String> {
     let mut parser = Parser::new();
+
+    let without_comments: String = text.lines()
+        .filter(|l| !l.trim().starts_with("--"))
+        .fold(String::new(), |a, b| a + b + "\n");
 
     // TODO how bad is using `chars` for non-UTF char sets, of which there
     // are a ton supported by postgres?
     // See: https://www.postgresql.org/docs/13/multibyte.html#MULTIBYTE-CHARSET-SUPPORTED
-    for c in text.chars() {
+    for c in without_comments.chars() {
         parser.accept(c);
     }
 
