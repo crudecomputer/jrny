@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use postgres::Client;
 use std::convert::TryFrom;
 
@@ -98,6 +99,20 @@ impl Executor {
         Ok(revisions)
     }
 
+    pub fn insert_revision(&mut self, filename: &str, checksum: &str, created_at: &DateTime<Utc>) -> Result<(), String> {
+        let insert = INSERT_REVISION
+            .replace("$$schema$$", &self.schema)
+            .replace("$$table$$", &self.table);
+
+        let row = self.client.execute(insert.as_str(), &[
+            &filename,
+            &checksum,
+            &created_at,
+        ]).map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
     fn table_exists(&mut self) -> Result<bool, String> {
         let row = self.client.query_one(TABLE_EXISTS, &[
             &self.schema,
@@ -132,15 +147,4 @@ impl Executor {
         self.client.execute(create.as_str(), &[]).map_err(|e| e.to_string())?;
         Ok(())
     }
-
-    //fn insert_revision(&mut self, revision: &FileRevision) -> Result<(), String> {
-        //let insert = INSERT_REVISION
-            //.replace("$$schema$$", &self.schema)
-            //.replace("$$table$$", &self.table);
-            
-        //let row = self.client.execute(insert, &[
-            //&self.schema,
-            //&self.table,
-        //]).map_err(|e| e.to_string())?;
-    //}
 }

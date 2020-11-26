@@ -8,6 +8,7 @@ use crate::{DatabaseRevision, FileRevision};
 #[derive(Debug, Eq)]
 pub struct AnnotatedRevision {
     pub applied_on: Option<DateTime<Utc>>,
+    pub checksum: Option<String>,
     pub contents: Option<String>,
     pub created_at: DateTime<Utc>,
     pub filename: String,
@@ -84,6 +85,7 @@ impl Review {
         for file in self.files.iter() {
             let mut anno = AnnotatedRevision {
                 applied_on: None,
+                checksum: Some(file.checksum.clone()),
                 checksums_match: None,
                 contents: Some(file.contents.clone()),
                 created_at: file.created_at.clone(),
@@ -106,6 +108,7 @@ impl Review {
 
             let anno = AnnotatedRevision {
                 applied_on: Some(record.applied_on),
+                checksum: None,
                 checksums_match: None,
                 contents: None,
                 created_at: record.created_at,

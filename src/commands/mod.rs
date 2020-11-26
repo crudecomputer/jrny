@@ -154,7 +154,6 @@ pub fn on(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> {
     if to_apply.len() == 0 {
         println!("No revisions to apply");
         return Ok(())
-
     }
 
     println!("Found {} revision(s) to apply", to_apply.len());
@@ -165,16 +164,16 @@ pub fn on(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> {
 
     // TODO confirm..? or allow "auto confirm" option..?
     // Parse all files into statements before printing or applying any
-    /*let groups = to_apply.iter()*/
-        /*.map(|rev| (rev.filename.clone(), StatementGroup::new(rev.contents.as_ref().unwrap())))*/
-        /*.collect::<Result<Vec<(String, StatementGroup)>, String>>()?;*/
+    //let groups = to_apply.iter()
+        //.map(|rev| (rev.filename.clone(), StatementGroup::new(rev.contents.as_ref().unwrap())))
+        //.collect::<Result<Vec<(String, StatementGroup)>, String>>()?;
 
     let mut groups = vec![];
 
-    for revision in to_apply.iter() {
+    for revision in to_apply {
         match StatementGroup::new(revision.contents.as_ref().unwrap()) {
             Ok(group) => {
-                groups.push((revision.filename.clone(), group));
+                groups.push((revision, group));
             },
             Err(e) => {
                 eprintln!("\nFound error in \"{}\"", revision.filename);
@@ -183,8 +182,8 @@ pub fn on(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> {
         }
     }
 
-    for (filename, group) in &groups {
-        println!("\nApplying \"{}\"", filename);
+    for (revision, group) in &groups {
+        println!("\nApplying \"{}\"", revision.filename);
 
         for statement in &group.statements {
             let preview = statement.0.lines()
@@ -195,6 +194,12 @@ pub fn on(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> {
 
             println!("\t{}", preview);
         }
+
+        exec.insert_revision(
+            &revision.filename,
+            &revision.checksum.as_ref().unwrap(),
+            &revision.created_at,
+        );
     }
 
     Ok(())
