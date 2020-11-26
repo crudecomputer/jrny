@@ -13,6 +13,7 @@ use begin::Begin;
 
 mod review;
 use review::Review;
+pub use review::AnnotatedRevision;
 
 
 /// Accepts a path string targeting a directory to set up project files:
@@ -164,10 +165,6 @@ pub fn on(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> {
 
     // TODO confirm..? or allow "auto confirm" option..?
     // Parse all files into statements before printing or applying any
-    //let groups = to_apply.iter()
-        //.map(|rev| (rev.filename.clone(), StatementGroup::new(rev.contents.as_ref().unwrap())))
-        //.collect::<Result<Vec<(String, StatementGroup)>, String>>()?;
-
     let mut groups = vec![];
 
     for revision in to_apply {
@@ -182,25 +179,7 @@ pub fn on(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> {
         }
     }
 
-    for (revision, group) in &groups {
-        println!("\nApplying \"{}\"", revision.filename);
-
-        for statement in &group.statements {
-            let preview = statement.0.lines()
-                .filter(|l| !l.is_empty())
-                .take(3)
-                .fold(String::new(), |a, b| a + b.trim() + " ")
-                + "...";
-
-            println!("\t{}", preview);
-        }
-
-        exec.insert_revision(
-            &revision.filename,
-            &revision.checksum.as_ref().unwrap(),
-            &revision.created_at,
-        );
-    }
+    let _ = exec.run_revisions(groups, commit)?;
 
     Ok(())
 }

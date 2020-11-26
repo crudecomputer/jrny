@@ -2,7 +2,9 @@ use chrono::{DateTime, Utc};
 use postgres::Client;
 use std::convert::TryFrom;
 
-use crate::{Config, DatabaseRevision, FileRevision};
+use crate::{Config, DatabaseRevision};
+use crate::commands::AnnotatedRevision;
+use crate::statements::StatementGroup;
 
 const CREATE_SCHEMA: &str =
 "CREATE SCHEMA $$schema$$";
@@ -57,7 +59,7 @@ pub struct Executor {
 
 impl Executor {
     pub fn new(config: &Config) -> Result<Self, String> {
-        let client = Client::try_from(config)?;
+        let mut client = Client::try_from(config)?;
 
         Ok(Self {
             client,
@@ -99,16 +101,45 @@ impl Executor {
         Ok(revisions)
     }
 
-    pub fn insert_revision(&mut self, filename: &str, checksum: &str, created_at: &DateTime<Utc>) -> Result<(), String> {
-        let insert = INSERT_REVISION
+    pub fn run_revisions(
+        &mut self,
+        groups: Vec<(&AnnotatedRevision, StatementGroup)>,
+        commit: bool,
+    ) -> Result<(), String> {
+        let insert_revision = INSERT_REVISION
             .replace("$$schema$$", &self.schema)
             .replace("$$table$$", &self.table);
 
-        let row = self.client.execute(insert.as_str(), &[
-            &filename,
-            &checksum,
-            &created_at,
-        ]).map_err(|e| e.to_string())?;
+        let mut tx = self.client.transaction()
+            .map_err(|e| e.to_string())?;
+
+        for (revision, group) in &groups {
+            println!("\nApplying \"{}\"", revision.filename);
+
+            for statement in &group.statements {
+                let preview = statement.0.lines()
+                    .filter(|l| !l.is_empty())
+                    .take(3)
+                    .fold(String::new(), |a, b| a + b.trim() + " ")
+                    + "...";
+
+                println!("\t{}", preview);
+
+                let _ = tx
+                    .execute(statement.0.as_str(), &[])
+                    .map_err(|e| e.to_string())?;
+            }
+
+            let _ = tx.execute(insert_revision.as_str(), &[
+                &revision.filename,
+                &revision.checksum,
+                &revision.created_at,
+            ]).map_err(|e| e.to_string())?;
+        }
+
+        if commit {
+            tx.commit().map_err(|e| e.to_string())?;
+        }
 
         Ok(())
     }

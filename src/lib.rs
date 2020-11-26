@@ -22,7 +22,7 @@ name = "dbname"
 user = "dbrole"
 
 [table]
-schema = "jrny"
-name = "revision"
+schema = "public"
+name = "jrny_revision"
 "#
 .as_bytes();
