@@ -1,38 +1,8 @@
 use chrono::{DateTime, Utc};
-use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::{DatabaseRevision, FileRevision};
-
-#[derive(Debug, Eq)]
-pub struct AnnotatedRevision {
-    pub applied_on: Option<DateTime<Utc>>,
-    pub checksum: Option<String>,
-    pub contents: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub filename: String,
-    pub checksums_match: Option<bool>,
-    pub on_disk: bool,
-}
-
-impl Ord for AnnotatedRevision {
-    fn cmp(&self, other: &Self) -> Ordering {
-        (&self.created_at, &self.filename).cmp(&(&other.created_at, &other.filename))
-    }
-}
-
-impl PartialOrd for AnnotatedRevision {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl PartialEq for AnnotatedRevision {
-    fn eq(&self, other: &Self) -> bool {
-        self.created_at == other.created_at && self.filename == other.filename
-    }
-}
+use crate::{AnnotatedRevision, DatabaseRevision, FileRevision};
 
 #[derive(Debug)]
 pub struct Review {
@@ -62,7 +32,7 @@ impl Review {
 
         let files_map = files.iter()
             // TODO clean this stuff up
-            .map(|fr| (format!("{}.{}.sql", fr.created_at.timestamp(), fr.filename), fr.clone()))
+            .map(|rc_fr| (rc_fr.filename.clone(), rc_fr.clone()))
             .collect();
 
         let records: Vec<Rc<DatabaseRevision>> = records
@@ -71,7 +41,7 @@ impl Review {
             .collect();
 
         let records_map = records.iter()
-            .map(|dr| (format!("{}.{}.sql", dr.created_at.timestamp(), dr.filename), dr.clone()))
+            .map(|rc_dr| (rc_dr.filename.clone(), rc_dr.clone()))
             .collect();
 
         Self { annotated: vec![], files, files_map, records, records_map }
@@ -90,6 +60,7 @@ impl Review {
                 contents: Some(file.contents.clone()),
                 created_at: file.created_at.clone(),
                 filename: file.filename.clone(),
+                name: file.name.clone(),
                 on_disk: true,
             };
 
@@ -113,6 +84,7 @@ impl Review {
                 contents: None,
                 created_at: record.created_at,
                 filename: record.filename.clone(),
+                name: record.name.clone(),
                 on_disk: false,
             };
 

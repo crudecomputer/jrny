@@ -9,7 +9,7 @@ mod statements;
 pub use paths::ProjectPaths;
 use config::Config;
 use executor::Executor;
-use revision::{DatabaseRevision, FileRevision};
+use revision::{AnnotatedRevision, DatabaseRevision, FileRevision};
 
 const CONF: &str = "jrny.toml";
 const CONF_TEMPLATE: &[u8] =

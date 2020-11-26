@@ -2,8 +2,7 @@ use chrono::{DateTime, Utc};
 use postgres::Client;
 use std::convert::TryFrom;
 
-use crate::{Config, DatabaseRevision};
-use crate::commands::AnnotatedRevision;
+use crate::{Config, AnnotatedRevision, DatabaseRevision};
 use crate::statements::StatementGroup;
 
 const CREATE_SCHEMA: &str =
@@ -14,10 +13,9 @@ const CREATE_TABLE: &str =
     id          SERIAL       PRIMARY KEY,
     applied_on  TIMESTAMPTZ  NOT NULL,
     created_at  TIMESTAMPTZ  NOT NULL,
-    filename    TEXT         NOT NULL,
-    checksum    TEXT         NOT NULL,
-
-    UNIQUE (created_at, filename)
+    filename    TEXT         NOT NULL UNIQUE,
+    name        TEXT         NOT NULL,
+    checksum    TEXT         NOT NULL
 )";
 
 const TABLE_EXISTS: &str =
@@ -37,18 +35,20 @@ const SELECT_REVISIONS: &str =
     applied_on,
     checksum,
     created_at,
-    filename
+    filename,
+    name
 FROM $$schema$$.$$table$$
 ORDER BY created_at ASC
 ";
 
 const INSERT_REVISION: &str =
 "INSERT INTO $$schema$$.$$table$$ (
-    filename,
-    checksum,
+    applied_on,
     created_at,
-    applied_on
-) VALUES ($1, $2, $3, now())
+    checksum,
+    filename,
+    name
+) VALUES (now(), $1, $2, $3, $4)
 ";
 
 pub struct Executor {
@@ -90,11 +90,8 @@ impl Executor {
                 applied_on: r.get("applied_on"),
                 checksum: r.get("checksum"),
                 created_at: r.get("created_at"),
-                filename: format!(
-                    "{}.{}",
-                    r.get::<&str, DateTime<Utc>>("created_at").timestamp(),
-                    r.get::<&str, String>("filename"),
-                ),
+                filename: r.get("filename"),
+                name: r.get("name"),
             })
             .collect();
 
@@ -131,9 +128,10 @@ impl Executor {
             }
 
             let _ = tx.execute(insert_revision.as_str(), &[
-                &revision.filename,
-                &revision.checksum,
                 &revision.created_at,
+                &revision.checksum,
+                &revision.filename,
+                &revision.name,
             ]).map_err(|e| e.to_string())?;
         }
 

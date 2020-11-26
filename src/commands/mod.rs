@@ -13,7 +13,6 @@ use begin::Begin;
 
 mod review;
 use review::Review;
-pub use review::AnnotatedRevision;
 
 
 /// Accepts a path string targeting a directory to set up project files:
@@ -89,7 +88,7 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
     for anno in annotated {
         let applied_on = match anno.applied_on {
             Some(a) => format_local(a),
-            _ => String::new(),
+            _ => "--".to_string(),
         };
 
         let error = if let Some(false) = anno.checksums_match {
