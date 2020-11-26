@@ -1,7 +1,9 @@
+use chrono::{DateTime, Utc};
 use postgres::Client;
 use std::convert::TryFrom;
 
-use crate::{Config, DatabaseRevision};
+use crate::{Config, AnnotatedRevision, DatabaseRevision};
+use crate::statements::StatementGroup;
 
 const CREATE_SCHEMA: &str =
 "CREATE SCHEMA $$schema$$";
@@ -11,10 +13,9 @@ const CREATE_TABLE: &str =
     id          SERIAL       PRIMARY KEY,
     applied_on  TIMESTAMPTZ  NOT NULL,
     created_at  TIMESTAMPTZ  NOT NULL,
-    filename    TEXT         NOT NULL,
-    checksum    TEXT         NOT NULL,
-
-    UNIQUE (created_at, filename)
+    filename    TEXT         NOT NULL UNIQUE,
+    name        TEXT         NOT NULL,
+    checksum    TEXT         NOT NULL
 )";
 
 const TABLE_EXISTS: &str =
@@ -31,12 +32,23 @@ const SCHEMA_EXISTS: &str =
 
 const SELECT_REVISIONS: &str =
 "SELECT
+    applied_on,
+    checksum,
     created_at,
     filename,
-    checksum,
-    applied_on
+    name
 FROM $$schema$$.$$table$$
 ORDER BY created_at ASC
+";
+
+const INSERT_REVISION: &str =
+"INSERT INTO $$schema$$.$$table$$ (
+    applied_on,
+    created_at,
+    checksum,
+    filename,
+    name
+) VALUES (now(), $1, $2, $3, $4)
 ";
 
 pub struct Executor {
@@ -47,7 +59,7 @@ pub struct Executor {
 
 impl Executor {
     pub fn new(config: &Config) -> Result<Self, String> {
-        let client = Client::try_from(config)?;
+        let mut client = Client::try_from(config)?;
 
         Ok(Self {
             client,
@@ -77,15 +89,57 @@ impl Executor {
             .map(|r| DatabaseRevision {
                 applied_on: r.get("applied_on"),
                 checksum: r.get("checksum"),
-                filename: format!(
-                    "{}.{}",
-                    r.get::<&str, DateTime<Utc>>("created_at").timestamp(),
-                    r.get::<&str, String>("filename"),
-                ),
+                created_at: r.get("created_at"),
+                filename: r.get("filename"),
+                name: r.get("name"),
             })
             .collect();
 
         Ok(revisions)
+    }
+
+    pub fn run_revisions(
+        &mut self,
+        groups: Vec<(&AnnotatedRevision, StatementGroup)>,
+        commit: bool,
+    ) -> Result<(), String> {
+        let insert_revision = INSERT_REVISION
+            .replace("$$schema$$", &self.schema)
+            .replace("$$table$$", &self.table);
+
+        let mut tx = self.client.transaction()
+            .map_err(|e| e.to_string())?;
+
+        for (revision, group) in &groups {
+            println!("\nApplying \"{}\"", revision.filename);
+
+            for statement in &group.statements {
+                let preview = statement.0.lines()
+                    .filter(|l| !l.is_empty())
+                    .take(3)
+                    .fold(String::new(), |a, b| a + b.trim() + " ")
+                    + "...";
+
+                println!("\t{}", preview);
+
+                let _ = tx
+                    .execute(statement.0.as_str(), &[])
+                    .map_err(|e| e.to_string())?;
+            }
+
+            let _ = tx.execute(insert_revision.as_str(), &[
+                &revision.created_at,
+                &revision.checksum,
+                &revision.filename,
+                &revision.name,
+            ]).map_err(|e| e.to_string())?;
+        }
+
+        if commit {
+            tx.commit().map_err(|e| e.to_string())?;
+        }
+
+        Ok(())
     }
 
     fn table_exists(&mut self) -> Result<bool, String> {

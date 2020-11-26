@@ -22,9 +22,11 @@ fn main() {
             (@arg config: -c --config [FILE] +takes_value "Sets a custom config file")
         )
 
-        //(@subcommand embark =>
-            //(about: "Applies the necessary revisions from within project directory")
-        //)
+        (@subcommand on =>
+            (about: "Reviews and applies the available revisions")
+            (@arg config: -c --config [FILE] +takes_value "Sets a custom config file")
+            (@arg commit: --commit !takes_value "Commits the transaction, false by default to encourage dry runs")
+        )
     };
 
     let result = match app.clone().get_matches().subcommand() {
@@ -38,7 +40,10 @@ fn main() {
         ("review", Some(cmd)) => commands::review(
             cmd.value_of("config"),
         ),
-        //("embark", Some(_)) => jrny::connect().embark(),
+        ("on", Some(cmd)) => commands::on(
+            cmd.value_of("config"),
+            cmd.is_present("commit"),
+        ),
 
         // TODO How to print help in absence of subcommand without cloning?
         _ => {

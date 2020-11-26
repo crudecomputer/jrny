@@ -1,25 +1,17 @@
 use chrono::{DateTime, TimeZone, Utc};
 use sha2::{Digest, Sha256};
+use std::cmp::Ordering;
 use std::convert::TryFrom;
 use std::fs;
 use std::path::PathBuf;
 
 #[derive(Debug)]
-pub struct DatabaseRevision {
-    pub applied_on: DateTime<Utc>,
-    pub checksum: String,
-    pub filename: String,
-    //pub name: String,
-    //pub timestamp: DateTime<Utc>,
-}
-
-#[derive(Debug)]
 pub struct FileRevision {
     pub checksum: String,
     pub contents: String,
+    pub created_at: DateTime<Utc>,
     pub filename: String,
-    //pub name: String,
-    //pub timestamp: DateTime<Utc>,
+    pub name: String,
 }
 
 impl FileRevision {
@@ -29,6 +21,7 @@ impl FileRevision {
         // files in there alongside the SQL revisions.
         let mut entries = fs::read_dir(revisions.as_path())
             .map_err(|e| e.to_string())?
+            // TODO filter to .sql files
             .map(|res| res
                  .map(|e| e.path())
                  .map_err(|e| e.to_string())
@@ -45,24 +38,24 @@ impl TryFrom<&PathBuf> for FileRevision {
     type Error = String;
 
     fn try_from(p: &PathBuf) -> Result<Self, Self::Error> {
-        let filename = p.file_stem()
+        let filename = p.file_name()
             .map(|os_str| os_str.to_str())
             .flatten()
             .ok_or_else(|| format!("{} is not a valid file", p.display()))?;
 
-        //let parts: Vec<&str> = filename.splitn(2, ".").collect();
+        let parts: Vec<&str> = filename.splitn(3, ".").collect();
 
-        //let err = || format!(
-            //"Invalid revision name {}: expected <timestamp>.<name>.sql",
-            //filename,
-        //);
+        let err = || format!(
+            "Invalid revision name {}: expected <timestamp>.<name>.sql",
+            filename,
+        );
 
-        //let (seconds, name) = match (parts.get(0), parts.get(1)) {
-            //(Some(seconds), Some(name)) => (seconds, name),
-            //_ => return Err(err()),
-        //};
-        //let seconds: i64 = seconds.parse().map_err(|_| err())?;
-        //let timestamp = Utc.timestamp(seconds, 0);
+        let (seconds, name) = match (parts.get(0), parts.get(1), parts.get(2)) {
+            (Some(seconds), Some(name), Some(&"sql")) => (seconds, name),
+            _ => return Err(err()),
+        };
+        let seconds: i64 = seconds.parse().map_err(|_| err())?;
+        let created_at = Utc.timestamp(seconds, 0);
 
         let contents = fs::read_to_string(p)
             .map_err(|e| format!(
@@ -74,10 +67,49 @@ impl TryFrom<&PathBuf> for FileRevision {
         Ok(Self {
             checksum: to_checksum(&contents),
             contents,
+            created_at,
             filename: filename.to_string(),
-            //name: name.to_string(),
-            //timestamp,
+            name: name.to_string(),
         })
+    }
+}
+
+#[derive(Debug)]
+pub struct DatabaseRevision {
+    pub applied_on: DateTime<Utc>,
+    pub checksum: String,
+    pub filename: String,
+    pub name: String,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Eq)]
+pub struct AnnotatedRevision {
+    pub applied_on: Option<DateTime<Utc>>,
+    pub checksum: Option<String>,
+    pub checksums_match: Option<bool>,
+    pub contents: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub filename: String,
+    pub name: String,
+    pub on_disk: bool,
+}
+
+impl Ord for AnnotatedRevision {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (&self.created_at, &self.filename).cmp(&(&other.created_at, &other.filename))
+    }
+}
+
+impl PartialOrd for AnnotatedRevision {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for AnnotatedRevision {
+    fn eq(&self, other: &Self) -> bool {
+        self.created_at == other.created_at && self.filename == other.filename
     }
 }
 

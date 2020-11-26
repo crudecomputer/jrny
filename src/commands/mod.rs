@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local, Utc};
 use std::{
     fmt::Display,
     fs,
@@ -6,6 +6,7 @@ use std::{
 };
 
 use crate::{Config, Executor, FileRevision};
+use crate::statements::StatementGroup;
 
 mod begin;
 use begin::Begin;
@@ -26,7 +27,7 @@ pub fn begin(p: &str) -> Result<(), String> {
         .create_revisions()?
         .create_conf()?;
 
-    println!("The journey has begun");
+    println!("A journey has begun");
 
     print_path("  ",     cmmd.created_root,      &cmmd.paths.root.display());
     print_path("  ├── ", cmmd.created_revisions, &cmmd.paths.revisions.display());
@@ -78,13 +79,18 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
     }
 
     println!("The journey thus far\n");
-    println!("{:50}{:50}{}", "Revision name", "Applied on", "Error");
+    println!("{:50}{:25}{:25}", "Revision", "Created", "Applied");
+
+    let format_local = |dt: DateTime<Utc>| DateTime::<Local>::from(dt)
+        .format("%v %X")
+        .to_string();
 
     for anno in annotated {
         let applied_on = match anno.applied_on {
-            Some(a) => a.to_string(),
-            _ => "[Not Applied]".to_string(),
+            Some(a) => format_local(a),
+            _ => "--".to_string(),
         };
+
         let error = if let Some(false) = anno.checksums_match {
             "The file has changed after being applied"
         } else if !anno.on_disk {
@@ -93,8 +99,86 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
             ""
         };
 
-        println!("{:50}{:50}{}", anno.filename, applied_on, error);
+        println!(
+            "{:50}{:25}{:25}{}",
+            anno.filename,
+            format_local(anno.created_at),
+            applied_on,
+            error,
+        );
     }
+
+    Ok(())
+}
+
+pub fn on(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> {
+    // FIXME this is SO much copy/paste with `review`
+    let config = Config::new(conf_path_name)?;
+    let mut exec = Executor::new(&config)?;
+
+    // Review revisions
+    let files = FileRevision::all_from_disk(&config.paths.revisions)?;
+    let records = exec.load_revisions()?;
+    let annotated = Review::annotate(files, records);
+
+    // If checksum comparison is missing, it hasn't been applied so ignore it
+    let changed: Vec<_> = annotated.iter()
+        .filter(|anno| !anno.checksums_match.unwrap_or(true))
+        .collect();
+
+    let missing: Vec<_> = annotated.iter()
+        .filter(|anno| !anno.on_disk)
+        .collect();
+
+    if changed.len() > 0 || missing.len() > 0 {
+        let mut msg = "Failed to run revisions".to_string();
+
+        if changed.len() > 0 {
+            msg.push_str(&format!("{} have changed since being applied", changed.len()));
+        }
+
+        if missing.len() > 0 {
+            msg.push_str(&format!("{} are no longer present on disk", changed.len()));
+        }
+
+        return Err(msg);
+    }
+
+    let to_apply: Vec<_> = annotated.iter()
+        .filter(|anno|
+            anno.on_disk &&
+            anno.applied_on.is_none()
+        )
+        .collect();
+
+    if to_apply.len() == 0 {
+        println!("No revisions to apply");
+        return Ok(())
+    }
+
+    println!("Found {} revision(s) to apply", to_apply.len());
+
+    for revision in &to_apply {
+        println!("\t{}", revision.filename);
+    }
+
+    // TODO confirm..? or allow "auto confirm" option..?
+    // Parse all files into statements before printing or applying any
+    let mut groups = vec![];
+
+    for revision in to_apply {
+        match StatementGroup::new(revision.contents.as_ref().unwrap()) {
+            Ok(group) => {
+                groups.push((revision, group));
+            },
+            Err(e) => {
+                eprintln!("\nFound error in \"{}\"", revision.filename);
+                return Err(e);
+            },
+        }
+    }
+
+    let _ = exec.run_revisions(groups, commit)?;
 
     Ok(())
 }
