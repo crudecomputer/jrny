@@ -1,4 +1,3 @@
-use chrono::{DateTime, Utc};
 use postgres::Client;
 use std::convert::TryFrom;
 
@@ -59,7 +58,7 @@ pub struct Executor {
 
 impl Executor {
     pub fn new(config: &Config) -> Result<Self, String> {
-        let mut client = Client::try_from(config)?;
+        let client = Client::try_from(config)?;
 
         Ok(Self {
             client,
@@ -82,8 +81,6 @@ impl Executor {
 
         let rows = self.client.query(stmt.as_str(), &[])
             .map_err(|e| e.to_string())?;
-
-        use chrono::{DateTime, Utc};
 
         let revisions = rows.iter()
             .map(|r| DatabaseRevision {

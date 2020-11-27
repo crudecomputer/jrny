@@ -2,8 +2,6 @@
 // parse into list of commands
 // error if encountering begin; rollback; commit; savepoint;
 
-use std::mem;
-
 #[derive(Debug, Default, PartialEq)]
 pub struct Statement(pub String);
 
