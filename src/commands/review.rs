@@ -1,21 +1,21 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::{AnnotatedRevision, DatabaseRevision, FileRevision};
+use crate::{AnnotatedRevision, RevisionRecord, RevisionFile};
 
 #[derive(Debug)]
 pub struct Review {
     annotated: Vec<AnnotatedRevision>,
-    files: Vec<Rc<FileRevision>>,
-    records: Vec<Rc<DatabaseRevision>>,
-    files_map: HashMap<String, Rc<FileRevision>>,
-    records_map: HashMap<String, Rc<DatabaseRevision>>,
+    files: Vec<Rc<RevisionFile>>,
+    records: Vec<Rc<RevisionRecord>>,
+    files_map: HashMap<String, Rc<RevisionFile>>,
+    records_map: HashMap<String, Rc<RevisionRecord>>,
 }
 
 impl Review {
     pub fn annotate(
-        files: Vec<FileRevision>,
-        records: Vec<DatabaseRevision>
+        files: Vec<RevisionFile>,
+        records: Vec<RevisionRecord>
     ) -> Vec<AnnotatedRevision> {
         let Self { mut annotated, .. } = Self::new(files, records).annotate_revisions();
 
@@ -23,8 +23,8 @@ impl Review {
         annotated
     }
 
-    fn new(mut files: Vec<FileRevision>, mut records: Vec<DatabaseRevision>) -> Self {
-        let files: Vec<Rc<FileRevision>> = files
+    fn new(mut files: Vec<RevisionFile>, mut records: Vec<RevisionRecord>) -> Self {
+        let files: Vec<Rc<RevisionFile>> = files
             .drain(..)
             .map(|fr| Rc::new(fr))
             .collect();
@@ -34,7 +34,7 @@ impl Review {
             .map(|rc_fr| (rc_fr.filename.clone(), rc_fr.clone()))
             .collect();
 
-        let records: Vec<Rc<DatabaseRevision>> = records
+        let records: Vec<Rc<RevisionRecord>> = records
             .drain(..)
             .map(|dr| Rc::new(dr))
             .collect();

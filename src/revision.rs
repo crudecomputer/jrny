@@ -6,7 +6,7 @@ use std::fs;
 use std::path::PathBuf;
 
 #[derive(Debug)]
-pub struct FileRevision {
+pub struct RevisionFile {
     pub checksum: String,
     pub contents: String,
     pub created_at: DateTime<Utc>,
@@ -14,7 +14,7 @@ pub struct FileRevision {
     pub name: String,
 }
 
-impl FileRevision {
+impl RevisionFile {
     pub fn all_from_disk(revisions: &PathBuf) -> Result<Vec<Self>, String> {
         // Assumes all files in directory are revisions. This isn't strictly
         // necessary but there's also not likely a reason for having other
@@ -34,7 +34,7 @@ impl FileRevision {
     }
 }
 
-impl TryFrom<&PathBuf> for FileRevision {
+impl TryFrom<&PathBuf> for RevisionFile {
     type Error = String;
 
     fn try_from(p: &PathBuf) -> Result<Self, Self::Error> {
@@ -43,6 +43,9 @@ impl TryFrom<&PathBuf> for FileRevision {
             .flatten()
             .ok_or_else(|| format!("{} is not a valid file", p.display()))?;
 
+        // Regex would work great here, but not sure if it's worth the 1.2 Mb increase
+        // in binary size, especially since (I believe) unicode tables would be necessary
+        // and that's the obvious feature to disable to reduce size
         let parts: Vec<&str> = filename.splitn(3, ".").collect();
 
         let err = || format!(
@@ -75,7 +78,7 @@ impl TryFrom<&PathBuf> for FileRevision {
 }
 
 #[derive(Debug)]
-pub struct DatabaseRevision {
+pub struct RevisionRecord {
     pub applied_on: DateTime<Utc>,
     pub checksum: String,
     pub filename: String,

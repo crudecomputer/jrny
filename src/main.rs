@@ -1,10 +1,11 @@
-use clap::clap_app;
+use clap::{clap_app, AppSettings};
 use jrny::{self, commands};
 
 fn main() {
-    let mut app = clap_app! {jrny =>
-        (about: "Data's a journey, so manage yours with jrny - simple, isolated PostgreSQL schema management")
-        (version: "0.1.0")
+    let app = clap_app! {jrny =>
+        (about: "Data's a journey, so manage yours with jrny - simple PostgreSQL schema management")
+        (version: "1.0.0")
+        (setting: AppSettings::SubcommandRequired)
 
         (@subcommand begin =>
             (about: "Sets up relevant files and directories for a new revision timeline")
@@ -44,13 +45,7 @@ fn main() {
             cmd.value_of("config"),
             cmd.is_present("commit"),
         ),
-
-        // TODO How to print help in absence of subcommand without cloning?
-        _ => {
-            app.print_help().expect("Failed to print help");
-            println!("");
-            Ok(())
-        }
+        _ => unreachable!(),
     };
 
     if let Err(e) = result {

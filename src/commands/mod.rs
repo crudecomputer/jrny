@@ -5,7 +5,7 @@ use std::{
     io::prelude::*,
 };
 
-use crate::{Config, Executor, FileRevision};
+use crate::{Config, Executor, RevisionFile};
 use crate::statements::StatementGroup;
 
 mod begin;
@@ -68,7 +68,7 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
 
     exec.ensure_table_exists()?;
 
-    let files = FileRevision::all_from_disk(&config.paths.revisions)?;
+    let files = RevisionFile::all_from_disk(&config.paths.revisions)?;
     let records = exec.load_revisions()?;
     let annotated = Review::annotate(files, records);
 
@@ -117,7 +117,7 @@ pub fn on(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> {
     let mut exec = Executor::new(&config)?;
 
     // Review revisions
-    let files = FileRevision::all_from_disk(&config.paths.revisions)?;
+    let files = RevisionFile::all_from_disk(&config.paths.revisions)?;
     let records = exec.load_revisions()?;
     let annotated = Review::annotate(files, records);
 

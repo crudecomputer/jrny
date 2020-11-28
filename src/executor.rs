@@ -1,7 +1,7 @@
 use postgres::Client;
 use std::convert::TryFrom;
 
-use crate::{Config, AnnotatedRevision, DatabaseRevision};
+use crate::{Config, AnnotatedRevision, RevisionRecord};
 use crate::statements::StatementGroup;
 
 const CREATE_SCHEMA: &str =
@@ -74,7 +74,7 @@ impl Executor {
         Ok(())
     }
 
-    pub fn load_revisions(&mut self) -> Result<Vec<DatabaseRevision>, String> {
+    pub fn load_revisions(&mut self) -> Result<Vec<RevisionRecord>, String> {
         let stmt = SELECT_REVISIONS
             .replace("$$schema$$", &self.schema)
             .replace("$$table$$", &self.table);
@@ -83,7 +83,7 @@ impl Executor {
             .map_err(|e| e.to_string())?;
 
         let revisions = rows.iter()
-            .map(|r| DatabaseRevision {
+            .map(|r| RevisionRecord {
                 applied_on: r.get("applied_on"),
                 checksum: r.get("checksum"),
                 created_at: r.get("created_at"),
