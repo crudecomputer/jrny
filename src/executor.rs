@@ -110,7 +110,7 @@ impl Executor {
         for (revision, group) in &groups {
             println!("\nApplying \"{}\"", revision.filename);
 
-            for statement in &group.statements {
+            for statement in group.iter() {
                 let preview = statement.0.lines()
                     .filter(|l| !l.is_empty())
                     .take(3)

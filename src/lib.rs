@@ -7,9 +7,10 @@ mod revision;
 mod statements;
 
 pub use paths::ProjectPaths;
-use config::Config;
-use executor::Executor;
-use revision::{AnnotatedRevision, RevisionRecord, RevisionFile};
+pub use statements::{Statement, StatementGroup};
+pub use config::Config;
+pub use executor::Executor;
+pub use revision::{AnnotatedRevision, RevisionRecord, RevisionFile};
 
 const CONF: &str = "jrny.toml";
 const CONF_TEMPLATE: &[u8] =

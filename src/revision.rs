@@ -21,14 +21,13 @@ impl RevisionFile {
         // files in there alongside the SQL revisions.
         let mut entries = fs::read_dir(revisions.as_path())
             .map_err(|e| e.to_string())?
-            // TODO filter to .sql files
             .map(|res| res
                  .map(|e| e.path())
                  .map_err(|e| e.to_string())
             )
             .collect::<Result<Vec<_>, String>>()?;
 
-        // All entries should be prefixed with timestamp for easy sorting
+        // All entries are prefixed with timestamp for easy sorting
         entries.sort();
         entries.iter().map(Self::try_from).collect()
     }

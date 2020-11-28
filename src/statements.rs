@@ -1,67 +1,74 @@
-// read a revision
-// parse into list of commands
-// error if encountering begin; rollback; commit; savepoint;
+//! Utilities for parsing SQL scripts into individual statements.
+//! There is no intention to perform any validation or statement preparation
+//! in the database; the primary use case is mainly better timing, logging,
+//! and user feedback.
+use std::convert::TryFrom;
+use std::slice::Iter;
 
+/// An individual raw SQL statement.
 #[derive(Debug, Default, PartialEq)]
 pub struct Statement(pub String);
 
+/// A group of raw SQL statements from a single file.
 #[derive(Debug)]
-pub struct StatementGroup {
-    pub statements: Vec<Statement>,
-}
+pub struct StatementGroup(Vec<Statement>);
 
 impl StatementGroup {
-    pub fn new(text: &str) -> Result<Self, String> {
-        Ok(Self {
-            statements: parse(text)?,
-        })
+    pub fn iter(&self) -> Iter<Statement> {
+        self.0.iter()
     }
 }
 
-pub fn parse(text: &str) -> Result<Vec<Statement>, String> {
-    let mut parser = Parser::new();
+impl TryFrom<&str> for StatementGroup {
+    type Error = String;
+    
+    /// Attempts to parse the input into individual statements.
+    fn try_from(input: &str) -> Result<Self, Self::Error> {
+        let mut parser = Parser::default();
 
-    let without_comments: String = text.lines()
-        .filter(|l| !l.trim().starts_with("--"))
-        .fold(String::new(), |a, b| a + b + "\n");
+        // Strip any lines that 
+        let without_comments: String = input.lines()
+            .filter(|l| !l.trim().starts_with("--"))
+            .fold(String::new(), |a, b| a + b + "\n");
 
-    // TODO how bad is using `chars` for non-UTF char sets, of which there
-    // are a ton supported by postgres?
-    // See: https://www.postgresql.org/docs/13/multibyte.html#MULTIBYTE-CHARSET-SUPPORTED
-    for c in without_comments.chars() {
-        parser.accept(c);
-    }
+        for c in without_comments.chars() {
+            parser.accept(c);
+        }
 
-    // If the parser handled white-space better, the extra allocations
-    // here would not be necessary... TODO
-    let statements: Vec<Statement> = parser.statements.iter()
-        .map(|stmt| Statement(stmt.0.trim().to_string()))
-        .filter(|stmt| !stmt.0.is_empty())
-        .collect();
+        // If the parser handled white-space better, the extra allocations
+        // here would not be necessary... TODO
+        let statements: Vec<Statement> = parser.statements.iter()
+            .map(|stmt| Statement(stmt.0.trim().to_string()))
+            .filter(|stmt| !stmt.0.is_empty())
+            .collect();
 
-    // Transaction-management commands should cause immediate errors,
-    // and thankfully it's just exact keyword matching at the start
-    // (provided the string is TRIMMED) and it doesn't matter if
-    // they're embedded inside a string or delimited identifier at all.
-    for s in &statements {
-        let lowered = s.0.chars()
-            .take(10)
-            .collect::<String>()
-            .to_lowercase();
+        // Transaction-management commands should cause immediate errors,
+        // and thankfully it's just exact keyword matching at the start
+        // (provided the string is TRIMMED) and it doesn't matter if
+        // they're embedded inside a string or delimited identifier at all.
+        for s in &statements {
+            let lowered = s.0.chars()
+                .take(10)
+                .collect::<String>()
+                .to_lowercase();
 
-        for command in ["begin", "savepoint", "rollback", "commit"].iter() {
-            if lowered.starts_with(command) {
-                return Err(format!(
-                    "{} command is not supported in a revision",
-                    command.to_uppercase(),
-                ));
+            for command in ["begin", "savepoint", "rollback", "commit"].iter() {
+                if lowered.starts_with(command) {
+                    return Err(format!(
+                        "{} command is not supported in a revision",
+                        command.to_uppercase(),
+                    ));
+                }
             }
         }
-    }
 
-    Ok(statements)
+        Ok(Self(statements))
+    }
 }
 
+/// A simple pseudo-state machine that generates a vec of individual statements
+/// by accepting one character at a time.
+#[derive(Default)]
 struct Parser {
     statements: Vec<Statement>,
     in_string: bool,
@@ -69,14 +76,8 @@ struct Parser {
 }
 
 impl Parser {
-    fn new() -> Self {
-        Self {
-            statements: vec![],
-            in_string: false,
-            in_delimited_identifier: false,
-        }
-    }
-
+    /// Appends the char to the current statement, ignore the character, or begins
+    /// a new statement depending on the given char.
     fn accept(&mut self, c: char) {
         // A single quote can open or close a text string, but ONLY if
         // it's not embedded in a delimited identifier
@@ -92,9 +93,8 @@ impl Parser {
 
         // Meanwhile, back at the ranch, a semicolon ends a statement
         // only if it's outside of text strings or quoted identifiers.
-        // A semicolon ending a statement is the only time the character
-        // SHOULD NOT be appended; instead, it should "end" the current
-        // statement by creating a new one.
+        // It doesn't need to be appended; it only needs to end the
+        // "current" statement by creating a new one.
         if c == ';' && !self.in_string && !self.in_delimited_identifier {
             self.statements.push(Statement::default());
 
@@ -105,10 +105,8 @@ impl Parser {
             self.statements.push(Statement::default());
         }
 
-        self.statements
-            .last_mut()
-            .unwrap()
-            .0.push(c);
+        // `unwrap` is safe here, as this is guaranteed to have an element
+        self.statements.last_mut().unwrap().0.push(c);
     }
 }
 
@@ -178,6 +176,20 @@ mod tests {
                 Statement(r#"a ';' b ";" c '";"' d "';'" e"#.to_string()),
             ]
         );
+    }
+
+    #[test]
+    fn test_inline_comments_with_semicolons() {
+        // own line
+        // trailing
+        assert_eq!(true, false);
+    }
+
+    #[test]
+    fn test_block_comments_with_semicolons() {
+        // own lines
+        // inline
+        assert_eq!(true, false);
     }
 
     #[test]
