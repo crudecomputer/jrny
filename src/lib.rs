@@ -3,14 +3,14 @@ mod client;
 mod config;
 mod executor;
 mod paths;
-mod revision;
+mod revisions;
 mod statements;
 
 pub use paths::ProjectPaths;
 pub use statements::{Statement, StatementGroup};
 pub use config::Config;
 pub use executor::Executor;
-pub use revision::{AnnotatedRevision, RevisionRecord, RevisionFile};
+pub use revisions::{AnnotatedRevision, RevisionRecord, RevisionFile};
 
 const CONF: &str = "jrny.toml";
 const CONF_TEMPLATE: &[u8] =
