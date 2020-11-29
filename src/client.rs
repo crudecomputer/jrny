@@ -4,7 +4,7 @@ use std::convert::TryFrom;
 
 pub use postgres::Client;
 
-use crate::Config;
+use crate::config::Config;
 
 impl TryFrom<&Config> for Client {
     type Error = String;

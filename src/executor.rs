@@ -1,7 +1,8 @@
 use postgres::Client;
 use std::convert::TryFrom;
 
-use crate::{Config, AnnotatedRevision, RevisionRecord};
+use crate::config::Config;
+use crate::revisions::{AnnotatedRevision, RevisionRecord};
 use crate::statements::StatementGroup;
 
 const CREATE_SCHEMA: &str =

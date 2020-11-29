@@ -1,16 +1,15 @@
 pub mod commands;
+pub mod paths;
+pub mod revisions;
+pub mod statements;
+
 mod client;
 mod config;
 mod executor;
-mod paths;
-mod revisions;
-mod statements;
 
-pub use paths::ProjectPaths;
-pub use statements::{Statement, StatementGroup};
 pub use config::Config;
 pub use executor::Executor;
-pub use revisions::{AnnotatedRevision, RevisionRecord, RevisionFile};
+
 
 const CONF: &str = "jrny.toml";
 const CONF_TEMPLATE: &[u8] =

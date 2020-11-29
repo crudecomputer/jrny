@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::{CONF_TEMPLATE, AnnotatedRevision, RevisionRecord, RevisionFile, ProjectPaths};
+use crate::CONF_TEMPLATE;
+use crate::revisions::{AnnotatedRevision, RevisionRecord, RevisionFile};
+use crate::paths::ProjectPaths;
 
 use std::io::Write;
 use std::fs;

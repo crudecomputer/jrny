@@ -8,8 +8,13 @@ use std::{
     io::prelude::*,
 };
 
-use jrny::{Config, Executor, RevisionFile, StatementGroup};
-use jrny::commands;
+use jrny::{
+    commands,
+    Config,
+    Executor,
+    revisions::RevisionFile,
+    statements::StatementGroup,
+};
 
 fn main() {
     let app = clap_app! {jrny =>
