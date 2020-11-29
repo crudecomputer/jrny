@@ -10,7 +10,6 @@ use jrny::{
     commands,
     Config,
     Executor,
-    revisions::RevisionFile,
     statements::StatementGroup,
 };
 
@@ -100,13 +99,9 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
     let config = Config::new(conf_path_name)?;
     let mut exec = Executor::new(&config)?;
 
-    exec.ensure_table_exists()?;
+    let cmd = commands::Review::annotated_revisions(&config, &mut exec)?;
 
-    let files = RevisionFile::all_from_disk(&config.paths.revisions)?;
-    let records = exec.load_revisions()?;
-    let annotated = commands::Review::annotate(files, records);
-
-    if annotated.len() == 0 {
+    if cmd.revisions.len() == 0 {
         println!("No revisions found. Create your first revision with `jrny revise <some-revision-name>`.");
 
         return Ok(());
@@ -119,15 +114,15 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
         .format("%v %X")
         .to_string();
 
-    for anno in annotated {
-        let applied_on = match anno.applied_on {
+    for revision in cmd.revisions {
+        let applied_on = match revision.applied_on {
             Some(a) => format_local(a),
             _ => "--".to_string(),
         };
 
-        let error = if let Some(false) = anno.checksums_match {
+        let error = if let Some(false) = revision.checksums_match {
             "The file has changed after being applied"
-        } else if !anno.on_disk {
+        } else if !revision.on_disk {
             "No corresponding file could not be found"
         } else {
             ""
@@ -135,8 +130,8 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
 
         println!(
             "{:50}{:25}{:25}{}",
-            anno.filename,
-            format_local(anno.created_at),
+            revision.filename,
+            format_local(revision.created_at),
             applied_on,
             error,
         );
@@ -146,21 +141,17 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
 }
 
 pub fn embark(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> {
-    // FIXME this is SO much copy/paste with `review`
     let config = Config::new(conf_path_name)?;
     let mut exec = Executor::new(&config)?;
 
-    // Review revisions
-    let files = RevisionFile::all_from_disk(&config.paths.revisions)?;
-    let records = exec.load_revisions()?;
-    let annotated = commands::Review::annotate(files, records);
+    let cmd = commands::Review::annotated_revisions(&config, &mut exec)?;
 
     // If checksum comparison is missing, it hasn't been applied so ignore it
-    let changed: Vec<_> = annotated.iter()
+    let changed: Vec<_> = cmd.revisions.iter()
         .filter(|anno| !anno.checksums_match.unwrap_or(true))
         .collect();
 
-    let missing: Vec<_> = annotated.iter()
+    let missing: Vec<_> = cmd.revisions.iter()
         .filter(|anno| !anno.on_disk)
         .collect();
 
@@ -178,7 +169,7 @@ pub fn embark(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> 
         return Err(msg);
     }
 
-    let to_apply: Vec<_> = annotated.iter()
+    let to_apply: Vec<_> = cmd.revisions.iter()
         .filter(|anno|
             anno.on_disk &&
             anno.applied_on.is_none()

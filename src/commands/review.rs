@@ -3,10 +3,14 @@ use std::{
     rc::Rc,
 };
 
-use crate::revisions::{AnnotatedRevision, RevisionRecord, RevisionFile};
+use crate::{
+    config::Config,
+    executor::Executor,
+    revisions::{AnnotatedRevision, RevisionRecord, RevisionFile},
+};
 
 pub struct Review {
-    annotated: Vec<AnnotatedRevision>,
+    pub revisions: Vec<AnnotatedRevision>,
     files: Vec<Rc<RevisionFile>>,
     records: Vec<Rc<RevisionRecord>>,
     files_map: HashMap<String, Rc<RevisionFile>>,
@@ -14,44 +18,57 @@ pub struct Review {
 }
 
 impl Review {
-    pub fn annotate(
-        files: Vec<RevisionFile>,
-        records: Vec<RevisionRecord>
-    ) -> Vec<AnnotatedRevision> {
-        let Self { mut annotated, .. } = Self::new(files, records).annotate_revisions();
-
-        annotated.sort();
-        annotated
+    pub fn annotated_revisions(
+        config: &Config,
+        exec: &mut Executor,
+    ) -> Result<Self, String> {
+        Ok(Self::new(config, exec)?.annotate())
     }
 
-    fn new(mut files: Vec<RevisionFile>, mut records: Vec<RevisionRecord>) -> Self {
+    fn new(config: &Config, exec: &mut Executor) -> Result<Self, String> {
+        exec.ensure_table_exists()?;
+
+        let mut files = RevisionFile::all_from_disk(&config.paths.revisions)?;
+        let mut records = exec.load_revisions()?;
+        
         let files: Vec<Rc<RevisionFile>> = files
             .drain(..)
-            .map(|fr| Rc::new(fr))
+            .map(|file| Rc::new(file))
             .collect();
 
         let files_map = files.iter()
-            // TODO clean this stuff up
-            .map(|rc_fr| (rc_fr.filename.clone(), rc_fr.clone()))
+            .map(|file_rc| (
+                file_rc.filename.clone(),
+                file_rc.clone(),
+            ))
             .collect();
 
         let records: Vec<Rc<RevisionRecord>> = records
             .drain(..)
-            .map(|dr| Rc::new(dr))
+            .map(|record| Rc::new(record))
             .collect();
 
         let records_map = records.iter()
-            .map(|rc_dr| (rc_dr.filename.clone(), rc_dr.clone()))
+            .map(|record_rc| (
+                record_rc.filename.clone(),
+                record_rc.clone(),
+            ))
             .collect();
 
-        Self { annotated: vec![], files, files_map, records, records_map }
+        Ok(Self {
+            revisions: vec![],
+            files,
+            files_map,
+            records,
+            records_map,
+        })
     }
 
     /// Builds a list that represents all revisions files and records, matching each
     /// to determine which files have been applied and, for those that do, whether or
     /// not the checksums still match. Additionally, this verifies that all records
     /// continue to have corresponding files.
-    pub fn annotate_revisions(mut self) -> Self {
+    fn annotate(mut self) -> Self {
         for file in self.files.iter() {
             let mut anno = AnnotatedRevision {
                 applied_on: None,
@@ -69,7 +86,7 @@ impl Review {
                 anno.checksums_match = Some(file.checksum == record.checksum);
             }
 
-            self.annotated.push(anno);
+            self.revisions.push(anno);
         }
 
         for record in self.records.iter() {
@@ -88,9 +105,10 @@ impl Review {
                 on_disk: false,
             };
 
-            self.annotated.push(anno);
+            self.revisions.push(anno);
         }
 
+        self.revisions.sort();
         self
     }
 }

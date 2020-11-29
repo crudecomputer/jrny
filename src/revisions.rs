@@ -11,7 +11,9 @@ pub struct RevisionFile {
     pub checksum: String,
     pub contents: String,
     pub created_at: DateTime<Utc>,
+    /// The full name of the file, including timestamp and extension
     pub filename: String,
+    /// The name of the file, excluding timestamp and extension
     pub name: String,
 }
 
@@ -61,6 +63,51 @@ impl TryFrom<&PathBuf> for RevisionFile {
     }
 }
 
+/// Metadata stored for a revision that has already been applied.
+#[derive(Debug)]
+pub struct RevisionRecord {
+    pub applied_on: DateTime<Utc>,
+    pub checksum: String,
+    pub created_at: DateTime<Utc>,
+    /// The full name of the file, including timestamp and extension
+    pub filename: String,
+    /// The name of the file, excluding timestamp and extension
+    pub name: String,
+}
+
+/// Comprehensive metadata for a revision detected on disk or in the database.
+#[derive(Debug, Eq)]
+pub struct AnnotatedRevision {
+    pub applied_on: Option<DateTime<Utc>>,
+    pub checksum: Option<String>,
+    pub checksums_match: Option<bool>,
+    pub contents: Option<String>,
+    pub created_at: DateTime<Utc>,
+    /// The full name of the file, including timestamp and extension
+    pub filename: String,
+    /// The name of the file, excluding timestamp and extension
+    pub name: String,
+    pub on_disk: bool,
+}
+
+impl Ord for AnnotatedRevision {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (&self.created_at, &self.filename).cmp(&(&other.created_at, &other.filename))
+    }
+}
+
+impl PartialOrd for AnnotatedRevision {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for AnnotatedRevision {
+    fn eq(&self, other: &Self) -> bool {
+        self.created_at == other.created_at && self.filename == other.filename
+    }
+}
+
 /// Creation date and extension-less name extracted from a revision filename.
 struct RevisionTitle {
     created_at: DateTime<Utc>,
@@ -89,47 +136,6 @@ impl TryFrom<&str> for RevisionTitle {
         let created_at = Utc.timestamp(timestamp, 0);
 
         Ok(Self { created_at, name: name.to_string() })
-    }
-}
-
-/// Metadata stored for a revision that has already been applied.
-#[derive(Debug)]
-pub struct RevisionRecord {
-    pub applied_on: DateTime<Utc>,
-    pub checksum: String,
-    pub filename: String,
-    pub name: String,
-    pub created_at: DateTime<Utc>,
-}
-
-/// Comprehensive metadata for a revision detected on disk or in the database.
-#[derive(Debug, Eq)]
-pub struct AnnotatedRevision {
-    pub applied_on: Option<DateTime<Utc>>,
-    pub checksum: Option<String>,
-    pub checksums_match: Option<bool>,
-    pub contents: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub filename: String,
-    pub name: String,
-    pub on_disk: bool,
-}
-
-impl Ord for AnnotatedRevision {
-    fn cmp(&self, other: &Self) -> Ordering {
-        (&self.created_at, &self.filename).cmp(&(&other.created_at, &other.filename))
-    }
-}
-
-impl PartialOrd for AnnotatedRevision {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl PartialEq for AnnotatedRevision {
-    fn eq(&self, other: &Self) -> bool {
-        self.created_at == other.created_at && self.filename == other.filename
     }
 }
 
