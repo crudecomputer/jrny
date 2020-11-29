@@ -3,8 +3,6 @@ use clap::{clap_app, AppSettings};
 use chrono::{DateTime, Local, Utc};
 use std::{
     convert::TryFrom,
-    fs,
-    io::prelude::*,
     path::PathBuf,
 };
 
@@ -91,23 +89,9 @@ pub fn begin(path: &str) -> Result<(), String> {
 /// working directory; otherwise it will add file in a directory relative to config.
 pub fn plan(name: &str, conf_path_name: Option<&str>) -> Result<(), String> {
     let config = Config::new(conf_path_name)?;
+    let cmd = commands::Plan::new_revision(&config, name)?;
 
-    let utc: DateTime<Utc> = Utc::now();
-    let timestamp = utc.timestamp();
-
-    let revision_path = config.paths.revisions
-        .join(format!("{}.{}.sql", timestamp, name));
-    let filename = revision_path.display();
-
-    fs::File::create(&revision_path)
-        .map_err(|e| e.to_string())?
-        .write_all(format!(
-            "-- Journey revision\n--\n-- {}\n--\n\n",
-            filename,
-        ).as_bytes())
-        .map_err(|e| e.to_string())?;
-
-    println!("Created {}", filename);
+    println!("Created {}", cmd.filename);
 
     Ok(())
 }

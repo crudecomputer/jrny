@@ -1,13 +1,18 @@
-use std::collections::HashMap;
-use std::rc::Rc;
+use chrono::Utc;
+use std::{
+    fs,
+    collections::HashMap,
+    io::Write,
+    rc::Rc,
+    path::PathBuf,
+};
 
-use crate::CONF_TEMPLATE;
-use crate::revisions::{AnnotatedRevision, RevisionRecord, RevisionFile};
-use crate::paths::ProjectPaths;
-
-use std::io::Write;
-use std::fs;
-
+use crate::{
+    CONF_TEMPLATE,
+    config::Config,
+    revisions::{AnnotatedRevision, RevisionRecord, RevisionFile},
+    paths::ProjectPaths,
+};
 
 pub struct Begin {
     pub paths: ProjectPaths,
@@ -110,8 +115,39 @@ impl Begin {
     }
 }
 
+pub struct Plan {
+    pub filename: String,
+    path: PathBuf,
+}
 
-#[derive(Debug)]
+impl Plan {
+    pub fn new_revision(config: &Config, name: &str) -> Result<Self, String> {
+        let timestamp = Utc::now().timestamp();
+
+        let revision_path = config.paths.revisions
+            .join(format!("{}.{}.sql", timestamp, name));
+
+        let cmd = Self {
+            filename: revision_path.display().to_string(),
+            path: revision_path,
+        };
+
+        Ok(cmd.create_file()?)
+    }
+
+    fn create_file(self) -> Result<Self, String> {
+        fs::File::create(&self.path)
+            .map_err(|e| e.to_string())?
+            .write_all(format!(
+                "-- Journey revision\n--\n-- {}\n--\n\n",
+                self.filename,
+            ).as_bytes())
+            .map_err(|e| e.to_string())?;
+
+        Ok(self)
+    }
+}
+
 pub struct Review {
     annotated: Vec<AnnotatedRevision>,
     files: Vec<Rc<RevisionFile>>,
