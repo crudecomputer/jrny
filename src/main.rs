@@ -3,9 +3,9 @@ use clap::{clap_app, AppSettings};
 use chrono::{DateTime, Local, Utc};
 use std::{
     convert::TryFrom,
-    fmt::Display,
     fs,
     io::prelude::*,
+    path::PathBuf,
 };
 
 use jrny::{
@@ -74,17 +74,14 @@ fn main() {
 /// that there is an empty `revisions` directory nested within it or
 /// create it if not already present. If any error occurs, any changes
 /// to the file system will be attempted to be reversed.
-pub fn begin(p: &str) -> Result<(), String> {
-    let cmmd = commands::Begin::new_project(p)?
-        .create_root()?
-        .create_revisions()?
-        .create_conf()?;
+pub fn begin(path: &str) -> Result<(), String> {
+    let cmd = commands::Begin::new_project(path)?;
 
     println!("A journey has begun");
 
-    print_path("  ",     cmmd.created_root,      &cmmd.paths.root.display());
-    print_path("  ├── ", cmmd.created_revisions, &cmmd.paths.revisions.display());
-    print_path("  └── ", cmmd.created_conf,      &cmmd.paths.conf.display());
+    print_path("  ",     cmd.created_root,      &cmd.paths.root);
+    print_path("  ├── ", cmd.created_revisions, &cmd.paths.revisions);
+    print_path("  └── ", cmd.created_conf,      &cmd.paths.conf);
 
     Ok(())
 }
@@ -238,11 +235,11 @@ pub fn embark(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> 
 
 /// Prints path string with optional prefix and "[created]" suffix if the created
 /// condition is true.
-fn print_path(prefix: &str, created: bool, path_name: impl Display) {
+fn print_path(prefix: &str, created: bool, path: &PathBuf) {
     println!(
         "{}{}{}",
         prefix,
-        path_name,
+        path.display(),
         if created { " [created]" } else { "" },
     );
 }
