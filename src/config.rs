@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::fs;
 
-use crate::ProjectPaths;
+use crate::paths::ProjectPaths;
 
 pub struct Config {
     pub paths: ProjectPaths,

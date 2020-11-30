@@ -1,7 +1,9 @@
+use log::info;
 use postgres::Client;
 use std::convert::TryFrom;
 
-use crate::{Config, AnnotatedRevision, DatabaseRevision};
+use crate::config::Config;
+use crate::revisions::{AnnotatedRevision, RevisionRecord};
 use crate::statements::StatementGroup;
 
 const CREATE_SCHEMA: &str =
@@ -74,7 +76,7 @@ impl Executor {
         Ok(())
     }
 
-    pub fn load_revisions(&mut self) -> Result<Vec<DatabaseRevision>, String> {
+    pub fn load_revisions(&mut self) -> Result<Vec<RevisionRecord>, String> {
         let stmt = SELECT_REVISIONS
             .replace("$$schema$$", &self.schema)
             .replace("$$table$$", &self.table);
@@ -83,7 +85,7 @@ impl Executor {
             .map_err(|e| e.to_string())?;
 
         let revisions = rows.iter()
-            .map(|r| DatabaseRevision {
+            .map(|r| RevisionRecord {
                 applied_on: r.get("applied_on"),
                 checksum: r.get("checksum"),
                 created_at: r.get("created_at"),
@@ -95,9 +97,11 @@ impl Executor {
         Ok(revisions)
     }
 
+    /// Executes all statement groups inside a single transaction, only committing
+    /// if explicitly specified.
     pub fn run_revisions(
         &mut self,
-        groups: Vec<(&AnnotatedRevision, StatementGroup)>,
+        groups: &Vec<(AnnotatedRevision, StatementGroup)>,
         commit: bool,
     ) -> Result<(), String> {
         let insert_revision = INSERT_REVISION
@@ -107,17 +111,17 @@ impl Executor {
         let mut tx = self.client.transaction()
             .map_err(|e| e.to_string())?;
 
-        for (revision, group) in &groups {
-            println!("\nApplying \"{}\"", revision.filename);
+        for (revision, group) in groups.iter() {
+            info!("\nApplying \"{}\"", revision.filename);
 
-            for statement in &group.statements {
+            for statement in group.iter() {
                 let preview = statement.0.lines()
                     .filter(|l| !l.is_empty())
                     .take(3)
                     .fold(String::new(), |a, b| a + b.trim() + " ")
                     + "...";
 
-                println!("\t{}", preview);
+                info!("\t{}", preview);
 
                 let _ = tx
                     .execute(statement.0.as_str(), &[])
@@ -157,7 +161,7 @@ impl Executor {
     }
 
     fn create_schema(&mut self) -> Result<(), String> {
-        println!("Creating schema {}", self.schema);
+        info!("Creating schema {}", self.schema);
         let create = CREATE_SCHEMA.replace("$$schema$$", &self.schema);
 
         self.client.execute(create.as_str(), &[]).map_err(|e| e.to_string())?;
@@ -165,7 +169,7 @@ impl Executor {
     }
 
     fn create_table(&mut self) -> Result<(), String> {
-        println!("Creating table {}.{}", self.schema, self.table);
+        info!("Creating table {}.{}", self.schema, self.table);
         let create = CREATE_TABLE
             .replace("$$schema$$", &self.schema)
             .replace("$$table$$", &self.table);
