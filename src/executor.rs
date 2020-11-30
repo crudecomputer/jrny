@@ -98,7 +98,7 @@ impl Executor {
 
     pub fn run_revisions(
         &mut self,
-        groups: Vec<(&AnnotatedRevision, StatementGroup)>,
+        groups: &Vec<(AnnotatedRevision, StatementGroup)>,
         commit: bool,
     ) -> Result<(), String> {
         let insert_revision = INSERT_REVISION
@@ -108,7 +108,7 @@ impl Executor {
         let mut tx = self.client.transaction()
             .map_err(|e| e.to_string())?;
 
-        for (revision, group) in &groups {
+        for (revision, group) in groups.iter() {
             println!("\nApplying \"{}\"", revision.filename);
 
             for statement in group.iter() {

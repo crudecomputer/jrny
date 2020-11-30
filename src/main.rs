@@ -144,54 +144,23 @@ pub fn embark(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> 
     let config = Config::new(conf_path_name)?;
     let mut exec = Executor::new(&config)?;
 
-    let cmd = commands::Review::annotated_revisions(&config, &mut exec)?;
+    let cmd = commands::Embark::prepare(&config, &mut exec)?;
 
-    // If checksum comparison is missing, it hasn't been applied so ignore it
-    let changed: Vec<_> = cmd.revisions.iter()
-        .filter(|anno| !anno.checksums_match.unwrap_or(true))
-        .collect();
-
-    let missing: Vec<_> = cmd.revisions.iter()
-        .filter(|anno| !anno.on_disk)
-        .collect();
-
-    if changed.len() > 0 || missing.len() > 0 {
-        let mut msg = "Failed to run revisions".to_string();
-
-        if changed.len() > 0 {
-            msg.push_str(&format!("{} have changed since being applied", changed.len()));
-        }
-
-        if missing.len() > 0 {
-            msg.push_str(&format!("{} are no longer present on disk", changed.len()));
-        }
-
-        return Err(msg);
-    }
-
-    let to_apply: Vec<_> = cmd.revisions.iter()
-        .filter(|anno|
-            anno.on_disk &&
-            anno.applied_on.is_none()
-        )
-        .collect();
-
-    if to_apply.len() == 0 {
+    if cmd.to_apply.len() == 0 {
         println!("No revisions to apply");
         return Ok(())
     }
 
-    println!("Found {} revision(s) to apply", to_apply.len());
+    println!("Found {} revision(s) to apply", cmd.to_apply.len());
 
-    for revision in &to_apply {
+    for revision in &cmd.to_apply {
         println!("\t{}", revision.filename);
     }
 
-    // TODO confirm..? or allow "auto confirm" option..?
     // Parse all files into statements before printing or applying any
     let mut groups = vec![];
 
-    for revision in to_apply {
+    for revision in cmd.to_apply {
         match StatementGroup::try_from(revision.contents.as_ref().unwrap().as_str()) {
             Ok(group) => {
                 groups.push((revision, group));
@@ -203,7 +172,7 @@ pub fn embark(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> 
         }
     }
 
-    let _ = exec.run_revisions(groups, commit)?;
+    let _ = exec.run_revisions(&groups, commit)?;
 
     Ok(())
 }
