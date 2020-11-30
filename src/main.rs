@@ -1,14 +1,23 @@
 use chrono::{DateTime, Local, Utc};
 use clap::{clap_app, AppSettings};
+use log::{info, warn, LevelFilter};
 use std::path::PathBuf;
 
 use jrny::{
     commands,
     Config,
     Executor,
+    Logger,
 };
 
+static LOGGER: Logger = Logger;
+
 fn main() {
+    log::set_logger(&LOGGER)
+        .map(|()| log::set_max_level(LevelFilter::Info))
+        .map_err(|e| e.to_string())
+        .unwrap();
+
     let app = clap_app! {jrny =>
         (about: "Data's a journey, so manage yours with jrny - simple PostgreSQL schema management")
         (version: "1.0.0")
@@ -56,7 +65,7 @@ fn main() {
     };
 
     if let Err(e) = result {
-        eprintln!("Error: {:?}", e);
+        warn!("Error: {:?}", e);
     }
 }
 
@@ -69,7 +78,7 @@ fn main() {
 pub fn begin(path: &str) -> Result<(), String> {
     let cmd = commands::Begin::new_project(path)?;
 
-    println!("A journey has begun");
+    info!("A journey has begun");
 
     print_path("  ",     cmd.created_root,      &cmd.paths.root);
     print_path("  ├── ", cmd.created_revisions, &cmd.paths.revisions);
@@ -85,7 +94,7 @@ pub fn plan(name: &str, conf_path_name: Option<&str>) -> Result<(), String> {
     let config = Config::new(conf_path_name)?;
     let cmd = commands::Plan::new_revision(&config, name)?;
 
-    println!("Created {}", cmd.filename);
+    info!("Created {}", cmd.filename);
 
     Ok(())
 }
@@ -97,13 +106,13 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
     let cmd = commands::Review::annotated_revisions(&config, &mut exec)?;
 
     if cmd.revisions.len() == 0 {
-        println!("No revisions found. Create your first revision with `jrny revise <some-revision-name>`.");
+        info!("No revisions found. Create your first revision with `jrny revise <some-revision-name>`.");
 
         return Ok(());
     }
 
-    println!("The journey thus far\n");
-    println!("{:50}{:25}{:25}", "Revision", "Created", "Applied");
+    info!("The journey thus far\n");
+    info!("{:50}{:25}{:25}", "Revision", "Created", "Applied");
 
     let format_local = |dt: DateTime<Utc>| DateTime::<Local>::from(dt)
         .format("%v %X")
@@ -116,20 +125,28 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
         };
 
         let error = if let Some(false) = revision.checksums_match {
-            "The file has changed after being applied"
+            Some("The file has changed after being applied")
         } else if !revision.on_disk {
-            "No corresponding file could not be found"
+            Some("No corresponding file could not be found")
         } else {
-            ""
+            None
         };
 
-        println!(
-            "{:50}{:25}{:25}{}",
-            revision.filename,
-            format_local(revision.created_at),
-            applied_on,
-            error,
-        );
+        match error {
+            Some(error) => warn!(
+                "{:50}{:25}{:25}{}",
+                revision.filename,
+                format_local(revision.created_at),
+                applied_on,
+                error,
+            ),
+            None => info!(
+                "{:50}{:25}{:25}",
+                revision.filename,
+                format_local(revision.created_at),
+                applied_on,
+            ),
+        }
     }
 
     Ok(())
@@ -142,14 +159,14 @@ pub fn embark(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> 
     let cmd = commands::Embark::prepare(&config, &mut exec)?;
 
     if cmd.to_apply.len() == 0 {
-        println!("No revisions to apply");
+        info!("No revisions to apply");
         return Ok(())
     }
 
-    println!("Found {} revision(s) to apply", cmd.to_apply.len());
+    info!("Found {} revision(s) to apply", cmd.to_apply.len());
 
     for revision in &cmd.to_apply {
-        println!("\t{}", revision.filename);
+        info!("\t{}", revision.filename);
     }
 
     let _ = cmd.apply(&mut exec, commit)?;
@@ -160,7 +177,7 @@ pub fn embark(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> 
 /// Prints path string with optional prefix and "[created]" suffix if the created
 /// condition is true.
 fn print_path(prefix: &str, created: bool, path: &PathBuf) {
-    println!(
+    info!(
         "{}{}{}",
         prefix,
         path.display(),

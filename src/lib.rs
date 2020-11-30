@@ -6,9 +6,11 @@ pub mod statements;
 mod client;
 mod config;
 mod executor;
+mod logger;
 
 pub use config::Config;
 pub use executor::Executor;
+pub use logger::Logger;
 
 
 const CONF: &str = "jrny.toml";

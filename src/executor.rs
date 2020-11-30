@@ -1,3 +1,4 @@
+use log::info;
 use postgres::Client;
 use std::convert::TryFrom;
 
@@ -96,6 +97,8 @@ impl Executor {
         Ok(revisions)
     }
 
+    /// Executes all statement groups inside a single transaction, only committing
+    /// if explicitly specified.
     pub fn run_revisions(
         &mut self,
         groups: &Vec<(AnnotatedRevision, StatementGroup)>,
@@ -109,7 +112,7 @@ impl Executor {
             .map_err(|e| e.to_string())?;
 
         for (revision, group) in groups.iter() {
-            println!("\nApplying \"{}\"", revision.filename);
+            info!("\nApplying \"{}\"", revision.filename);
 
             for statement in group.iter() {
                 let preview = statement.0.lines()
@@ -118,7 +121,7 @@ impl Executor {
                     .fold(String::new(), |a, b| a + b.trim() + " ")
                     + "...";
 
-                println!("\t{}", preview);
+                info!("\t{}", preview);
 
                 let _ = tx
                     .execute(statement.0.as_str(), &[])
@@ -158,7 +161,7 @@ impl Executor {
     }
 
     fn create_schema(&mut self) -> Result<(), String> {
-        println!("Creating schema {}", self.schema);
+        info!("Creating schema {}", self.schema);
         let create = CREATE_SCHEMA.replace("$$schema$$", &self.schema);
 
         self.client.execute(create.as_str(), &[]).map_err(|e| e.to_string())?;
@@ -166,7 +169,7 @@ impl Executor {
     }
 
     fn create_table(&mut self) -> Result<(), String> {
-        println!("Creating table {}.{}", self.schema, self.table);
+        info!("Creating table {}.{}", self.schema, self.table);
         let create = CREATE_TABLE
             .replace("$$schema$$", &self.schema)
             .replace("$$table$$", &self.table);

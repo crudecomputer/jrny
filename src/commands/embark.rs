@@ -1,3 +1,4 @@
+use log::warn;
 use std::convert::TryFrom;
 
 use crate::{
@@ -60,7 +61,7 @@ impl Embark {
                     groups.push((revision, group));
                 },
                 Err(e) => {
-                    eprintln!("\nFound error in \"{}\"", revision.filename);
+                    warn!("\nFound error in \"{}\"", revision.filename);
                     return Err(e);
                 },
             }
