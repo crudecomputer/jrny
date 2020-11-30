@@ -1,16 +1,11 @@
-use clap::{clap_app, AppSettings};
-
 use chrono::{DateTime, Local, Utc};
-use std::{
-    convert::TryFrom,
-    path::PathBuf,
-};
+use clap::{clap_app, AppSettings};
+use std::path::PathBuf;
 
 use jrny::{
     commands,
     Config,
     Executor,
-    statements::StatementGroup,
 };
 
 fn main() {
@@ -157,22 +152,7 @@ pub fn embark(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> 
         println!("\t{}", revision.filename);
     }
 
-    // Parse all files into statements before printing or applying any
-    let mut groups = vec![];
-
-    for revision in cmd.to_apply {
-        match StatementGroup::try_from(revision.contents.as_ref().unwrap().as_str()) {
-            Ok(group) => {
-                groups.push((revision, group));
-            },
-            Err(e) => {
-                eprintln!("\nFound error in \"{}\"", revision.filename);
-                return Err(e);
-            },
-        }
-    }
-
-    let _ = exec.run_revisions(&groups, commit)?;
+    let _ = cmd.apply(&mut exec, commit)?;
 
     Ok(())
 }

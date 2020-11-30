@@ -1,7 +1,10 @@
+use std::convert::TryFrom;
+
 use crate::{
     config::Config,
     executor::Executor,
     revisions::AnnotatedRevision,
+    statements::StatementGroup,
 };
 use super::Review;
 
@@ -45,5 +48,26 @@ impl Embark {
             .collect();
 
         Ok(Self { to_apply })
+    }
+
+    pub fn apply(self, exec: &mut Executor, commit: bool) -> Result<(), String> {
+        // Parse all files into statements before printing or applying any
+        let mut groups = vec![];
+
+        for revision in self.to_apply {
+            match StatementGroup::try_from(revision.contents.as_ref().unwrap().as_str()) {
+                Ok(group) => {
+                    groups.push((revision, group));
+                },
+                Err(e) => {
+                    eprintln!("\nFound error in \"{}\"", revision.filename);
+                    return Err(e);
+                },
+            }
+        }
+
+        let _ = exec.run_revisions(&groups, commit)?;
+
+        Ok(())
     }
 }
