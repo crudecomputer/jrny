@@ -19,8 +19,8 @@ fn main() {
         .unwrap();
 
     let app = clap_app! {jrny =>
-        (about: "Data's a journey, so manage yours with jrny - simple PostgreSQL schema management")
-        (version: "1.0.0")
+        (about: "Data modeling is a journey; manage yours with jrny - simple PostgreSQL schema management")
+        (version: "0.1.1")
         (setting: AppSettings::SubcommandRequired)
 
         (@subcommand begin =>
@@ -65,7 +65,7 @@ fn main() {
     };
 
     if let Err(e) = result {
-        warn!("Error: {:?}", e);
+        warn!("Error: {}", e);
     }
 }
 
@@ -172,9 +172,9 @@ pub fn embark(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> 
     let _ = cmd.apply(&mut exec, commit)?;
 
     if commit {
-        println!("\nCommitting the revisions")
+        println!("\nCommitting the transaction")
     } else {
-        println!("\nRolling back the transactions - use `--commit` to persist changes")
+        println!("\nRolling back the transaction - use `--commit` to persist changes")
     }
 
     Ok(())

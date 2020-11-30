@@ -27,14 +27,14 @@ impl Embark {
             .collect();
 
         if changed.len() > 0 || missing.len() > 0 {
-            let mut msg = "Failed to run revisions".to_string();
+            let mut msg = "Failed to run revisions:".to_string();
 
             if changed.len() > 0 {
-                msg.push_str(&format!("{} have changed since being applied", changed.len()));
+                msg.push_str(&format!("\n\t{} changed since being applied", changed.len()));
             }
 
             if missing.len() > 0 {
-                msg.push_str(&format!("{} are no longer present on disk", changed.len()));
+                msg.push_str(&format!("\n\t{} no longer present on disk", changed.len()));
             }
 
             return Err(msg);
