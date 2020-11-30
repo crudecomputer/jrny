@@ -106,7 +106,7 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
     let cmd = commands::Review::annotated_revisions(&config, &mut exec)?;
 
     if cmd.revisions.len() == 0 {
-        info!("No revisions found. Create your first revision with `jrny revise <some-revision-name>`.");
+        info!("No revisions found. Create your first revision with `jrny plan <some-name>`.");
 
         return Ok(());
     }
@@ -170,6 +170,12 @@ pub fn embark(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> 
     }
 
     let _ = cmd.apply(&mut exec, commit)?;
+
+    if commit {
+        println!("\nCommitting the revisions")
+    } else {
+        println!("\nRolling back the transactions - use `--commit` to persist changes")
+    }
 
     Ok(())
 }
