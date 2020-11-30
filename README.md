@@ -2,55 +2,32 @@
 
 Data modeling is a journey - manage yours with `jrny`.
 
-`jrny` is a prototype PostgreSQL<sup>1</sup> schema-management tool, intended to offer
-a simple, free, native, and SQL-based alternative to contemporary (and sometimes proprietary)
-migration tools that execute changes via language runtimes and code scripts or .yml files.
 
-> <sup>1</sup> While Postgres is the only current target, it could theoretically be extended
-> in the future to support other databases, though extensibility is not an immediate goal.
+## Overview
 
-## Primary Opinions
+A lot of schema-migration tools already exist. They work, and they work pretty well at that,
+but there are (subjectively) some big downsides.
 
-### Plain SQL
+`jrny` offers an alternative for people who...
 
-DSLs, query builders, YAML files, etc. can be convenient, but they require **additional cognitive overhead**
-that quickly proves an obstacle the moment one tries to translate a non-trivial SQL statement.
+* ... would **rather write SQL** than translate it to method calls or YAML entries that are often more verbose and less documented
 
-If we already know SQL, why not just use SQL? Having to know just one thing is better than having to know two
-things, even if the price is (sometimes) a little extra verbosity.
+* ... prefer to **install compiled binaries** rather than manage a language and dependencies on whatever system(s) run migrations
 
-Being language- and project- independent is actually a good thing, too, as it encourages a
-separation of concerns, and untying schema changes from application code and deploys goes *a long way*
-toward enabling zero-downtime migrations.
+* ... like the idea of **single responsibility**, especially if multiple applications (potentially in different repos and written in different languages) access the same tables
 
-### No down migrations
+* ... believe that **separating migrations from application deploys** encourages one to write non-breaking migrations and helps enable zero-downtime updates
 
-Down-migrations can be useful while writing and testing migrations,
-but it's trivially easy to miss something (like an index on a column being added back in)
-or 'change history' (like adding a check constraint that's different).
-If the down migrations are used on one database and not another, then they are now out of sync.
-If it was supposed to be that easy to mess up history, we'd probably already all be time-travelers.
+* ... think **down-migrations are impractical** at best and dangerous at worst, especially as relying on them during development makes it trivially easy to 'change' history by forgetting to add an index, check constraint, etc.
 
-Rather than down migrations, `jrny` instead encourages dry runs where revisions are applied but not committed by default.
 
-### Simpler is easier and easier is better
-
-Migration tools don't need complicated methods for history tracking or determining the sequence of revisions -
-timestamps are good enough. If branches with different revisions get merged together,
-then a test database will tell us if there's a problem.
-
-### Compiled binaries are easier to manage than language runtimes
-
-Language runtimes, dynamically-typed or static, are fantastically great tools.
-
-But if database migrations can be easily run via a single (relatively tiny) binary rather than an
-entire runtime with dependencies that need to be installed on a remote system, isn't that simpler?
-
-And isn't simpler better?
+`jrny` is still in a prototype state and currently **only supports PostgreSQL**.
+While it could theoretically be extended fairly easily in the future to support other databases,
+extensibility is not an immediate goal.
 
 ## Installation
 
-At the moment, `jrny` is only built from scratch via `cargo`.
+At the moment, `jrny` must be manually built using `cargo`, but this will change in a subsequent release.
 
 ## Usage
 
@@ -198,15 +175,6 @@ managed by `jrny`. (If there are good use cases against this, **please** file an
 
 ## Planned improvements, or "things that are missing"
 
-### Installation
-
-Nobody should need `cargo` to build a tool and then copy it to their path somewhere.
-It should be built (cross-platform) and be made accessible.
-
-### Tests and automation
-
-No description necessary; there's barely any test coverage, and there's no CI.
-
 ### Revision archiving
 
 Revisions are great, but we don't normally need revisions from 2 years ago sitting in the directory.
@@ -221,3 +189,7 @@ This lets them revert changes, tweak the revision, and re-apply.
 
 It would be a huge bonus if `jrny` somehow offered something similar, perhaps by exposing the active
 session to run queries against prior to rolling back and/or committing.
+
+### Tests and automation
+
+No description necessary; there's barely any test coverage, and there's no CI.
