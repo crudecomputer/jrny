@@ -10,7 +10,7 @@ use std::slice::Iter;
 pub struct Statement(pub String);
 
 /// A group of raw SQL statements from a single file.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct StatementGroup(Vec<Statement>);
 
 impl StatementGroup {
@@ -116,65 +116,65 @@ mod tests {
 
     #[test]
     fn test_parse_empty() {
-        let empty: Vec<Statement> = vec![];
+        let empty = StatementGroup(vec![]);
 
-        assert_eq!(parse("").unwrap(), empty);
-        assert_eq!(parse("  ").unwrap(), empty);
-        assert_eq!(parse("  \n  \n  ").unwrap(), empty);
-        assert_eq!(parse(" ;; ; ;  ;").unwrap(), empty);
+        assert_eq!(StatementGroup::try_from("").unwrap(), empty);
+        assert_eq!(StatementGroup::try_from("  ").unwrap(), empty);
+        assert_eq!(StatementGroup::try_from("  \n  \n  ").unwrap(), empty);
+        assert_eq!(StatementGroup::try_from(" ;; ; ;  ;").unwrap(), empty);
     }
 
     #[test]
     fn test_single() {
         assert_eq!(
-            parse("anything really, does not matter").unwrap(),
-            vec![
+            StatementGroup::try_from("anything really, does not matter").unwrap(),
+            StatementGroup(vec![
                 Statement("anything really, does not matter".to_string()),
-            ],
+            ]),
         );
     }
 
     #[test]
     fn test_single_with_embedded_semicolons() {
         assert_eq!(
-            parse("one thing ';' and two things \";\"").unwrap(),
-            vec![
+            StatementGroup::try_from("one thing ';' and two things \";\"").unwrap(),
+            StatementGroup(vec![
                 Statement("one thing ';' and two things \";\"".to_string()),
-            ],
+            ]),
         );
     }
 
     #[test]
     fn test_multiple_without_embedded() {
         assert_eq!(
-            parse("  one thing  ; two things ").unwrap(),
-            vec![
+            StatementGroup::try_from("  one thing  ; two things ").unwrap(),
+            StatementGroup(vec![
                 Statement("one thing".to_string()),
                 Statement("two things".to_string()),
-            ],
+            ]),
         );
     }
 
     #[test]
     fn test_quoted_with_semicolons() {
         assert_eq!(
-            parse(r#" '";'"  "#).unwrap(),
-            vec![
+            StatementGroup::try_from(r#" '";'"  "#).unwrap(),
+            StatementGroup(vec![
                 Statement(r#"'";'""#.to_string()),
-            ]
+            ]),
         );
         assert_eq!(
-            parse(r#" '"';"  "#).unwrap(),
-            vec![
+            StatementGroup::try_from(r#" '"';"  "#).unwrap(),
+            StatementGroup(vec![
                 Statement(r#"'"'"#.to_string()),
                 Statement(r#"""#.to_string()),
-            ]
+            ]),
         );
         assert_eq!(
-            parse(r#" a ';' b ";" c '";"' d "';'" e    "#).unwrap(),
-            vec![
+            StatementGroup::try_from(r#" a ';' b ";" c '";"' d "';'" e    "#).unwrap(),
+            StatementGroup(vec![
                 Statement(r#"a ';' b ";" c '";"' d "';'" e"#.to_string()),
-            ]
+            ]),
         );
     }
 
@@ -199,25 +199,25 @@ mod tests {
             cmd,
         ));
 
-        assert_eq!(parse(" beGIN "),         err("BEGIN"));
-        assert_eq!(parse("one; begin; two"), err("BEGIN"));
-        assert_eq!(parse("ONE; BEGIN; TWO"), err("BEGIN"));
+        assert_eq!(StatementGroup::try_from(" beGIN "),         err("BEGIN"));
+        assert_eq!(StatementGroup::try_from("one; begin; two"), err("BEGIN"));
+        assert_eq!(StatementGroup::try_from("ONE; BEGIN; TWO"), err("BEGIN"));
 
-        assert_eq!(parse("  savEPOint "),        err("SAVEPOINT"));
-        assert_eq!(parse("one; savepoint; two"), err("SAVEPOINT"));
-        assert_eq!(parse("ONE; SAVEPOINT; TWO"), err("SAVEPOINT"));
+        assert_eq!(StatementGroup::try_from("  savEPOint "),        err("SAVEPOINT"));
+        assert_eq!(StatementGroup::try_from("one; savepoint; two"), err("SAVEPOINT"));
+        assert_eq!(StatementGroup::try_from("ONE; SAVEPOINT; TWO"), err("SAVEPOINT"));
 
-        assert_eq!(parse("  rOLLBack "),        err("ROLLBACK"));
-        assert_eq!(parse("one; rollback; two"), err("ROLLBACK"));
-        assert_eq!(parse("ONE; ROLLBACK; TWO"), err("ROLLBACK"));
+        assert_eq!(StatementGroup::try_from("  rOLLBack "),        err("ROLLBACK"));
+        assert_eq!(StatementGroup::try_from("one; rollback; two"), err("ROLLBACK"));
+        assert_eq!(StatementGroup::try_from("ONE; ROLLBACK; TWO"), err("ROLLBACK"));
 
-        assert_eq!(parse("  coMMIt "),        err("COMMIT"));
-        assert_eq!(parse("one; commit; two"), err("COMMIT"));
-        assert_eq!(parse("ONE; COMMIT; TWO"), err("COMMIT"));
+        assert_eq!(StatementGroup::try_from("  coMMIt "),        err("COMMIT"));
+        assert_eq!(StatementGroup::try_from("one; commit; two"), err("COMMIT"));
+        assert_eq!(StatementGroup::try_from("ONE; COMMIT; TWO"), err("COMMIT"));
 
-        assert_eq!(parse("begin; rollback; savepoint; commit"), err("BEGIN"));
-        assert_eq!(parse("rollback; begin; savepoint; commit"), err("ROLLBACK"));
-        assert_eq!(parse("savepoint; begin; rollback; commit"), err("SAVEPOINT"));
-        assert_eq!(parse("commit; begin; rollback; commit"),    err("COMMIT"));
+        assert_eq!(StatementGroup::try_from("begin; rollback; savepoint; commit"), err("BEGIN"));
+        assert_eq!(StatementGroup::try_from("rollback; begin; savepoint; commit"), err("ROLLBACK"));
+        assert_eq!(StatementGroup::try_from("savepoint; begin; rollback; commit"), err("SAVEPOINT"));
+        assert_eq!(StatementGroup::try_from("commit; begin; rollback; commit"),    err("COMMIT"));
     }
 }
