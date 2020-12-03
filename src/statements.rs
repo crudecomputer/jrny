@@ -179,10 +179,34 @@ mod tests {
     }
 
     #[test]
-    fn test_inline_comments_with_semicolons() {
-        // own line
-        // trailing
-        assert_eq!(true, false);
+    fn test_inline_comments_with_semicolon_on_own_line() {
+        assert_eq!(
+            StatementGroup::try_from("
+                this is one statement;
+                this is
+                -- ;
+                another statement
+            ").unwrap(),
+            StatementGroup(vec![
+                Statement("this is one statement".to_string()),
+                Statement("this is another statement".to_string()),
+            ]),
+        );
+    }
+
+    #[test]
+    fn test_inline_comments_with_semicolon_trailing() {
+        assert_eq!(
+            StatementGroup::try_from("
+                this is one statement;
+                this is -- ;
+                another statement
+            ").unwrap(),
+            StatementGroup(vec![
+                Statement("this is one statement".to_string()),
+                Statement("this is another statement".to_string()),
+            ]),
+        );
     }
 
     #[test]
