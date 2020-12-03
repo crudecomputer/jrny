@@ -4,6 +4,7 @@
 //! and user feedback.
 use std::convert::TryFrom;
 use std::slice::Iter;
+use unicode_segmentation::UnicodeSegmentation;
 
 /// An individual raw SQL statement.
 #[derive(Debug, Default, PartialEq)]
@@ -24,15 +25,15 @@ impl TryFrom<&str> for StatementGroup {
     
     /// Attempts to parse the input into individual statements.
     fn try_from(input: &str) -> Result<Self, Self::Error> {
-        let mut parser = Parser::default();
+        let mut parser = Parser::new();
 
         // Strip any lines that 
         let without_comments: String = input.lines()
             .filter(|l| !l.trim().starts_with("--"))
             .fold(String::new(), |a, b| a + b + "\n");
 
-        for c in without_comments.chars() {
-            parser.accept(c);
+        for grapheme in without_comments.graphemes(true) {
+            parser.accept(grapheme);
         }
 
         // If the parser handled white-space better, the extra allocations
@@ -66,47 +67,209 @@ impl TryFrom<&str> for StatementGroup {
     }
 }
 
-/// A simple pseudo-state machine that generates a vec of individual statements
+
+
+enum Action {
+    Ignore,
+    Append,
+    Carry,
+}
+
+trait ParserState {
+    fn can_terminate(&self) -> bool { false }
+
+    fn accept(&self, grapheme: &str) -> (Action, Box<dyn ParserState>);
+}
+
+struct Start;
+struct InString;
+struct InDelimitedIdentifier;
+struct PotentialStartInlineComment;
+struct InInlineComment;
+struct PotentialStartBlockComment;
+struct InBlockComment;
+struct PotentialEndBlockComment;
+
+
+impl ParserState for Start { // 1
+    fn can_terminate(&self) -> bool {
+        true
+    }
+    
+    fn accept(&self, s: &str) -> (Action, Box<dyn ParserState>) {
+        match s {
+            "'"  => (Action::Append, Box::new(InString)),
+            "\"" => (Action::Append, Box::new(InDelimitedIdentifier)),
+            "-"  => (Action::Carry,  Box::new(PotentialStartInlineComment)),
+            "/"  => (Action::Carry,  Box::new(PotentialStartBlockComment)),
+            _    => (Action::Append, Box::new(Start)),
+
+        }
+    }
+}
+
+impl ParserState for InString { // 2
+    fn accept(&self, s: &str) -> (Action, Box<dyn ParserState>) {
+        match s {
+            "'" => (Action::Append, Box::new(Start)),
+            _   => (Action::Append, Box::new(InString)),
+
+        }
+    }
+}
+
+impl ParserState for InDelimitedIdentifier { // 3
+    fn accept(&self, s: &str) -> (Action, Box<dyn ParserState>) {
+        match s {
+            "\"" => (Action::Append, Box::new(Start)),
+            _    => (Action::Append, Box::new(InDelimitedIdentifier)),
+
+        }
+    }
+}
+
+impl ParserState for PotentialStartInlineComment { // 4
+    fn can_terminate(&self) -> bool {
+        true
+    }
+
+    fn accept(&self, s: &str) -> (Action, Box<dyn ParserState>) {
+        match s {
+            "'"  => (Action::Append, Box::new(InString)),
+            "\"" => (Action::Append, Box::new(InDelimitedIdentifier)),
+            "--" => (Action::Ignore, Box::new(InInlineComment)),
+            "/"  => (Action::Carry,  Box::new(PotentialStartBlockComment)),
+            _    => (Action::Append, Box::new(Start)),
+        }
+    }
+}
+
+impl ParserState for InInlineComment { // 5
+    fn accept(&self, s: &str) -> (Action, Box<dyn ParserState>) {
+        match s {
+            "\n" => (Action::Ignore, Box::new(Start)),
+            _    => (Action::Ignore, Box::new(InInlineComment)),
+        }
+    }
+}
+
+impl ParserState for PotentialStartBlockComment { // 6
+    fn can_terminate(&self) -> bool {
+        true
+    }
+
+    fn accept(&self, s: &str) -> (Action, Box<dyn ParserState>) {
+        match s {
+            "'"  => (Action::Append, Box::new(InString)),
+            "\"" => (Action::Append, Box::new(InDelimitedIdentifier)),
+            "-"  => (Action::Ignore, Box::new(PotentialStartInlineComment)),
+            "/*" => (Action::Carry,  Box::new(InBlockComment)),
+            _    => (Action::Append, Box::new(Start)),
+        }
+    }
+}
+
+impl ParserState for InBlockComment { // 7
+    fn accept(&self, s: &str) -> (Action, Box<dyn ParserState>) {
+        match s {
+            "*" => (Action::Carry,  Box::new(PotentialEndBlockComment)),
+            _   => (Action::Ignore, Box::new(InBlockComment)),
+        }
+    }
+}
+
+impl ParserState for PotentialEndBlockComment { // 8
+    fn accept(&self, s: &str) -> (Action, Box<dyn ParserState>) {
+        match s {
+            "/" => (Action::Ignore, Box::new(Start)),
+            _   => (Action::Ignore, Box::new(InBlockComment)),
+        }
+    }
+}
+
+
+
+
+
+
+
+/// A simple state machine that generates a vec of individual statements
 /// by accepting one character at a time.
-#[derive(Default)]
 struct Parser {
+    carried: Option<String>,
     statements: Vec<Statement>,
-    in_string: bool,
-    in_delimited_identifier: bool,
+    state: Box<dyn ParserState>,
 }
 
 impl Parser {
-    /// Appends the char to the current statement, ignore the character, or begins
-    /// a new statement depending on the given char.
-    fn accept(&mut self, c: char) {
-        // A single quote can open or close a text string, but ONLY if
-        // it's not embedded in a delimited identifier
-        if c == '\'' && !self.in_delimited_identifier {
-            self.in_string = !self.in_string;
+    fn new() -> Self {
+        Self {
+            carried: None,
+            statements: vec![],
+            state: Box::new(Start),
         }
+    }
 
-        // Likewise, a double quote can open or close a delimited identifer,
-        // but only if it's not inside a text string
-        if c == '"' && !self.in_string {
-            self.in_delimited_identifier = !self.in_delimited_identifier;
-        }
-
-        // Meanwhile, back at the ranch, a semicolon ends a statement
-        // only if it's outside of text strings or quoted identifiers.
-        // It doesn't need to be appended; it only needs to end the
-        // "current" statement by creating a new one.
-        if c == ';' && !self.in_string && !self.in_delimited_identifier {
-            self.statements.push(Statement::default());
-
-            return;
-        }
-
+    fn accept(&mut self, next: &str) {
         if self.statements.len() == 0 {
             self.statements.push(Statement::default());
         }
 
-        // `unwrap` is safe here, as this is guaranteed to have an element
-        self.statements.last_mut().unwrap().0.push(c);
+        let current_statement = self.statements.last_mut().unwrap();
+
+        if next == ";" && self.state.can_terminate() {
+            if let Some(carried) = &self.carried {
+                current_statement.0.push_str(&carried);
+            }
+
+            self.statements.push(Statement::default());
+            self.state = Box::new(Start);
+
+            return;
+        }
+
+        let next = match self.carried.take() {
+            Some(mut c) => {
+                c.push_str(next);
+                c
+            },
+            None => next.to_string(),
+        };
+
+        let (action, next_state) = (&self.state).accept(&next);
+
+        self.state = next_state;
+
+        match action {
+            Append => { current_statement.0.push_str(&next); },
+            Carry => { self.carried = Some(next.to_string()); },
+            Ignore => {},
+        }
+
+        //// A single quote can open or close a text string, but ONLY if
+        //// it's not embedded in a delimited identifier
+        //if c == '\'' && !self.in_delimited_identifier {
+            //self.in_string = !self.in_string;
+        //}
+
+        //// Likewise, a double quote can open or close a delimited identifer,
+        //// but only if it's not inside a text string
+        //if c == '"' && !self.in_string {
+            //self.in_delimited_identifier = !self.in_delimited_identifier;
+        //}
+
+        //// Meanwhile, back at the ranch, a semicolon ends a statement
+        //// only if it's outside of text strings or quoted identifiers.
+        //// It doesn't need to be appended; it only needs to end the
+        //// "current" statement by creating a new one.
+        //if c == ';' && !self.in_string && !self.in_delimited_identifier {
+            //self.statements.push(Statement::default());
+
+            //return;
+        //}
+
+        //// `unwrap` is safe here, as this is guaranteed to have an element
+        //self.statements.last_mut().unwrap().0.push(c);
     }
 }
 
