@@ -1,14 +1,15 @@
 # jrny
 
-Data modeling is a journey - manage yours with `jrny`.
+*Data modeling is a journey - manage yours with `jrny`*
 
+---
 
 ## Overview
 
 A lot of schema-migration tools already exist. They work, and they work pretty well at that,
-but there are (subjectively) some big downsides.
+but there are (subjectively) some big annoyances and I just don't like them.
 
-`jrny` offers an alternative for people who...
+`jrny` offers an alternative<sup>1</sup> for people who...
 
 * ... would **rather write SQL** than translate it to method calls or YAML entries that are often more verbose and less documented
 
@@ -18,16 +19,31 @@ but there are (subjectively) some big downsides.
 
 * ... believe that **separating migrations from application deploys** encourages one to write non-breaking migrations and helps enable zero-downtime updates
 
-* ... think **down-migrations are impractical** at best and dangerous at worst, especially as relying on them during development makes it trivially easy to 'change' history by forgetting to add an index, check constraint, etc.
+* ... think **down-migrations are unnecessary**<sup>2</sup> at best and dangerous at worst, especially as relying on them during development makes it trivially easy to 'change' history by forgetting to add an index, check constraint, etc.
 
 
-`jrny` is still in a prototype state and currently **only supports PostgreSQL**.
-While it could theoretically be extended fairly easily in the future to support other databases,
-extensibility is not an immediate goal.
+<small>
+
+> <sup>1</sup> `jrny` is still in a prototype state and currently **only supports PostgreSQL**.
+> While it could theoretically be extended fairly easily in the future to support other databases,
+> extensibility is not an immediate goal.
+>
+> <sup>2</sup> Down-migrations are great for iteratively developing complex schema changes,
+> as it lets the developer make a small change, roll it back, add another change, etc. until
+> the migration performs as intended. *An alternative*, especially for those of us who prefer SQL,
+> is to **iterate on statements within a transaction** in another client (eg. `psql`) and then just
+> add the final statements to a revision & apply. Using a transaction and another client to test SQL
+> statements *also* means the developer can explore schema changes interactively. *Rollbacks are great, m'kay.*
+
+</small>
+
+---
 
 ## Installation
 
 At the moment, `jrny` must be manually built using `cargo`, but this will change in a subsequent release.
+
+---
 
 ## Usage
 
@@ -54,8 +70,8 @@ A journey has begun
 
 ### Plan the journey
 
-To create a new SQL revision, run `jrny plan [-c <path-to-config>]` either specifying the path to the `jrny.toml`
-file via `-c` or by omitting and defaulting to looking in current directory.
+To create a new SQL revision, run `jrny plan [-c <path-to-config>]` either specifying the path to the
+config file via `-c` or (if ommitted) by looking for `jrny.toml` in the current directory.
 
 This will create an empty SQL file for you to populate with wonderful statements.
 
@@ -66,7 +82,7 @@ Created revisions/1606743300.create-users.sql
 
 $ jrny plan 'name with spaces' -c <path>/jrny.toml
 
-Created <path>revisions/1606743400.name with spaces.sql
+Created <path>/revisions/1606743400.name with spaces.sql
 ```
 
 ### Review the journey
@@ -74,7 +90,7 @@ Created <path>revisions/1606743400.name with spaces.sql
 To summarize the state of revisions, run `jrny review [-c <path-to-config>]`, again either specifying the config
 file to use or defaulting to looking in current directory.
 
-This will list all ordered revisions with time of creation and, if applied, application to database.
+This will list all ordered revisions, each with time of creation as well as time of application, if applied to the specified database.
 Additionally, `jrny` will also ensure that...
 
 * ... all applied revisions are still present on disk
@@ -97,7 +113,7 @@ Revision                                          Created                  Appli
 ### Embark on the journey!
 
 To apply pending revisions, run `jrny embark [-c <path-to-config> --commit]`.
-All statements will be executed *within a single transaction* that, by default, is **rolled back** upon completion
+All statements will be executed *within a single transaction* that is **rolled back by default** upon completion,
 unless explicitly told to commit via the `--commit` flag.
 This is to encourage dry-runs, which is particularly helpful while developing migrations -
 each statement can be added and tested incrementally, without requiring a down migration to undo changes.
@@ -116,7 +132,7 @@ Error: Failed to run revisions:
 ```
 
 If the files were restored and reverted, `jrny` would go ahead with applying `1606749809.so many things.sql`.
-In the process, it would preview each individual statement as it is being applied. For instance,
+In the process, it would preview each individual statement<sup>3</sup> as it is being applied. For instance,
 if a new multi-statement revision is added...
 
 ```
@@ -149,9 +165,12 @@ Applying "1606753722.create-pets.sql"
 	CREATE TABLE pet ( id SERIAL PRIMARY KEY, name TEXT NOT NULL ...
 	INSERT INTO pet (name) VALUES ('Eiyre'), ('Cupid'), ...
 
-Rolling back the transaction - use `--commit` to persist changes
+Rolling back the transaction - use `--commit` to persist changes`
+```
 
+As the output indicates, pass `--commit` to do just that.
 
+```
 $ jrny embark --commit
 
 Found 1 revision(s) to apply
@@ -162,16 +181,27 @@ Applying "1606753722.create-pets.sql"
 	INSERT INTO pet (name) VALUES ('Eiyre'), ('Cupid'), ...
 
 Committing the transaction
+```
 
+Attempting to apply revisions again would simply find none available.
+
+```
 
 $ jrny embark --commit
 
 No revisions to apply
 ```
 
-**Note:** SQL revisions will **fail to apply** if they include transaction commands like `BEGIN`
-or `COMMIT`, because the assumption (for now) is that the transaction should be fully
-managed by `jrny`. (If there are good use cases against this, **please** file an issue.)
+<small>
+
+> <sup>3</sup> `jrny` uses a state machine-based parser to split multi-statement files into
+> individual statements. No validations are performed (preferring to fully leverage database
+> for that) other than issuing an **error if transaction commands are found**, as the
+> assumption is that `jrny` should fully manage the transaction.
+
+</small>
+
+---
 
 ## Planned improvements, or "things that are missing"
 
@@ -179,16 +209,6 @@ managed by `jrny`. (If there are good use cases against this, **please** file an
 
 Revisions are great, but we don't normally need revisions from 2 years ago sitting in the directory.
 There should be a command to help 'reset' history, potentially archiving them into another table somewhere.
-
-### Session exploration
-
-Down-migrations have one BIG advantage during development compared to dry runs:
-they leave the database in a state that the developer *can explore* after revisions are applied.
-
-This lets them revert changes, tweak the revision, and re-apply.
-
-It would be a huge bonus if `jrny` somehow offered something similar, perhaps by exposing the active
-session to run queries against prior to rolling back and/or committing.
 
 ### Tests and automation
 
