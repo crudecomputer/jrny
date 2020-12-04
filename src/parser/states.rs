@@ -19,7 +19,6 @@ pub struct MightStartBlockComment;
 pub struct InBlockComment;
 pub struct MightEndBlockComment;
 
-
 impl State for Start { // 1
     fn can_terminate(&self) -> bool {
         true
@@ -113,5 +112,22 @@ impl State for MightEndBlockComment { // 8
             "*/" => (Action::Ignore, Box::new(Start)),
             _    => (Action::Ignore, Box::new(InBlockComment)),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn states_can_terminate() {
+        assert_eq!(Start                  .can_terminate(), true);
+        assert_eq!(InString               .can_terminate(), false); // Inside string
+        assert_eq!(InDelimitedIdentifier  .can_terminate(), false); // Inside quoted
+        assert_eq!(MightStartInlineComment.can_terminate(), true);
+        assert_eq!(InInlineComment        .can_terminate(), false); // Inside comment
+        assert_eq!(MightStartBlockComment .can_terminate(), true);
+        assert_eq!(InBlockComment         .can_terminate(), false); // Inside comment
+        assert_eq!(MightEndBlockComment   .can_terminate(), false); // Inside comment
     }
 }

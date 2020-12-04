@@ -49,7 +49,7 @@ impl Parser {
 
         if next == ";" && self.state.can_terminate() {
             current_statement.0.push_str(&self.carried);
-            //self.carried = String::new();
+            self.carried = String::new();
 
             self.statements.push(Statement::default());
             self.state = Box::new(Start);
@@ -82,7 +82,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_empty() {
+    fn empty_statement() {
         let empty = vec![];
 
         assert_eq!(Parser::parse(""), empty);
@@ -92,7 +92,7 @@ mod tests {
     }
 
     #[test]
-    fn test_single() {
+    fn single_statement() {
         assert_eq!(
             Parser::parse("anything really, does not matter"),
             vec![
@@ -102,7 +102,7 @@ mod tests {
     }
 
     #[test]
-    fn test_single_with_embedded_semicolons() {
+    fn single_with_embedded_semicolons() {
         assert_eq!(
             Parser::parse("one thing ';' and two things \";\""),
             vec![
@@ -112,7 +112,18 @@ mod tests {
     }
 
     #[test]
-    fn test_multiple_without_embedded() {
+    fn single_with_semicolon_after_carry() {
+        assert_eq!(
+            Parser::parse("one thing -; two thing"),
+            vec![
+                Statement("one thing -".to_string()),
+                Statement("two thing".to_string()),
+            ],
+        );
+    }
+
+    #[test]
+    fn multiple_without_embedded() {
         assert_eq!(
             Parser::parse("  one thing  ; two things "),
             vec![
@@ -123,7 +134,18 @@ mod tests {
     }
 
     #[test]
-    fn test_quoted_with_semicolons() {
+    fn multiple_with_embedded() {
+        assert_eq!(
+            Parser::parse(r#"  one ';' ";" thing  ; two things "#),
+            vec![
+                Statement(r#"one ';' ";" thing"#.to_string()),
+                Statement("two things".to_string()),
+            ],
+        );
+    }
+
+    #[test]
+    fn quoted_with_semicolons() {
         assert_eq!(
             Parser::parse(r#" '";'"  "#),
             vec![
@@ -146,7 +168,7 @@ mod tests {
     }
 
     #[test]
-    fn test_inline_comments_with_semicolon_on_own_line() {
+    fn inline_comments_with_semicolon_on_own_line() {
         assert_eq!(
             Parser::parse("
 this is one statement;
@@ -162,7 +184,7 @@ another statement
     }
 
     #[test]
-    fn test_inline_comments_with_semicolon_trailing() {
+    fn inline_comments_with_semicolon_trailing() {
         assert_eq!(
             Parser::parse("
 this is one statement;
@@ -177,7 +199,7 @@ another statement
     }
 
     #[test]
-    fn test_block_comments_with_semicolons_own_line() {
+    fn block_comments_with_semicolons_own_line() {
         assert_eq!(
             Parser::parse("
 this is one statement;
@@ -193,7 +215,7 @@ another statement
     }
 
     #[test]
-    fn test_block_comments_with_semicolons_trailing() {
+    fn block_comments_with_semicolons_trailing() {
         assert_eq!(
             Parser::parse("
 this is one statement;
@@ -208,7 +230,7 @@ another statement
     }
 
     #[test]
-    fn test_block_comments_with_semicolons_inline() {
+    fn block_comments_with_semicolons_inline() {
         assert_eq!(
             Parser::parse("
 this is one statement;
