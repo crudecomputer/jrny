@@ -1,12 +1,9 @@
-use std::{
-    collections::HashMap,
-    rc::Rc,
-};
+use std::{collections::HashMap, rc::Rc};
 
 use crate::{
     config::Config,
     executor::Executor,
-    revisions::{AnnotatedRevision, RevisionRecord, RevisionFile},
+    revisions::{AnnotatedRevision, RevisionFile, RevisionRecord},
 };
 
 pub struct Review {
@@ -18,10 +15,7 @@ pub struct Review {
 }
 
 impl Review {
-    pub fn annotated_revisions(
-        config: &Config,
-        exec: &mut Executor,
-    ) -> Result<Self, String> {
+    pub fn annotated_revisions(config: &Config, exec: &mut Executor) -> Result<Self, String> {
         Ok(Self::new(config, exec)?.annotate())
     }
 
@@ -30,29 +24,19 @@ impl Review {
 
         let mut files = RevisionFile::all_from_disk(&config.paths.revisions)?;
         let mut records = exec.load_revisions()?;
-        
-        let files: Vec<Rc<RevisionFile>> = files
-            .drain(..)
-            .map(|file| Rc::new(file))
+
+        let files: Vec<Rc<RevisionFile>> = files.drain(..).map(Rc::new).collect();
+
+        let files_map = files
+            .iter()
+            .map(|file_rc| (file_rc.filename.clone(), file_rc.clone()))
             .collect();
 
-        let files_map = files.iter()
-            .map(|file_rc| (
-                file_rc.filename.clone(),
-                file_rc.clone(),
-            ))
-            .collect();
+        let records: Vec<Rc<RevisionRecord>> = records.drain(..).map(Rc::new).collect();
 
-        let records: Vec<Rc<RevisionRecord>> = records
-            .drain(..)
-            .map(|record| Rc::new(record))
-            .collect();
-
-        let records_map = records.iter()
-            .map(|record_rc| (
-                record_rc.filename.clone(),
-                record_rc.clone(),
-            ))
+        let records_map = records
+            .iter()
+            .map(|record_rc| (record_rc.filename.clone(), record_rc.clone()))
             .collect();
 
         Ok(Self {
@@ -75,14 +59,14 @@ impl Review {
                 checksum: Some(file.checksum.clone()),
                 checksums_match: None,
                 contents: Some(file.contents.clone()),
-                created_at: file.created_at.clone(),
+                created_at: file.created_at,
                 filename: file.filename.clone(),
                 name: file.name.clone(),
                 on_disk: true,
             };
 
             if let Some(record) = self.records_map.get(&file.filename) {
-                anno.applied_on = Some(record.applied_on.clone());
+                anno.applied_on = Some(record.applied_on);
                 anno.checksums_match = Some(file.checksum == record.checksum);
             }
 
@@ -90,7 +74,7 @@ impl Review {
         }
 
         for record in self.records.iter() {
-            if let Some(_) = self.files_map.get(&record.filename) {
+            if self.files_map.get(&record.filename).is_some() {
                 continue;
             }
 

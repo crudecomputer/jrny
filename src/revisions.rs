@@ -23,10 +23,7 @@ impl RevisionFile {
     pub fn all_from_disk(revisions: &PathBuf) -> Result<Vec<Self>, String> {
         let mut entries = fs::read_dir(revisions.as_path())
             .map_err(|e| e.to_string())?
-            .map(|res| res
-                 .map(|e| e.path())
-                 .map_err(|e| e.to_string())
-            )
+            .map(|res| res.map(|e| e.path()).map_err(|e| e.to_string()))
             .collect::<Result<Vec<_>, String>>()?;
 
         entries.sort();
@@ -39,7 +36,8 @@ impl TryFrom<&PathBuf> for RevisionFile {
 
     /// Attempts to gather appropriate metadata for and read contents of given path buf.
     fn try_from(p: &PathBuf) -> Result<Self, Self::Error> {
-        let filename = p.file_name()
+        let filename = p
+            .file_name()
             .map(|os_str| os_str.to_str())
             .flatten()
             .ok_or_else(|| format!("{} is not a valid file", p.display()))?;
@@ -47,18 +45,14 @@ impl TryFrom<&PathBuf> for RevisionFile {
         let title = RevisionTitle::try_from(filename)?;
 
         let contents = fs::read_to_string(p)
-            .map_err(|e| format!(
-                "Could not open {}: {}",
-                p.display(),
-                e.to_string()
-            ))?;
+            .map_err(|e| format!("Could not open {}: {}", p.display(), e.to_string()))?;
 
         Ok(Self {
             checksum: to_checksum(&contents),
             contents,
             created_at: title.created_at,
             filename: filename.to_string(),
-            name: title.name.to_string(),
+            name: title.name,
         })
     }
 }
@@ -121,12 +115,14 @@ impl TryFrom<&str> for RevisionTitle {
         // Regex would work great here, but not sure if it's worth the 1.2 Mb increase
         // in binary size, especially since (I believe) unicode tables would be necessary
         // and that's the obvious feature to disable to reduce size
-        let parts: Vec<&str> = filename.splitn(3, ".").collect();
+        let parts: Vec<&str> = filename.splitn(3, '.').collect();
 
-        let err = || format!(
-            "Invalid revision name {}: expected <timestamp>.<name>.sql",
-            filename,
-        );
+        let err = || {
+            format!(
+                "Invalid revision name {}: expected <timestamp>.<name>.sql",
+                filename,
+            )
+        };
 
         let (timestamp, name) = match (parts.get(0), parts.get(1), parts.get(2)) {
             (Some(seconds), Some(name), Some(&"sql")) => (seconds, name),
@@ -135,7 +131,10 @@ impl TryFrom<&str> for RevisionTitle {
         let timestamp: i64 = timestamp.parse().map_err(|_| err())?;
         let created_at = Utc.timestamp(timestamp, 0);
 
-        Ok(Self { created_at, name: name.to_string() })
+        Ok(Self {
+            created_at,
+            name: (*name).to_string(),
+        })
     }
 }
 

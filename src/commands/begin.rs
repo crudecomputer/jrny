@@ -1,12 +1,6 @@
-use std::{
-    fs,
-    io::Write,
-};
+use std::{fs, io::Write};
 
-use crate::{
-    CONF_TEMPLATE,
-    paths::ProjectPaths,
-};
+use crate::{paths::ProjectPaths, CONF_TEMPLATE};
 
 pub struct Begin {
     pub paths: ProjectPaths,
@@ -30,11 +24,7 @@ impl Begin {
             created_root: false,
         };
 
-        Ok(cmd
-            .create_root()?
-            .create_revisions()?
-            .create_conf()?
-        )
+        Ok(cmd.create_root()?.create_revisions()?.create_conf()?)
     }
 
     /// Attempts to create the project root directory if it doesn't exist,

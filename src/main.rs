@@ -3,12 +3,7 @@ use clap::{clap_app, AppSettings};
 use log::{info, warn, LevelFilter};
 use std::path::PathBuf;
 
-use jrny::{
-    commands,
-    Config,
-    Executor,
-    Logger,
-};
+use jrny::{commands, Config, Executor, Logger};
 
 static LOGGER: Logger = Logger;
 
@@ -47,20 +42,10 @@ fn main() {
     };
 
     let result = match app.clone().get_matches().subcommand() {
-        ("begin", Some(cmd)) => begin(
-            cmd.value_of("dirpath").unwrap(),
-        ),
-        ("plan", Some(cmd)) => plan(
-            cmd.value_of("name").unwrap(),
-            cmd.value_of("config"),
-        ),
-        ("review", Some(cmd)) => review(
-            cmd.value_of("config"),
-        ),
-        ("embark", Some(cmd)) => embark(
-            cmd.value_of("config"),
-            cmd.is_present("commit"),
-        ),
+        ("begin", Some(cmd)) => begin(cmd.value_of("dirpath").unwrap()),
+        ("plan", Some(cmd)) => plan(cmd.value_of("name").unwrap(), cmd.value_of("config")),
+        ("review", Some(cmd)) => review(cmd.value_of("config")),
+        ("embark", Some(cmd)) => embark(cmd.value_of("config"), cmd.is_present("commit")),
         _ => unreachable!(),
     };
 
@@ -80,9 +65,9 @@ pub fn begin(path: &str) -> Result<(), String> {
 
     info!("A journey has begun");
 
-    print_path("  ",     cmd.created_root,      &cmd.paths.root);
+    print_path("  ", cmd.created_root, &cmd.paths.root);
     print_path("  ├── ", cmd.created_revisions, &cmd.paths.revisions);
-    print_path("  └── ", cmd.created_conf,      &cmd.paths.conf);
+    print_path("  └── ", cmd.created_conf, &cmd.paths.conf);
 
     Ok(())
 }
@@ -105,7 +90,7 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
 
     let cmd = commands::Review::annotated_revisions(&config, &mut exec)?;
 
-    if cmd.revisions.len() == 0 {
+    if cmd.revisions.is_empty() {
         info!("No revisions found. Create your first revision with `jrny plan <some-name>`.");
 
         return Ok(());
@@ -114,9 +99,7 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
     info!("The journey thus far\n");
     info!("{:50}{:25}{:25}", "Revision", "Created", "Applied");
 
-    let format_local = |dt: DateTime<Utc>| DateTime::<Local>::from(dt)
-        .format("%v %X")
-        .to_string();
+    let format_local = |dt: DateTime<Utc>| DateTime::<Local>::from(dt).format("%v %X").to_string();
 
     for revision in cmd.revisions {
         let applied_on = match revision.applied_on {
@@ -158,9 +141,9 @@ pub fn embark(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> 
 
     let cmd = commands::Embark::prepare(&config, &mut exec)?;
 
-    if cmd.to_apply.len() == 0 {
+    if cmd.to_apply.is_empty() {
         info!("No revisions to apply");
-        return Ok(())
+        return Ok(());
     }
 
     info!("Found {} revision(s) to apply", cmd.to_apply.len());
@@ -169,7 +152,7 @@ pub fn embark(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> 
         info!("\t{}", revision.filename);
     }
 
-    let _ = cmd.apply(&mut exec, commit)?;
+    cmd.apply(&mut exec, commit)?;
 
     if commit {
         println!("\nCommitting the transaction")

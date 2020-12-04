@@ -1,6 +1,6 @@
 use postgres::NoTls;
-use std::time::Duration;
 use std::convert::TryFrom;
+use std::time::Duration;
 
 pub use postgres::Client;
 
@@ -12,7 +12,8 @@ impl TryFrom<&Config> for Client {
     fn try_from(config: &Config) -> Result<Self, Self::Error> {
         let mut client = Self::configure();
 
-        client.application_name("jrny")
+        client
+            .application_name("jrny")
             .connect_timeout(Duration::new(30, 0))
             .host(&config.settings.connection.host)
             .port(config.settings.connection.port)
