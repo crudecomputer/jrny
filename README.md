@@ -68,6 +68,24 @@ A journey has begun
   └── <project-dir>/jrny.toml [created]
 ```
 
+The default `jrny.toml` file specifies how `jrny` will connect to the target database, for instance:
+
+```
+[connection]
+strategy = { type = "env-url-string", var-name = "JRNY_DATABASE_URL" }
+
+[table]
+schema = "public"
+name = "jrny_revision"
+```
+
+This means that `jrny` will look for a connection string in the `JRNY_DATABASE_URL` environment variable
+and store revision history in the `public.jrny_revision` table. The variable name can be changed any time
+but, once revisions are applied and tracked, the schema and table name should not be changed, as `jrny`
+would then attempt to apply all revisions from the beginning.
+
+The config file can be freely renamed if desired; however, this requires passing the filepath in via `-c` to all commands.
+
 ### Plan the journey
 
 To create a new SQL revision, run `jrny plan [-c <path-to-config>]` either specifying the path to the
@@ -80,9 +98,9 @@ $ jrny plan create-users
 
 Created revisions/1606743300.create-users.sql
 
-$ jrny plan 'name with spaces' -c <path>/jrny.toml
+$ jrny plan 'name with spaces' -c /path/to/my/config.toml
 
-Created <path>/revisions/1606743400.name with spaces.sql
+Created /path/to/my/revisions/1606743400.name with spaces.sql
 ```
 
 ### Review the journey
