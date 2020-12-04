@@ -15,7 +15,7 @@ fn main() {
 
     let app = clap_app! {jrny =>
         (about: "Data modeling is a journey; manage yours with jrny - simple PostgreSQL schema management")
-        (version: "0.1.1")
+        (version: env!("CARGO_PKG_VERSION"))
         (setting: AppSettings::SubcommandRequired)
 
         (@subcommand begin =>
