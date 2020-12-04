@@ -67,8 +67,6 @@ impl TryFrom<&str> for StatementGroup {
     }
 }
 
-
-
 enum Action {
     Ignore,
     Append,
@@ -181,7 +179,7 @@ impl ParserState for InBlockComment { // 7
 impl ParserState for PotentialEndBlockComment { // 8
     fn accept(&self, s: &str) -> (Action, Box<dyn ParserState>) {
         match s {
-            "/" => (Action::Ignore, Box::new(Start)),
+            "*/" => (Action::Ignore, Box::new(Start)),
             _   => (Action::Ignore, Box::new(InBlockComment)),
         }
     }
@@ -241,9 +239,9 @@ impl Parser {
         self.state = next_state;
 
         match action {
-            Append => { current_statement.0.push_str(&next); },
-            Carry => { self.carried = Some(next.to_string()); },
-            Ignore => {},
+            Action::Append => { current_statement.0.push_str(&next); },
+            Action::Carry => { self.carried = Some(next.to_string()); },
+            Action::Ignore => {},
         }
 
         //// A single quote can open or close a text string, but ONLY if
@@ -345,14 +343,14 @@ mod tests {
     fn test_inline_comments_with_semicolon_on_own_line() {
         assert_eq!(
             StatementGroup::try_from("
-                this is one statement;
-                this is
-                -- ;
-                another statement
+this is one statement;
+this is
+-- ;
+another statement
             ").unwrap(),
             StatementGroup(vec![
                 Statement("this is one statement".to_string()),
-                Statement("this is another statement".to_string()),
+                Statement("this is\nanother statement".to_string()),
             ]),
         );
     }
@@ -361,9 +359,9 @@ mod tests {
     fn test_inline_comments_with_semicolon_trailing() {
         assert_eq!(
             StatementGroup::try_from("
-                this is one statement;
-                this is -- ;
-                another statement
+this is one statement;
+this is -- ;
+another statement
             ").unwrap(),
             StatementGroup(vec![
                 Statement("this is one statement".to_string()),
@@ -373,10 +371,48 @@ mod tests {
     }
 
     #[test]
-    fn test_block_comments_with_semicolons() {
-        // own lines
-        // inline
-        assert_eq!(true, false);
+    fn test_block_comments_with_semicolons_own_line() {
+        assert_eq!(
+            StatementGroup::try_from("
+this is one statement;
+this is
+/* ; */
+another statement
+            ").unwrap(),
+            StatementGroup(vec![
+                Statement("this is one statement".to_string()),
+                Statement("this is\n\nanother statement".to_string()),
+            ]),
+        );
+    }
+
+    #[test]
+    fn test_block_comments_with_semicolons_trailing() {
+        assert_eq!(
+            StatementGroup::try_from("
+this is one statement;
+this is /* ; */
+another statement
+            ").unwrap(),
+            StatementGroup(vec![
+                Statement("this is one statement".to_string()),
+                Statement("this is \nanother statement".to_string()),
+            ]),
+        );
+    }
+
+    #[test]
+    fn test_block_comments_with_semicolons_inline() {
+        assert_eq!(
+            StatementGroup::try_from("
+this is one statement;
+this is /* ; */ another statement
+            ").unwrap(),
+            StatementGroup(vec![
+                Statement("this is one statement".to_string()),
+                Statement("this is  another statement".to_string()),
+            ]),
+        );
     }
 
     #[test]
