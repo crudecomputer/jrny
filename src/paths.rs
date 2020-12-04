@@ -18,7 +18,11 @@ impl ProjectPaths {
         let revisions = root.join("revisions");
         let conf = root.join(CONF);
 
-        let paths = Self { conf, revisions, root };
+        let paths = Self {
+            conf,
+            revisions,
+            root,
+        };
 
         paths.valid_for_new()?;
 
@@ -30,13 +34,18 @@ impl ProjectPaths {
     pub fn from_conf_path(conf_path_name: Option<&str>) -> Result<Self, String> {
         let conf = PathBuf::from(conf_path_name.unwrap_or(CONF));
 
-        let root = conf.parent()
+        let root = conf
+            .parent()
             .ok_or_else(|| "Config filepath is not valid".to_string())?
             .to_path_buf();
 
         let revisions = root.join("revisions");
 
-        Ok(Self { conf, revisions, root })
+        Ok(Self {
+            conf,
+            revisions,
+            root,
+        })
     }
 
     /// Ensures that own path bufs are valid for a new project, namely that the
@@ -48,7 +57,10 @@ impl ProjectPaths {
         }
 
         if self.revisions.exists() && !Self::is_empty_dir(&self.revisions)? {
-            return Err(format!("{} is not an empty directory", self.revisions.display()));
+            return Err(format!(
+                "{} is not an empty directory",
+                self.revisions.display()
+            ));
         }
 
         if self.conf.exists() {
@@ -60,9 +72,6 @@ impl ProjectPaths {
 
     /// Determines whether the path buf corresponds to an empty directory.
     fn is_empty_dir(p: &PathBuf) -> Result<bool, String> {
-        Ok(p.is_dir() && p.read_dir()
-           .map_err(|e| e.to_string())?
-           .next()
-           .is_none())
+        Ok(p.is_dir() && p.read_dir().map_err(|e| e.to_string())?.next().is_none())
     }
 }

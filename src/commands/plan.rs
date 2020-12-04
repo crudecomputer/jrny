@@ -1,9 +1,5 @@
 use chrono::Utc;
-use std::{
-    fs,
-    io::Write,
-    path::PathBuf,
-};
+use std::{fs, io::Write, path::PathBuf};
 
 use crate::config::Config;
 
@@ -16,7 +12,9 @@ impl Plan {
     pub fn new_revision(config: &Config, name: &str) -> Result<Self, String> {
         let timestamp = Utc::now().timestamp();
 
-        let revision_path = config.paths.revisions
+        let revision_path = config
+            .paths
+            .revisions
             .join(format!("{}.{}.sql", timestamp, name));
 
         let cmd = Self {
@@ -30,10 +28,7 @@ impl Plan {
     fn create_file(self) -> Result<Self, String> {
         fs::File::create(&self.path)
             .map_err(|e| e.to_string())?
-            .write_all(format!(
-                "-- Journey revision\n--\n-- {}\n--\n\n",
-                self.filename,
-            ).as_bytes())
+            .write_all(format!("-- Journey revision\n--\n-- {}\n--\n\n", self.filename,).as_bytes())
             .map_err(|e| e.to_string())?;
 
         Ok(self)

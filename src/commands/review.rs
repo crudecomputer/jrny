@@ -1,12 +1,9 @@
-use std::{
-    collections::HashMap,
-    rc::Rc,
-};
+use std::{collections::HashMap, rc::Rc};
 
 use crate::{
     config::Config,
     executor::Executor,
-    revisions::{AnnotatedRevision, RevisionRecord, RevisionFile},
+    revisions::{AnnotatedRevision, RevisionFile, RevisionRecord},
 };
 
 pub struct Review {
@@ -18,10 +15,7 @@ pub struct Review {
 }
 
 impl Review {
-    pub fn annotated_revisions(
-        config: &Config,
-        exec: &mut Executor,
-    ) -> Result<Self, String> {
+    pub fn annotated_revisions(config: &Config, exec: &mut Executor) -> Result<Self, String> {
         Ok(Self::new(config, exec)?.annotate())
     }
 
@@ -30,29 +24,19 @@ impl Review {
 
         let mut files = RevisionFile::all_from_disk(&config.paths.revisions)?;
         let mut records = exec.load_revisions()?;
-        
-        let files: Vec<Rc<RevisionFile>> = files
-            .drain(..)
-            .map(Rc::new)
+
+        let files: Vec<Rc<RevisionFile>> = files.drain(..).map(Rc::new).collect();
+
+        let files_map = files
+            .iter()
+            .map(|file_rc| (file_rc.filename.clone(), file_rc.clone()))
             .collect();
 
-        let files_map = files.iter()
-            .map(|file_rc| (
-                file_rc.filename.clone(),
-                file_rc.clone(),
-            ))
-            .collect();
+        let records: Vec<Rc<RevisionRecord>> = records.drain(..).map(Rc::new).collect();
 
-        let records: Vec<Rc<RevisionRecord>> = records
-            .drain(..)
-            .map(Rc::new)
-            .collect();
-
-        let records_map = records.iter()
-            .map(|record_rc| (
-                record_rc.filename.clone(),
-                record_rc.clone(),
-            ))
+        let records_map = records
+            .iter()
+            .map(|record_rc| (record_rc.filename.clone(), record_rc.clone()))
             .collect();
 
         Ok(Self {

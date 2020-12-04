@@ -5,7 +5,9 @@ pub enum Action {
 }
 
 pub trait State {
-    fn can_terminate(&self) -> bool { false }
+    fn can_terminate(&self) -> bool {
+        false
+    }
 
     fn accept(&self, grapheme: &str) -> (Action, Box<dyn State>);
 }
@@ -19,98 +21,95 @@ pub struct MightStartBlockComment;
 pub struct InBlockComment;
 pub struct MightEndBlockComment;
 
-impl State for Start { // 1
+impl State for Start {
     fn can_terminate(&self) -> bool {
         true
     }
-    
+
     fn accept(&self, s: &str) -> (Action, Box<dyn State>) {
         match s {
-            "'"  => (Action::Append, Box::new(InString)),
+            "'" => (Action::Append, Box::new(InString)),
             "\"" => (Action::Append, Box::new(InDelimitedIdentifier)),
-            "-"  => (Action::Carry,  Box::new(MightStartInlineComment)),
-            "/"  => (Action::Carry,  Box::new(MightStartBlockComment)),
-            _    => (Action::Append, Box::new(Start)),
-
+            "-" => (Action::Carry, Box::new(MightStartInlineComment)),
+            "/" => (Action::Carry, Box::new(MightStartBlockComment)),
+            _ => (Action::Append, Box::new(Start)),
         }
     }
 }
 
-impl State for InString { // 2
+impl State for InString {
     fn accept(&self, s: &str) -> (Action, Box<dyn State>) {
         match s {
             "'" => (Action::Append, Box::new(Start)),
-            _   => (Action::Append, Box::new(InString)),
-
+            _ => (Action::Append, Box::new(InString)),
         }
     }
 }
 
-impl State for InDelimitedIdentifier { // 3
+impl State for InDelimitedIdentifier {
     fn accept(&self, s: &str) -> (Action, Box<dyn State>) {
         match s {
             "\"" => (Action::Append, Box::new(Start)),
-            _    => (Action::Append, Box::new(InDelimitedIdentifier)),
-
+            _ => (Action::Append, Box::new(InDelimitedIdentifier)),
         }
     }
 }
 
-impl State for MightStartInlineComment { // 4
+impl State for MightStartInlineComment {
     fn can_terminate(&self) -> bool {
         true
     }
 
     fn accept(&self, s: &str) -> (Action, Box<dyn State>) {
         match s {
-            "'"  => (Action::Append, Box::new(InString)),
+            "'" => (Action::Append, Box::new(InString)),
             "\"" => (Action::Append, Box::new(InDelimitedIdentifier)),
             "--" => (Action::Ignore, Box::new(InInlineComment)),
-            "/"  => (Action::Carry,  Box::new(MightStartBlockComment)),
-            _    => (Action::Append, Box::new(Start)),
+            "/" => (Action::Carry, Box::new(MightStartBlockComment)),
+            _ => (Action::Append, Box::new(Start)),
         }
     }
 }
 
-impl State for InInlineComment { // 5
+impl State for InInlineComment {
     fn accept(&self, s: &str) -> (Action, Box<dyn State>) {
         match s {
             "\n" => (Action::Append, Box::new(Start)),
-            _    => (Action::Ignore, Box::new(InInlineComment)),
+            _ => (Action::Ignore, Box::new(InInlineComment)),
         }
     }
 }
 
-impl State for MightStartBlockComment { // 6
+impl State for MightStartBlockComment {
     fn can_terminate(&self) -> bool {
         true
     }
 
     fn accept(&self, s: &str) -> (Action, Box<dyn State>) {
         match s {
-            "'"  => (Action::Append, Box::new(InString)),
+            "'" => (Action::Append, Box::new(InString)),
             "\"" => (Action::Append, Box::new(InDelimitedIdentifier)),
-            "-"  => (Action::Ignore, Box::new(MightStartInlineComment)),
-            "/*" => (Action::Carry,  Box::new(InBlockComment)),
-            _    => (Action::Append, Box::new(Start)),
+            "-" => (Action::Ignore, Box::new(MightStartInlineComment)),
+            "/*" => (Action::Carry, Box::new(InBlockComment)),
+            _ => (Action::Append, Box::new(Start)),
         }
     }
 }
 
-impl State for InBlockComment { // 7
+impl State for InBlockComment {
     fn accept(&self, s: &str) -> (Action, Box<dyn State>) {
         match s {
-            "*" => (Action::Carry,  Box::new(MightEndBlockComment)),
-            _   => (Action::Ignore, Box::new(InBlockComment)),
+            "*" => (Action::Carry, Box::new(MightEndBlockComment)),
+            _ => (Action::Ignore, Box::new(InBlockComment)),
         }
     }
 }
 
-impl State for MightEndBlockComment { // 8
+impl State for MightEndBlockComment {
     fn accept(&self, s: &str) -> (Action, Box<dyn State>) {
         match s {
             "*/" => (Action::Ignore, Box::new(Start)),
-            _    => (Action::Ignore, Box::new(InBlockComment)),
+            _ => (Action::Ignore, Box::new(InBlockComment)),
         }
     }
 }
@@ -121,13 +120,13 @@ mod tests {
 
     #[test]
     fn states_can_terminate() {
-        assert_eq!(Start                  .can_terminate(), true);
-        assert_eq!(InString               .can_terminate(), false); // Inside string
-        assert_eq!(InDelimitedIdentifier  .can_terminate(), false); // Inside quoted
+        assert_eq!(Start.can_terminate(), true);
+        assert_eq!(InString.can_terminate(), false); // Inside string
+        assert_eq!(InDelimitedIdentifier.can_terminate(), false); // Inside quoted
         assert_eq!(MightStartInlineComment.can_terminate(), true);
-        assert_eq!(InInlineComment        .can_terminate(), false); // Inside comment
-        assert_eq!(MightStartBlockComment .can_terminate(), true);
-        assert_eq!(InBlockComment         .can_terminate(), false); // Inside comment
-        assert_eq!(MightEndBlockComment   .can_terminate(), false); // Inside comment
+        assert_eq!(InInlineComment.can_terminate(), false); // Inside comment
+        assert_eq!(MightStartBlockComment.can_terminate(), true);
+        assert_eq!(InBlockComment.can_terminate(), false); // Inside comment
+        assert_eq!(MightEndBlockComment.can_terminate(), false); // Inside comment
     }
 }

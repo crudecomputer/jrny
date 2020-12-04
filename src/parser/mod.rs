@@ -25,7 +25,9 @@ impl Parser {
 
         // If the parser handled white-space better, the extra allocations
         // here would not be necessary... TODO
-        parser.statements.iter()
+        parser
+            .statements
+            .iter()
             .map(|stmt| Statement(stmt.0.trim().to_string()))
             .filter(|stmt| !stmt.0.is_empty())
             .collect()
@@ -70,9 +72,13 @@ impl Parser {
         self.state = next_state;
 
         match action {
-            Action::Append => { current_statement.0.push_str(&next); },
-            Action::Carry  => { self.carried = next; },
-            Action::Ignore => {},
+            Action::Append => {
+                current_statement.0.push_str(&next);
+            }
+            Action::Carry => {
+                self.carried = next;
+            }
+            Action::Ignore => {}
         }
     }
 }
@@ -95,9 +101,7 @@ mod tests {
     fn single_statement() {
         assert_eq!(
             Parser::parse("anything really, does not matter"),
-            vec![
-                Statement("anything really, does not matter".to_string()),
-            ],
+            vec![Statement("anything really, does not matter".to_string()),],
         );
     }
 
@@ -105,9 +109,7 @@ mod tests {
     fn single_with_embedded_semicolons() {
         assert_eq!(
             Parser::parse("one thing ';' and two things \";\""),
-            vec![
-                Statement("one thing ';' and two things \";\"".to_string()),
-            ],
+            vec![Statement("one thing ';' and two things \";\"".to_string()),],
         );
     }
 
@@ -148,9 +150,7 @@ mod tests {
     fn quoted_with_semicolons() {
         assert_eq!(
             Parser::parse(r#" '";'"  "#),
-            vec![
-                Statement(r#"'";'""#.to_string()),
-            ],
+            vec![Statement(r#"'";'""#.to_string()),],
         );
         assert_eq!(
             Parser::parse(r#" '"';"  "#),
@@ -161,21 +161,21 @@ mod tests {
         );
         assert_eq!(
             Parser::parse(r#" a ';' b ";" c '";"' d "';'" e    "#),
-            vec![
-                Statement(r#"a ';' b ";" c '";"' d "';'" e"#.to_string()),
-            ],
+            vec![Statement(r#"a ';' b ";" c '";"' d "';'" e"#.to_string()),],
         );
     }
 
     #[test]
     fn inline_comments_with_semicolon_on_own_line() {
         assert_eq!(
-            Parser::parse("
+            Parser::parse(
+                "
 this is one statement;
 this is
 -- ;
 another statement
-            "),
+            "
+            ),
             vec![
                 Statement("this is one statement".to_string()),
                 Statement("this is\n\nanother statement".to_string()),
@@ -186,11 +186,13 @@ another statement
     #[test]
     fn inline_comments_with_semicolon_trailing() {
         assert_eq!(
-            Parser::parse("
+            Parser::parse(
+                "
 this is one statement;
 this is -- ;
 another statement
-            "),
+            "
+            ),
             vec![
                 Statement("this is one statement".to_string()),
                 Statement("this is \nanother statement".to_string()),
@@ -201,12 +203,14 @@ another statement
     #[test]
     fn block_comments_with_semicolons_own_line() {
         assert_eq!(
-            Parser::parse("
+            Parser::parse(
+                "
 this is one statement;
 this is
 /* ; */
 another statement
-            "),
+            "
+            ),
             vec![
                 Statement("this is one statement".to_string()),
                 Statement("this is\n\nanother statement".to_string()),
@@ -217,11 +221,13 @@ another statement
     #[test]
     fn block_comments_with_semicolons_trailing() {
         assert_eq!(
-            Parser::parse("
+            Parser::parse(
+                "
 this is one statement;
 this is /* ; */
 another statement
-            "),
+            "
+            ),
             vec![
                 Statement("this is one statement".to_string()),
                 Statement("this is \nanother statement".to_string()),
@@ -232,10 +238,12 @@ another statement
     #[test]
     fn block_comments_with_semicolons_inline() {
         assert_eq!(
-            Parser::parse("
+            Parser::parse(
+                "
 this is one statement;
 this is /* ; */ another statement
-            "),
+            "
+            ),
             vec![
                 Statement("this is one statement".to_string()),
                 Statement("this is  another statement".to_string()),
