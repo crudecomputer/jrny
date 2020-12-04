@@ -6,6 +6,7 @@ pub mod statements;
 mod client;
 mod config;
 mod executor;
+mod parser;
 mod logger;
 
 pub use config::Config;
@@ -15,7 +16,7 @@ pub use logger::Logger;
 
 const CONF: &str = "jrny.toml";
 const CONF_TEMPLATE: &[u8] =
-r#"# jrny.toml
+r#"# jrny config
 
 [connection]
 host = "localhost"
