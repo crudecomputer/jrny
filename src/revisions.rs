@@ -58,7 +58,7 @@ impl TryFrom<&PathBuf> for RevisionFile {
             contents,
             created_at: title.created_at,
             filename: filename.to_string(),
-            name: title.name.to_string(),
+            name: title.name,
         })
     }
 }
@@ -121,7 +121,7 @@ impl TryFrom<&str> for RevisionTitle {
         // Regex would work great here, but not sure if it's worth the 1.2 Mb increase
         // in binary size, especially since (I believe) unicode tables would be necessary
         // and that's the obvious feature to disable to reduce size
-        let parts: Vec<&str> = filename.splitn(3, ".").collect();
+        let parts: Vec<&str> = filename.splitn(3, '.').collect();
 
         let err = || format!(
             "Invalid revision name {}: expected <timestamp>.<name>.sql",
@@ -135,7 +135,7 @@ impl TryFrom<&str> for RevisionTitle {
         let timestamp: i64 = timestamp.parse().map_err(|_| err())?;
         let created_at = Utc.timestamp(timestamp, 0);
 
-        Ok(Self { created_at, name: name.to_string() })
+        Ok(Self { created_at, name: (*name).to_string() })
     }
 }
 

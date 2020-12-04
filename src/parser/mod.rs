@@ -40,7 +40,7 @@ impl Parser {
     }
 
     fn accept(&mut self, next: &str) {
-        if self.statements.len() == 0 {
+        if self.statements.is_empty() {
             self.statements.push(Statement::default());
         }
 

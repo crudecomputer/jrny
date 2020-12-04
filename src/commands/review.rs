@@ -33,7 +33,7 @@ impl Review {
         
         let files: Vec<Rc<RevisionFile>> = files
             .drain(..)
-            .map(|file| Rc::new(file))
+            .map(Rc::new)
             .collect();
 
         let files_map = files.iter()
@@ -45,7 +45,7 @@ impl Review {
 
         let records: Vec<Rc<RevisionRecord>> = records
             .drain(..)
-            .map(|record| Rc::new(record))
+            .map(Rc::new)
             .collect();
 
         let records_map = records.iter()
@@ -75,14 +75,14 @@ impl Review {
                 checksum: Some(file.checksum.clone()),
                 checksums_match: None,
                 contents: Some(file.contents.clone()),
-                created_at: file.created_at.clone(),
+                created_at: file.created_at,
                 filename: file.filename.clone(),
                 name: file.name.clone(),
                 on_disk: true,
             };
 
             if let Some(record) = self.records_map.get(&file.filename) {
-                anno.applied_on = Some(record.applied_on.clone());
+                anno.applied_on = Some(record.applied_on);
                 anno.checksums_match = Some(file.checksum == record.checksum);
             }
 
@@ -90,7 +90,7 @@ impl Review {
         }
 
         for record in self.records.iter() {
-            if let Some(_) = self.files_map.get(&record.filename) {
+            if self.files_map.get(&record.filename).is_some() {
                 continue;
             }
 

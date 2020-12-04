@@ -24,7 +24,7 @@ impl Log for Logger {
             write!(&mut stderr, "{}", record.args()).unwrap();
 
             stderr.set_color(ColorSpec::new().set_fg(None)).unwrap();
-            writeln!(&mut stderr, "").unwrap();
+            writeln!(&mut stderr).unwrap();
 
             return;
         }

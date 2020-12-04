@@ -101,7 +101,7 @@ impl Executor {
     /// if explicitly specified.
     pub fn run_revisions(
         &mut self,
-        groups: &Vec<(AnnotatedRevision, StatementGroup)>,
+        groups: &[(AnnotatedRevision, StatementGroup)],
         commit: bool,
     ) -> Result<(), String> {
         let insert_revision = INSERT_REVISION

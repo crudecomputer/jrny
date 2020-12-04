@@ -105,7 +105,7 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
 
     let cmd = commands::Review::annotated_revisions(&config, &mut exec)?;
 
-    if cmd.revisions.len() == 0 {
+    if cmd.revisions.is_empty() {
         info!("No revisions found. Create your first revision with `jrny plan <some-name>`.");
 
         return Ok(());
@@ -158,7 +158,7 @@ pub fn embark(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> 
 
     let cmd = commands::Embark::prepare(&config, &mut exec)?;
 
-    if cmd.to_apply.len() == 0 {
+    if cmd.to_apply.is_empty() {
         info!("No revisions to apply");
         return Ok(())
     }
@@ -169,7 +169,7 @@ pub fn embark(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> 
         info!("\t{}", revision.filename);
     }
 
-    let _ = cmd.apply(&mut exec, commit)?;
+    cmd.apply(&mut exec, commit)?;
 
     if commit {
         println!("\nCommitting the transaction")

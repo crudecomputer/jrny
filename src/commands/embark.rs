@@ -26,14 +26,14 @@ impl Embark {
             .filter(|anno| !anno.on_disk)
             .collect();
 
-        if changed.len() > 0 || missing.len() > 0 {
+        if !changed.is_empty() || !missing.is_empty() {
             let mut msg = "Failed to run revisions:".to_string();
 
-            if changed.len() > 0 {
+            if !changed.is_empty() {
                 msg.push_str(&format!("\n\t{} changed since being applied", changed.len()));
             }
 
-            if missing.len() > 0 {
+            if !missing.is_empty() {
                 msg.push_str(&format!("\n\t{} no longer present on disk", changed.len()));
             }
 
@@ -67,7 +67,7 @@ impl Embark {
             }
         }
 
-        let _ = exec.run_revisions(&groups, commit)?;
+        exec.run_revisions(&groups, commit)?;
 
         Ok(())
     }

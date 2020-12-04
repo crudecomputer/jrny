@@ -13,10 +13,10 @@ impl Config {
         let paths = ProjectPaths::from_conf_path(conf_path_name)?;
 
         let contents = fs::read_to_string(&paths.conf)
-            .expect(&format!("Could not open {}", paths.conf.display()));
+            .unwrap_or_else(|_| panic!("Could not open {}", paths.conf.display()));
 
         let settings: Settings = toml::from_str(&contents)
-            .expect(&format!("Could not parse {}", paths.conf.display()));
+            .unwrap_or_else(|_| panic!("Could not open {}", paths.conf.display()));
 
         Ok(Self { paths, settings })
     }
