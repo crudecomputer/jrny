@@ -10,7 +10,6 @@ use crate::paths::ProjectPaths;
 #[serde(tag = "type")]
 #[serde(rename_all = "kebab-case")]
 enum ConnectionStrategy {
-
     #[serde(rename_all = "kebab-case")]
     EnvUrlString { var_name: String },
 }
@@ -52,11 +51,13 @@ impl Config {
     pub fn new(conf_path_name: Option<&str>) -> Result<Self, String> {
         let paths = ProjectPaths::from_conf_path(conf_path_name)?;
 
-        let contents = fs::read_to_string(&paths.conf)
-            .unwrap_or_else(|e| panic!("Could not open {}: {}", paths.conf.display(), e.to_string()));
+        let contents = fs::read_to_string(&paths.conf).unwrap_or_else(|e| {
+            panic!("Could not open {}: {}", paths.conf.display(), e.to_string())
+        });
 
-        let toml_settings: TomlSettings = toml::from_str(&contents)
-            .unwrap_or_else(|e| panic!("Could not open {}: {}", paths.conf.display(), e.to_string()));
+        let toml_settings: TomlSettings = toml::from_str(&contents).unwrap_or_else(|e| {
+            panic!("Could not open {}: {}", paths.conf.display(), e.to_string())
+        });
 
         let settings = Settings {
             connection: ConnectionSettings {
@@ -71,7 +72,8 @@ impl Config {
 
 fn url_from_toml(conn_settings: &TomlConnectionSettings) -> Result<String, String> {
     Ok(match &conn_settings.strategy {
-        ConnectionStrategy::EnvUrlString { var_name } =>
-            env::var(var_name).map_err(|e| format!("{}: {}", e, var_name))?,
+        ConnectionStrategy::EnvUrlString { var_name } => {
+            env::var(var_name).map_err(|e| format!("{}: {}", e, var_name))?
+        }
     })
 }

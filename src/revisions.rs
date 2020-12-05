@@ -103,6 +103,7 @@ impl PartialEq for AnnotatedRevision {
 }
 
 /// Creation date and extension-less name extracted from a revision filename.
+#[derive(Debug, PartialEq)]
 struct RevisionTitle {
     created_at: DateTime<Utc>,
     name: String,
@@ -112,23 +113,30 @@ impl TryFrom<&str> for RevisionTitle {
     type Error = String;
 
     fn try_from(filename: &str) -> Result<Self, Self::Error> {
-        // Regex would work great here, but not sure if it's worth the 1.2 Mb increase
-        // in binary size, especially since (I believe) unicode tables would be necessary
-        // and that's the obvious feature to disable to reduce size
-        let parts: Vec<&str> = filename.splitn(3, '.').collect();
-
         let err = || {
             format!(
-                "Invalid revision name {}: expected <timestamp>.<name>.sql",
+                "Invalid revision name `{}`: expected [timestamp].[name].sql",
                 filename,
             )
         };
 
-        let (timestamp, name) = match (parts.get(0), parts.get(1), parts.get(2)) {
-            (Some(seconds), Some(name), Some(&"sql")) => (seconds, name),
+        let parts: Vec<&str> = filename.split('.').collect();
+
+        // TODO maybe just use nightly?
+        // Regex would work too, but it's not worth the 1.2 Mb increase
+        /*
+        let (timestamp, name) = match parts.as_slice() {
+            [timestamp, .. name, "sql"] => (timestamp, name.join(".")),
             _ => return Err(err()),
         };
-        let timestamp: i64 = timestamp.parse().map_err(|_| err())?;
+        */
+
+        if parts.len() < 3 || parts[parts.len() - 1] != "sql" {
+            return Err(err());
+        }
+
+        let name = parts[1..parts.len() - 1].join(".");
+        let timestamp: i64 = parts[0].parse().map_err(|_| err())?;
         let created_at = Utc.timestamp(timestamp, 0);
 
         Ok(Self {
@@ -145,9 +153,38 @@ fn to_checksum(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    fn parses_filename() {
-        // test name allowed to have "." in it
-        assert_eq!(true, false)
+    fn revision_title_parses_sql_filename() {
+        assert_eq!(
+            RevisionTitle::try_from("1577836800.some-file.sql").unwrap(),
+            RevisionTitle {
+                created_at: Utc.ymd(2020, 1, 1).and_hms(0, 0, 0),
+                name: "some-file".to_string(),
+            }
+        )
+    }
+
+    #[test]
+    fn revision_title_fails_non_sql() {
+        assert_eq!(
+            RevisionTitle::try_from("1577836800.some-file.wat"),
+            Err(
+                "Invalid revision name `1577836800.some-file.wat`: expected [timestamp].[name].sql"
+                    .to_string()
+            )
+        )
+    }
+
+    #[test]
+    fn revision_title_allows_multiple_periods() {
+        assert_eq!(
+            RevisionTitle::try_from("1577836800.some.file.sql").unwrap(),
+            RevisionTitle {
+                created_at: Utc.ymd(2020, 1, 1).and_hms(0, 0, 0),
+                name: "some.file".to_string(),
+            }
+        )
     }
 }

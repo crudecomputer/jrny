@@ -3,8 +3,8 @@ use std::convert::TryFrom;
 use std::str::FromStr;
 use std::time::Duration;
 
-pub use postgres::Client;
 use postgres::config::Config as ClientConfig;
+pub use postgres::Client;
 
 use crate::config::Config;
 
@@ -17,7 +17,7 @@ impl TryFrom<&Config> for Client {
 
         config.application_name("jrny");
 
-        if let None = config.get_connect_timeout() {
+        if config.get_connect_timeout().is_none() {
             config.connect_timeout(Duration::new(30, 0));
         }
 
