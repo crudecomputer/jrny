@@ -5,13 +5,17 @@ pub mod statements;
 
 mod client;
 mod config;
+mod error;
 mod executor;
 mod logger;
 mod parser;
 
 pub use config::Config;
+pub use error::Error;
 pub use executor::Executor;
 pub use logger::Logger;
+
+pub type Result<T> = std::result::Result<T, Error>;
 
 const CONF: &str = "jrny.toml";
 const CONF_TEMPLATE: &[u8] = r#"# jrny config

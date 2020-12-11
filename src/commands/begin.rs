@@ -1,6 +1,6 @@
 use std::{fs, io::Write};
 
-use crate::{paths::ProjectPaths, CONF_TEMPLATE};
+use crate::{CONF_TEMPLATE, Error, Result, paths::ProjectPaths};
 
 pub struct Begin {
     pub paths: ProjectPaths,
@@ -16,7 +16,7 @@ impl Begin {
     /// that there is an empty `revisions` directory nested within it or
     /// create it if not already present. If any error occurs, any changes
     /// to the file system will be attempted to be reversed.
-    pub fn new_project(p: &str) -> Result<Self, String> {
+    pub fn new_project(p: &str) -> Result<Self> {
         let cmd = Self {
             paths: ProjectPaths::for_new_project(p)?,
             created_conf: false,
@@ -29,9 +29,9 @@ impl Begin {
 
     /// Attempts to create the project root directory if it doesn't exist,
     /// marking created as true if newly created.
-    fn create_root(mut self) -> Result<Self, String> {
+    fn create_root(mut self) -> Result<Self> {
         if !self.paths.root.exists() {
-            fs::create_dir(&self.paths.root).map_err(|e| e.to_string())?;
+            fs::create_dir(&self.paths.root)?;
             self.created_root = true;
         }
 
@@ -40,12 +40,11 @@ impl Begin {
 
     /// Attempts to create the revisions directory if it doesn't exist,
     /// marking created as true if newly created.
-    fn create_revisions(mut self) -> Result<Self, String> {
+    fn create_revisions(mut self) -> Result<Self> {
         if !self.paths.revisions.exists() {
             if let Err(e) = fs::create_dir(&self.paths.revisions) {
                 self.revert()?;
-
-                return Err(e.to_string());
+                return Err(Error::IoError(e));
             }
 
             self.created_revisions = true;
@@ -56,7 +55,7 @@ impl Begin {
 
     /// Attempts to create the default configuration file. If a failure occurs,
     /// it will attempt to clean up any directory or file created during the command.
-    fn create_conf(mut self) -> Result<Self, String> {
+    fn create_conf(mut self) -> Result<Self> {
         let mut err = None;
 
         match fs::File::create(&self.paths.conf) {
@@ -64,11 +63,11 @@ impl Begin {
                 self.created_conf = true;
 
                 if let Err(e) = f.write_all(CONF_TEMPLATE) {
-                    err = Some(e.to_string());
+                    err = Some(Error::IoError(e));
                 }
             }
             Err(e) => {
-                err = Some(e.to_string());
+                err = Some(Error::IoError(e));
             }
         }
 
@@ -82,17 +81,17 @@ impl Begin {
     }
 
     /// Attempts to remove any directories or files created during command execution.
-    fn revert(&self) -> Result<(), String> {
+    fn revert(&self) -> Result<()> {
         if self.created_conf {
-            fs::remove_file(&self.paths.conf).map_err(|e| e.to_string())?;
+            fs::remove_file(&self.paths.conf)?;
         }
 
         if self.created_revisions {
-            fs::remove_dir(&self.paths.revisions).map_err(|e| e.to_string())?;
+            fs::remove_dir(&self.paths.revisions)?;
         }
 
         if self.created_root {
-            fs::remove_dir(&self.paths.root).map_err(|e| e.to_string())?;
+            fs::remove_dir(&self.paths.root)?;
         }
 
         Ok(())

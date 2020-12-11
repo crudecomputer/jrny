@@ -41,7 +41,25 @@ but there are (subjectively) some big annoyances and I just don't like them.
 
 ## Installation
 
-At the moment, `jrny` must be manually built using `cargo`, but this will change in a subsequent release.
+`jrny` is currently only pre-compiled for macOS but has zero external dependencies, so it should be available soon [on other platforms](https://github.com/kevlarr/jrny/issues/14). If you feel like testing, feel free to clone and build from source and let me know how it goes!
+
+### macOS
+
+`jrny` can easily be installed via [Homebrew](https://brew.sh/)...
+
+```bash
+brew tap kevlarr/jrny
+brew install jrny
+```
+
+... or be built from source if you have `cargo` installed (easiest is using [rustup](https://rustup.rs/)).
+
+```bash
+git clone https://github.com/kevlarr/jrny.git jrny
+cd jrny
+cargo build --release
+cp target/release/jrny /usr/bin/local
+```
 
 ---
 

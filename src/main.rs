@@ -3,7 +3,7 @@ use clap::{clap_app, AppSettings};
 use log::{info, warn, LevelFilter};
 use std::path::PathBuf;
 
-use jrny::{commands, Config, Executor, Logger};
+use jrny::{commands, Config, Executor, JrnyError, Logger};
 
 static LOGGER: Logger = Logger;
 
@@ -14,7 +14,7 @@ fn main() {
         .unwrap();
 
     let app = clap_app! {jrny =>
-        (about: "Data modeling is a journey; manage yours with jrny - simple PostgreSQL schema management")
+        (about: "PostgreSQL schema revisions made easy - just add SQL")
         (version: env!("CARGO_PKG_VERSION"))
         (setting: AppSettings::SubcommandRequired)
 
@@ -24,28 +24,36 @@ fn main() {
         )
 
         (@subcommand plan =>
-            (about: "Generates a timestamped SQL revision")
+            (about: "Generates a timestamped SQL revision file")
             (@arg name: +required "Name of the revision")
-            (@arg config: -c --config [FILE] +takes_value "Sets a custom config file")
+            (@arg config: -c --config [FILE] +takes_value "Path to TOML config file")
         )
 
         (@subcommand review =>
-            (about: "Reviews which plans need to be applied, which have been applied and when, and whether or not plans already applied appear to differ from the plan file")
-            (@arg config: -c --config [FILE] +takes_value "Sets a custom config file")
+            (about: "Provides a summary of applied and pending revisions, including whether any applied have changed or are not found")
+            (@arg config: -c --config [FILE] +takes_value "Path to TOML config file")
         )
 
         (@subcommand embark =>
-            (about: "Reviews and applies the available revisions")
-            (@arg config: -c --config [FILE] +takes_value "Sets a custom config file")
+            (about: "Applies pending revisions upon successful review")
+            (@arg config: -c --config [FILE] +takes_value "Path to TOML config file")
             (@arg commit: --commit !takes_value "Commits the transaction, false by default to encourage dry runs")
         )
     };
 
     let result = match app.clone().get_matches().subcommand() {
-        ("begin", Some(cmd)) => begin(cmd.value_of("dirpath").unwrap()),
-        ("plan", Some(cmd)) => plan(cmd.value_of("name").unwrap(), cmd.value_of("config")),
-        ("review", Some(cmd)) => review(cmd.value_of("config")),
-        ("embark", Some(cmd)) => embark(cmd.value_of("config"), cmd.is_present("commit")),
+        ("begin", Some(cmd)) => {
+            begin(cmd.value_of("dirpath").unwrap())
+        }
+        ("plan", Some(cmd)) => {
+            plan(cmd.value_of("name").unwrap(), cmd.value_of("config"))
+        }
+        ("review", Some(cmd)) => {
+            review(cmd.value_of("config"))
+        }
+        ("embark", Some(cmd)) => {
+            embark(cmd.value_of("config"), cmd.is_present("commit"))
+        }
         _ => unreachable!(),
     };
 
@@ -84,7 +92,7 @@ pub fn plan(name: &str, conf_path_name: Option<&str>) -> Result<(), String> {
     Ok(())
 }
 
-pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
+pub fn review(conf_path_name: Option<&str>) -> Result<(), JrnyError> {
     let config = Config::new(conf_path_name)?;
     let mut exec = Executor::new(&config)?;
 
@@ -92,7 +100,6 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
 
     if cmd.revisions.is_empty() {
         info!("No revisions found. Create your first revision with `jrny plan <some-name>`.");
-
         return Ok(());
     }
 
