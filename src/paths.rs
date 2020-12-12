@@ -36,7 +36,7 @@ impl ProjectPaths {
 
         let root = conf
             .parent()
-            .ok_or_else(|| Error::InvalidPath(conf.display().to_string()))?
+            .ok_or_else(|| Error::PathInvalid(conf.display().to_string()))?
             .to_path_buf();
 
         let revisions = root.join("revisions");
@@ -55,15 +55,15 @@ impl ProjectPaths {
         use Error::*;
 
         if self.root.exists() && !self.root.is_dir() {
-            return Err(NotDirectory(self.root.display().to_string()));
+            return Err(PathNotDirectory(self.root.display().to_string()));
         }
 
         if self.revisions.exists() && !Self::is_empty_dir(&self.revisions)? {
-            return Err(NotEmptyDirectory(self.revisions.display().to_string()));
+            return Err(PathNotEmptyDirectory(self.revisions.display().to_string()));
         }
 
         if self.conf.exists() {
-            return Err(AlreadyExists(self.conf.display().to_string()));
+            return Err(PathAlreadyExists(self.conf.display().to_string()));
         }
 
         Ok(())

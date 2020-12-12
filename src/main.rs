@@ -3,7 +3,7 @@ use clap::{clap_app, AppSettings};
 use log::{info, warn, LevelFilter};
 use std::path::PathBuf;
 
-use jrny::{commands, Config, Executor, JrnyError, Logger};
+use jrny::{Config, Executor, Logger, Result, commands};
 
 static LOGGER: Logger = Logger;
 
@@ -68,7 +68,7 @@ fn main() {
 /// that there is an empty `revisions` directory nested within it or
 /// create it if not already present. If any error occurs, any changes
 /// to the file system will be attempted to be reversed.
-pub fn begin(path: &str) -> Result<(), String> {
+pub fn begin(path: &str) -> Result<()> {
     let cmd = commands::Begin::new_project(path)?;
 
     info!("A journey has begun");
@@ -83,7 +83,7 @@ pub fn begin(path: &str) -> Result<(), String> {
 /// Accepts a name for the migration file and an optional path to a config file.
 /// If no path is provided, it will add a timestamped SQL file relative to current
 /// working directory; otherwise it will add file in a directory relative to config.
-pub fn plan(name: &str, conf_path_name: Option<&str>) -> Result<(), String> {
+pub fn plan(name: &str, conf_path_name: Option<&str>) -> Result<()> {
     let config = Config::new(conf_path_name)?;
     let cmd = commands::Plan::new_revision(&config, name)?;
 
@@ -92,7 +92,7 @@ pub fn plan(name: &str, conf_path_name: Option<&str>) -> Result<(), String> {
     Ok(())
 }
 
-pub fn review(conf_path_name: Option<&str>) -> Result<(), JrnyError> {
+pub fn review(conf_path_name: Option<&str>) -> Result<()> {
     let config = Config::new(conf_path_name)?;
     let mut exec = Executor::new(&config)?;
 
@@ -142,7 +142,7 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), JrnyError> {
     Ok(())
 }
 
-pub fn embark(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> {
+pub fn embark(conf_path_name: Option<&str>, commit: bool) -> Result<()> {
     let config = Config::new(conf_path_name)?;
     let mut exec = Executor::new(&config)?;
 

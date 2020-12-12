@@ -2,7 +2,7 @@ use log::info;
 use postgres::Client;
 use std::convert::TryFrom;
 
-use crate::config::Config;
+use crate::{Result, config::Config};
 use crate::revisions::{AnnotatedRevision, RevisionRecord};
 use crate::statements::StatementGroup;
 
@@ -53,7 +53,7 @@ pub struct Executor {
 }
 
 impl Executor {
-    pub fn new(config: &Config) -> Result<Self, String> {
+    pub fn new(config: &Config) -> Result<Self> {
         let client = Client::try_from(config)?;
 
         Ok(Self {
@@ -63,7 +63,7 @@ impl Executor {
         })
     }
 
-    pub fn ensure_table_exists(&mut self) -> Result<(), String> {
+    pub fn ensure_table_exists(&mut self) -> Result<()> {
         if !self.schema_exists()? {
             self.create_schema()?;
         }
@@ -74,15 +74,12 @@ impl Executor {
         Ok(())
     }
 
-    pub fn load_revisions(&mut self) -> Result<Vec<RevisionRecord>, String> {
+    pub fn load_revisions(&mut self) -> Result<Vec<RevisionRecord>> {
         let stmt = SELECT_REVISIONS
             .replace("$$schema$$", &self.schema)
             .replace("$$table$$", &self.table);
 
-        let rows = self
-            .client
-            .query(stmt.as_str(), &[])
-            .map_err(|e| e.to_string())?;
+        let rows = self.client.query(stmt.as_str(), &[])?;
 
         let revisions = rows
             .iter()
@@ -104,12 +101,12 @@ impl Executor {
         &mut self,
         groups: &[(AnnotatedRevision, StatementGroup)],
         commit: bool,
-    ) -> Result<(), String> {
+    ) -> Result<()> {
         let insert_revision = INSERT_REVISION
             .replace("$$schema$$", &self.schema)
             .replace("$$table$$", &self.table);
 
-        let mut tx = self.client.transaction().map_err(|e| e.to_string())?;
+        let mut tx = self.client.transaction()?;
 
         for (revision, group) in groups.iter() {
             info!("\nApplying \"{}\"", revision.filename);
@@ -125,68 +122,56 @@ impl Executor {
 
                 info!("\t{}", preview);
 
-                let _ = tx
-                    .execute(statement.0.as_str(), &[])
-                    .map_err(|e| e.to_string())?;
+                let _ = tx.execute(statement.0.as_str(), &[])?;
             }
 
-            let _ = tx
-                .execute(
-                    insert_revision.as_str(),
-                    &[
-                        &revision.created_at,
-                        &revision.checksum,
-                        &revision.filename,
-                        &revision.name,
-                    ],
-                )
-                .map_err(|e| e.to_string())?;
+            let _ = tx.execute(
+                insert_revision.as_str(),
+                &[
+                    &revision.created_at,
+                    &revision.checksum,
+                    &revision.filename,
+                    &revision.name,
+                ],
+            )?;
         }
 
         if commit {
-            tx.commit().map_err(|e| e.to_string())?;
+            tx.commit()?;
         }
 
         Ok(())
     }
 
-    fn table_exists(&mut self) -> Result<bool, String> {
-        let row = self
-            .client
-            .query_one(TABLE_EXISTS, &[&self.schema, &self.table])
-            .map_err(|e| e.to_string())?;
+    fn table_exists(&mut self) -> Result<bool> {
+        let row = self.client.query_one(TABLE_EXISTS, &[&self.schema, &self.table])?;
 
         Ok(row.get("exists"))
     }
 
-    fn schema_exists(&mut self) -> Result<bool, String> {
-        let row = self
-            .client
-            .query_one(SCHEMA_EXISTS, &[&self.schema])
-            .map_err(|e| e.to_string())?;
+    fn schema_exists(&mut self) -> Result<bool> {
+        let row = self.client.query_one(SCHEMA_EXISTS, &[&self.schema])?;
 
         Ok(row.get("exists"))
     }
 
-    fn create_schema(&mut self) -> Result<(), String> {
+    fn create_schema(&mut self) -> Result<()> {
         info!("Creating schema {}", self.schema);
         let create = CREATE_SCHEMA.replace("$$schema$$", &self.schema);
 
-        self.client
-            .execute(create.as_str(), &[])
-            .map_err(|e| e.to_string())?;
+        self.client.execute(create.as_str(), &[])?;
+
         Ok(())
     }
 
-    fn create_table(&mut self) -> Result<(), String> {
+    fn create_table(&mut self) -> Result<()> {
         info!("Creating table {}.{}", self.schema, self.table);
         let create = CREATE_TABLE
             .replace("$$schema$$", &self.schema)
             .replace("$$table$$", &self.table);
 
-        self.client
-            .execute(create.as_str(), &[])
-            .map_err(|e| e.to_string())?;
+        self.client.execute(create.as_str(), &[])?;
+
         Ok(())
     }
 }

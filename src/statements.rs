@@ -5,7 +5,7 @@
 use std::convert::TryFrom;
 use std::slice::Iter;
 
-use crate::parser::Parser;
+use crate::{Error, parser::Parser};
 
 /// An individual raw SQL statement.
 #[derive(Debug, Default, PartialEq)]
@@ -22,10 +22,10 @@ impl StatementGroup {
 }
 
 impl TryFrom<&str> for StatementGroup {
-    type Error = String;
+    type Error = crate::Error;
 
     /// Attempts to parse the input into individual statements.
-    fn try_from(input: &str) -> Result<Self, Self::Error> {
+    fn try_from(input: &str) -> std::result::Result<Self, Self::Error> {
         let statements = Parser::parse(input);
 
         // Transaction-management commands should cause immediate errors,
@@ -37,10 +37,7 @@ impl TryFrom<&str> for StatementGroup {
 
             for command in ["begin", "savepoint", "rollback", "commit"].iter() {
                 if lowered.starts_with(command) {
-                    return Err(format!(
-                        "{} command is not supported in a revision",
-                        command.to_uppercase(),
-                    ));
+                    return Err(Error::TransactionCommandFound(command.to_string()));
                 }
             }
         }

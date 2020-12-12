@@ -51,6 +51,10 @@ impl Config {
     pub fn new(conf_path_name: Option<&str>) -> Result<Self> {
         let paths = ProjectPaths::from_conf_path(conf_path_name)?;
 
+        if !paths.conf.exists() {
+            return Err(Error::ConfigNotFound(paths.conf.display().to_string()));
+        }
+
         let contents = fs::read_to_string(&paths.conf).unwrap_or_else(|e| {
             panic!("Could not open {}: {}", paths.conf.display(), e.to_string())
         });

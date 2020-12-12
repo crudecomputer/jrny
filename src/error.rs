@@ -1,14 +1,19 @@
-//use postgres;
-use std::{env, fmt, io};
+use std::{env, fmt, io, num};
 
 pub enum Error {
-    AlreadyExists(String),
     BadEnvVar(env::VarError),
+    ConfigNotFound(String),
     DatabaseError(postgres::Error),
-    InvalidPath(String),
+    FileNotValid(String),
     IoError(io::Error),
-    NotDirectory(String),
-    NotEmptyDirectory(String),
+    PathAlreadyExists(String),
+    PathInvalid(String),
+    PathNotDirectory(String),
+    PathNotEmptyDirectory(String),
+    RevisionNameInvalid(String),
+    RevisionTimestampInvalid(num::ParseIntError, String),
+    RevisionsFailedReview { changed: usize, missing: usize },
+    TransactionCommandFound(String),
 }
 
 impl fmt::Display for Error {
@@ -16,26 +21,60 @@ impl fmt::Display for Error {
         use Error::*;
 
         match self {
-            AlreadyExists(pathstr) => {
-                write!(f, "{} already exists", pathstr)
-            }
             BadEnvVar(err) => {
                 write!(f, "{}", err)
+            }
+            ConfigNotFound(pathstr) => {
+                write!(f, "`{}` not found - try again in directory with `jrny.toml` file or specify path to config with `-c /path/to/config`", pathstr)
             }
             DatabaseError(err) => {
                 write!(f, "{}", err)
             }
-            InvalidPath(pathstr) => {
-                write!(f, "'{}' is not a valid path", pathstr)
+            FileNotValid(pathstr) => {
+                write!(f, "`{}` is not a valid file", pathstr)
             }
             IoError(err) => {
                 write!(f, "{}", err)
             }
-            NotDirectory(pathstr) => {
-                write!(f, "{} is not a directory", pathstr)
+            PathAlreadyExists(pathstr) => {
+                write!(f, "`{}` already exists", pathstr)
             }
-            NotEmptyDirectory(pathstr) => {
-                write!(f, "{} is not an empty directory", pathstr)
+            PathInvalid(pathstr) => {
+                write!(f, "`{}` is not a valid path", pathstr)
+            }
+            PathNotDirectory(pathstr) => {
+                write!(f, "`{}` is not a directory", pathstr)
+            }
+            PathNotEmptyDirectory(pathstr) => {
+                write!(f, "`{}` is not an empty directory", pathstr)
+            }
+            RevisionNameInvalid(filename) => {
+                write!(f, "Invalid revision name `{}`: expected [timestamp].[name].sql", filename)
+            }
+            RevisionTimestampInvalid(err, filename) => {
+                write!(f, "Invalid revision timestamp `{}`: {}", filename, err)
+            }
+            RevisionsFailedReview { changed, missing } => {
+                let mut errs = String::new();
+
+                if *changed > 0 {
+                    errs.push_str(&format!(
+                        "\n\t{} changed since being applied",
+                        changed,
+                    ));
+                }
+
+                if *missing > 0 {
+                    errs.push_str(&format!(
+                        "\n\t{} no longer present on disk",
+                        missing,
+                    ));
+                }
+
+                write!(f, "Revisions review failed:{}", errs)
+            }
+            TransactionCommandFound(cmd) => {
+                write!(f, "Cannot use transaction commands: found `{}`", cmd)
             }
         }
     }

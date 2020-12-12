@@ -5,6 +5,8 @@ use std::convert::TryFrom;
 use std::fs;
 use std::path::PathBuf;
 
+use crate::{Error, Result};
+
 /// Metadata and contents for a revision loaded from disk.
 #[derive(Debug)]
 pub struct RevisionFile {
@@ -20,11 +22,10 @@ pub struct RevisionFile {
 impl RevisionFile {
     /// Attempts to read revision directory to convert all entries (assumed to be SQL files)
     /// into metadata objects with contents stored.
-    pub fn all_from_disk(revisions: &PathBuf) -> Result<Vec<Self>, String> {
-        let mut entries = fs::read_dir(revisions.as_path())
-            .map_err(|e| e.to_string())?
-            .map(|res| res.map(|e| e.path()).map_err(|e| e.to_string()))
-            .collect::<Result<Vec<_>, String>>()?;
+    pub fn all_from_disk(revisions: &PathBuf) -> Result<Vec<Self>> {
+        let mut entries = fs::read_dir(revisions.as_path())?
+            .map(|res| res.map(|e| e.path()).map_err(Error::IoError))
+            .collect::<Result<Vec<_>>>()?;
 
         entries.sort();
         entries.iter().map(Self::try_from).collect()
@@ -32,20 +33,18 @@ impl RevisionFile {
 }
 
 impl TryFrom<&PathBuf> for RevisionFile {
-    type Error = String;
+    type Error = crate::Error;
 
     /// Attempts to gather appropriate metadata for and read contents of given path buf.
-    fn try_from(p: &PathBuf) -> Result<Self, Self::Error> {
+    fn try_from(p: &PathBuf) -> std::result::Result<Self, Self::Error> {
         let filename = p
             .file_name()
             .map(|os_str| os_str.to_str())
             .flatten()
-            .ok_or_else(|| format!("{} is not a valid file", p.display()))?;
+            .ok_or_else(|| Error::FileNotValid(p.display().to_string()))?;
 
         let title = RevisionTitle::try_from(filename)?;
-
-        let contents = fs::read_to_string(p)
-            .map_err(|e| format!("Could not open {}: {}", p.display(), e.to_string()))?;
+        let contents = fs::read_to_string(p)?;
 
         Ok(Self {
             checksum: to_checksum(&contents),
@@ -110,33 +109,28 @@ struct RevisionTitle {
 }
 
 impl TryFrom<&str> for RevisionTitle {
-    type Error = String;
+    type Error = crate::Error;
 
-    fn try_from(filename: &str) -> Result<Self, Self::Error> {
-        let err = || {
-            format!(
-                "Invalid revision name `{}`: expected [timestamp].[name].sql",
-                filename,
-            )
-        };
-
+    fn try_from(filename: &str) -> std::result::Result<Self, Self::Error> {
         let parts: Vec<&str> = filename.split('.').collect();
 
+        // Regex would work too, but not sure it's worth the dependencies and
+        // binary size increase.
         // TODO maybe just use nightly?
-        // Regex would work too, but it's not worth the 1.2 Mb increase
-        /*
-        let (timestamp, name) = match parts.as_slice() {
-            [timestamp, .. name, "sql"] => (timestamp, name.join(".")),
-            _ => return Err(err()),
-        };
-        */
+        //
+        // let (timestamp, name) = match parts.as_slice() {
+        //     [timestamp, .. name, "sql"] => (timestamp, name.join(".")),
+        //     _ => return Err(err()),
+        // };
 
         if parts.len() < 3 || parts[parts.len() - 1] != "sql" {
-            return Err(err());
+            return Err(Error::RevisionNameInvalid(filename.to_string()));
         }
 
         let name = parts[1..parts.len() - 1].join(".");
-        let timestamp: i64 = parts[0].parse().map_err(|_| err())?;
+        let timestamp: i64 = parts[0].parse()
+            .map_err(|e| Error::RevisionTimestampInvalid(e, filename.to_string()))?;
+
         let created_at = Utc.timestamp(timestamp, 0);
 
         Ok(Self {
