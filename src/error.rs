@@ -1,8 +1,11 @@
 use std::{env, fmt, io, num};
+use toml::de::Error as TomlError;
 
 pub enum Error {
     BadEnvVar(env::VarError),
     ConfigNotFound(String),
+    ConfigNotFile(String),
+    ConfigInvalid(TomlError, String),
     DatabaseError(postgres::Error),
     FileNotValid(String),
     IoError(io::Error),
@@ -25,7 +28,13 @@ impl fmt::Display for Error {
                 write!(f, "{}", err)
             }
             ConfigNotFound(pathstr) => {
-                write!(f, "`{}` not found - try again in directory with `jrny.toml` file or specify path to config with `-c /path/to/config`", pathstr)
+                write!(f, "`{}` not found - run in directory with `jrny.toml` file or specify path to config with `-c /path/to/config`", pathstr)
+            }
+            ConfigNotFile(pathstr) => {
+                write!(f, "`{}` must be a valid file", pathstr)
+            }
+            ConfigInvalid(err, pathstr) => {
+                write!(f, "`{}` is invalid - {}", pathstr, err)
             }
             DatabaseError(err) => {
                 write!(f, "{}", err)
@@ -79,6 +88,7 @@ impl fmt::Display for Error {
         }
     }
 }
+
 impl From<postgres::Error> for Error {
    fn from(e: postgres::Error) -> Self {
        Self::DatabaseError(e)

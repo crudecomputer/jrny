@@ -55,13 +55,13 @@ impl Config {
             return Err(Error::ConfigNotFound(paths.conf.display().to_string()));
         }
 
-        let contents = fs::read_to_string(&paths.conf).unwrap_or_else(|e| {
-            panic!("Could not open {}: {}", paths.conf.display(), e.to_string())
-        });
+        if !paths.conf.is_file() {
+            return Err(Error::ConfigNotFile(paths.conf.display().to_string()));
+        }
 
-        let toml_settings: TomlSettings = toml::from_str(&contents).unwrap_or_else(|e| {
-            panic!("Could not open {}: {}", paths.conf.display(), e.to_string())
-        });
+        let contents = fs::read_to_string(&paths.conf)?;
+        let toml_settings: TomlSettings = toml::from_str(&contents)
+            .map_err(|e| Error::ConfigInvalid(e, paths.conf.display().to_string()))?;
 
         let settings = Settings {
             connection: ConnectionSettings {
