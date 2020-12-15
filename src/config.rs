@@ -77,7 +77,8 @@ impl Config {
 fn url_from_toml(conn_settings: &TomlConnectionSettings) -> Result<String> {
     Ok(match &conn_settings.strategy {
         ConnectionStrategy::EnvUrlString { var_name } => {
-            env::var(var_name)?
+            env::var(var_name)
+                .map_err(|e| Error::BadEnvVar(e, var_name.clone()))?
         }
     })
 }
