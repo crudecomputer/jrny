@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 #
 # This builds a release version, compresses, and hashes it for the purpose
 # of releasing on homebrew via kevlarr/homebrew-jrny
