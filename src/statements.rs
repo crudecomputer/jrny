@@ -46,7 +46,6 @@ impl TryFrom<&str> for StatementGroup {
     }
 }
 
-/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -90,52 +89,30 @@ insert into "some;thing" (name) -- here we go;
 
     #[test]
     fn test_errors_from_transaction_commands() {
-        let err = |cmd| Err(format!("{} command is not supported in a revision", cmd,));
+        let is_err = |statement, cmd| match StatementGroup::try_from(statement) {
+            Err(Error::TransactionCommandFound(c)) if c == cmd => {},
+            result => panic!("received {:?}", result),
+        };
 
-        assert_eq!(StatementGroup::try_from(" beGIN "), err("BEGIN"));
-        assert_eq!(StatementGroup::try_from("one; begin; two"), err("BEGIN"));
-        assert_eq!(StatementGroup::try_from("ONE; BEGIN; TWO"), err("BEGIN"));
+        is_err(" beGIN ",         "begin");
+        is_err("one; begin; two", "begin");
+        is_err("ONE; BEGIN; TWO", "begin");
 
-        assert_eq!(StatementGroup::try_from("  savEPOint "), err("SAVEPOINT"));
-        assert_eq!(
-            StatementGroup::try_from("one; savepoint; two"),
-            err("SAVEPOINT")
-        );
-        assert_eq!(
-            StatementGroup::try_from("ONE; SAVEPOINT; TWO"),
-            err("SAVEPOINT")
-        );
+        is_err("  savEPOint ",        "savepoint");
+        is_err("one; savepoint; two", "savepoint");
+        is_err("ONE; SAVEPOINT; TWO", "savepoint");
 
-        assert_eq!(StatementGroup::try_from("  rOLLBack "), err("ROLLBACK"));
-        assert_eq!(
-            StatementGroup::try_from("one; rollback; two"),
-            err("ROLLBACK")
-        );
-        assert_eq!(
-            StatementGroup::try_from("ONE; ROLLBACK; TWO"),
-            err("ROLLBACK")
-        );
+        is_err("  rOLLBack ",        "rollback");
+        is_err("one; rollback; two", "rollback");
+        is_err("ONE; ROLLBACK; TWO", "rollback");
 
-        assert_eq!(StatementGroup::try_from("  coMMIt "), err("COMMIT"));
-        assert_eq!(StatementGroup::try_from("one; commit; two"), err("COMMIT"));
-        assert_eq!(StatementGroup::try_from("ONE; COMMIT; TWO"), err("COMMIT"));
+        is_err("  coMMIt ",        "commit");
+        is_err("one; commit; two", "commit");
+        is_err("ONE; COMMIT; TWO", "commit");
 
-        assert_eq!(
-            StatementGroup::try_from("begin; rollback; savepoint; commit"),
-            err("BEGIN")
-        );
-        assert_eq!(
-            StatementGroup::try_from("rollback; begin; savepoint; commit"),
-            err("ROLLBACK")
-        );
-        assert_eq!(
-            StatementGroup::try_from("savepoint; begin; rollback; commit"),
-            err("SAVEPOINT")
-        );
-        assert_eq!(
-            StatementGroup::try_from("commit; begin; rollback; commit"),
-            err("COMMIT")
-        );
+        is_err("begin; rollback; savepoint; commit", "begin");
+        is_err("rollback; begin; savepoint; commit", "rollback");
+        is_err("savepoint; begin; rollback; commit", "savepoint");
+        is_err("commit; begin; rollback; commit",    "commit");
     }
 }
-*/
