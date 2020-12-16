@@ -131,7 +131,11 @@ impl TryFrom<&str> for RevisionTitle {
         let timestamp: i64 = parts[0].parse()
             .map_err(|e| Error::RevisionTimestampInvalid(e, filename.to_string()))?;
 
-        let created_at = Utc.timestamp(timestamp, 0);
+        // Utc.timestamp will panic, hence timestamp_opt
+        let created_at = Utc
+            .timestamp_opt(timestamp, 0)
+            .single()
+            .ok_or_else(|| Error::RevisionTimestampOutOfRange(filename.to_string()))?;
 
         Ok(Self {
             created_at,
@@ -161,17 +165,6 @@ mod tests {
     }
 
     #[test]
-    fn revision_title_fails_non_sql() {
-        assert_eq!(
-            RevisionTitle::try_from("1577836800.some-file.wat"),
-            Err(
-                "Invalid revision name `1577836800.some-file.wat`: expected [timestamp].[name].sql"
-                    .to_string()
-            )
-        )
-    }
-
-    #[test]
     fn revision_title_allows_multiple_periods() {
         assert_eq!(
             RevisionTitle::try_from("1577836800.some.file.sql").unwrap(),
@@ -180,5 +173,31 @@ mod tests {
                 name: "some.file".to_string(),
             }
         )
+    }
+
+    #[test]
+    fn revision_title_fails_non_sql() {
+        match RevisionTitle::try_from("1577836800.some-file.wat") {
+            Err(Error::RevisionNameInvalid(filename)) => {
+                assert_eq!(filename, "1577836800.some-file.wat".to_string());
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    #[test]
+    fn revision_title_fails_bad_timestamp() {
+        match RevisionTitle::try_from("a.some-file.sql") {
+            Err(Error::RevisionTimestampInvalid(_, filename)) => {
+                assert_eq!(filename, "a.some-file.sql".to_string());
+            }
+            result => panic!("received {:?}", result),
+        }
+        match RevisionTitle::try_from("9999999999999999.some-file.sql") {
+            Err(Error::RevisionTimestampOutOfRange(filename)) => {
+                assert_eq!(filename, "9999999999999999.some-file.sql".to_string());
+            }
+            result => panic!("received {:?}", result),
+        }
     }
 }

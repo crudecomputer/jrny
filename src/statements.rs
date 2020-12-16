@@ -46,6 +46,7 @@ impl TryFrom<&str> for StatementGroup {
     }
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -137,3 +138,4 @@ insert into "some;thing" (name) -- here we go;
         );
     }
 }
+*/

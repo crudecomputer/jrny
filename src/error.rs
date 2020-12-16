@@ -1,6 +1,7 @@
 use std::{env, fmt, io, num};
 use toml::de::Error as TomlError;
 
+#[derive(Debug)]
 pub enum Error {
     BadEnvVar(env::VarError, String),
     ConfigNotFound(String),
@@ -15,6 +16,7 @@ pub enum Error {
     PathNotEmptyDirectory(String),
     RevisionNameInvalid(String),
     RevisionTimestampInvalid(num::ParseIntError, String),
+    RevisionTimestampOutOfRange(String),
     RevisionsFailedReview { changed: usize, missing: usize },
     TransactionCommandFound(String),
 }
@@ -62,6 +64,9 @@ impl fmt::Display for Error {
             }
             RevisionTimestampInvalid(err, filename) => {
                 write!(f, "Invalid revision timestamp `{}`: {}", filename, err)
+            }
+            RevisionTimestampOutOfRange(filename) => {
+                write!(f, "Invalid revision timestamp `{}`: timestamp out of range", filename)
             }
             RevisionsFailedReview { changed, missing } => {
                 let mut errs = String::new();
