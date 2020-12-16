@@ -1,7 +1,7 @@
 //! Utilities for working with paths.
 use std::path::PathBuf;
 
-use crate::CONF;
+use crate::{Error, Result, CONF};
 
 /// A container for the various paths of interest for a project.
 pub struct ProjectPaths {
@@ -13,7 +13,7 @@ pub struct ProjectPaths {
 impl ProjectPaths {
     /// Creates path bufs for a new project given a root directory, ensuring that
     /// there is not already a config file or a non-empty revisions directory.
-    pub fn for_new_project(root_dir: &str) -> Result<Self, String> {
+    pub fn for_new_project(root_dir: &str) -> Result<Self> {
         let root = PathBuf::from(root_dir);
         let revisions = root.join("revisions");
         let conf = root.join(CONF);
@@ -31,12 +31,12 @@ impl ProjectPaths {
 
     /// Creates path bufs for a project either relative to the given config filepath name
     /// or to the current working directory if no path name is provided.
-    pub fn from_conf_path(conf_path_name: Option<&str>) -> Result<Self, String> {
+    pub fn from_conf_path(conf_path_name: Option<&str>) -> Result<Self> {
         let conf = PathBuf::from(conf_path_name.unwrap_or(CONF));
 
         let root = conf
             .parent()
-            .ok_or_else(|| "Config filepath is not valid".to_string())?
+            .ok_or_else(|| Error::PathInvalid(conf.display().to_string()))?
             .to_path_buf();
 
         let revisions = root.join("revisions");
@@ -51,27 +51,26 @@ impl ProjectPaths {
     /// Ensures that own path bufs are valid for a new project, namely that the
     /// root path is a directory if exists, that the revisions directory is empty
     /// if exists, and that no config file exists.
-    fn valid_for_new(&self) -> Result<(), String> {
+    fn valid_for_new(&self) -> Result<()> {
+        use Error::*;
+
         if self.root.exists() && !self.root.is_dir() {
-            return Err(format!("{} is not a directory", self.root.display()));
+            return Err(PathNotDirectory(self.root.display().to_string()));
         }
 
         if self.revisions.exists() && !Self::is_empty_dir(&self.revisions)? {
-            return Err(format!(
-                "{} is not an empty directory",
-                self.revisions.display()
-            ));
+            return Err(PathNotEmptyDirectory(self.revisions.display().to_string()));
         }
 
         if self.conf.exists() {
-            return Err(format!("{} already exists", self.conf.display()));
+            return Err(PathAlreadyExists(self.conf.display().to_string()));
         }
 
         Ok(())
     }
 
     /// Determines whether the path buf corresponds to an empty directory.
-    fn is_empty_dir(p: &PathBuf) -> Result<bool, String> {
-        Ok(p.is_dir() && p.read_dir().map_err(|e| e.to_string())?.next().is_none())
+    fn is_empty_dir(p: &PathBuf) -> Result<bool> {
+        Ok(p.is_dir() && p.read_dir()?.next().is_none())
     }
 }

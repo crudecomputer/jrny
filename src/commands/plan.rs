@@ -1,7 +1,7 @@
 use chrono::Utc;
 use std::{fs, io::Write, path::PathBuf};
 
-use crate::config::Config;
+use crate::{config::Config, Result};
 
 pub struct Plan {
     pub filename: String,
@@ -9,7 +9,7 @@ pub struct Plan {
 }
 
 impl Plan {
-    pub fn new_revision(config: &Config, name: &str) -> Result<Self, String> {
+    pub fn new_revision(config: &Config, name: &str) -> Result<Self> {
         let timestamp = Utc::now().timestamp();
 
         let revision_path = config
@@ -25,11 +25,10 @@ impl Plan {
         Ok(cmd.create_file()?)
     }
 
-    fn create_file(self) -> Result<Self, String> {
-        fs::File::create(&self.path)
-            .map_err(|e| e.to_string())?
-            .write_all(format!("-- Journey revision\n--\n-- {}\n--\n\n", self.filename,).as_bytes())
-            .map_err(|e| e.to_string())?;
+    fn create_file(self) -> Result<Self> {
+        fs::File::create(&self.path)?.write_all(
+            format!("-- Journey revision\n--\n-- {}\n--\n\n", self.filename,).as_bytes(),
+        )?;
 
         Ok(self)
     }

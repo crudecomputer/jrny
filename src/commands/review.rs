@@ -4,6 +4,7 @@ use crate::{
     config::Config,
     executor::Executor,
     revisions::{AnnotatedRevision, RevisionFile, RevisionRecord},
+    Result,
 };
 
 pub struct Review {
@@ -15,11 +16,11 @@ pub struct Review {
 }
 
 impl Review {
-    pub fn annotated_revisions(config: &Config, exec: &mut Executor) -> Result<Self, String> {
+    pub fn annotated_revisions(config: &Config, exec: &mut Executor) -> Result<Self> {
         Ok(Self::new(config, exec)?.annotate())
     }
 
-    fn new(config: &Config, exec: &mut Executor) -> Result<Self, String> {
+    fn new(config: &Config, exec: &mut Executor) -> Result<Self> {
         exec.ensure_table_exists()?;
 
         let mut files = RevisionFile::all_from_disk(&config.paths.revisions)?;

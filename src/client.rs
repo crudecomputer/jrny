@@ -9,11 +9,10 @@ pub use postgres::Client;
 use crate::config::Config;
 
 impl TryFrom<&Config> for Client {
-    type Error = String;
+    type Error = crate::Error;
 
     fn try_from(config: &Config) -> Result<Self, Self::Error> {
-        let mut config = ClientConfig::from_str(config.settings.connection.database_url.as_str())
-            .map_err(|e| e.to_string())?;
+        let mut config = ClientConfig::from_str(config.settings.connection.database_url.as_str())?;
 
         config.application_name("jrny");
 
@@ -21,7 +20,7 @@ impl TryFrom<&Config> for Client {
             config.connect_timeout(Duration::new(30, 0));
         }
 
-        let client = config.connect(NoTls).map_err(|e| e.to_string())?;
+        let client = config.connect(NoTls)?;
 
         Ok(client)
     }

@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::{env, fs};
 
-use crate::paths::ProjectPaths;
+use crate::{paths::ProjectPaths, Error, Result};
 
 /// Strategy for locating connection details.
 /// Currently only supports whole URL-style string but it could be extended to support
@@ -48,16 +48,20 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(conf_path_name: Option<&str>) -> Result<Self, String> {
+    pub fn new(conf_path_name: Option<&str>) -> Result<Self> {
         let paths = ProjectPaths::from_conf_path(conf_path_name)?;
 
-        let contents = fs::read_to_string(&paths.conf).unwrap_or_else(|e| {
-            panic!("Could not open {}: {}", paths.conf.display(), e.to_string())
-        });
+        if !paths.conf.exists() {
+            return Err(Error::ConfigNotFound(paths.conf.display().to_string()));
+        }
 
-        let toml_settings: TomlSettings = toml::from_str(&contents).unwrap_or_else(|e| {
-            panic!("Could not open {}: {}", paths.conf.display(), e.to_string())
-        });
+        if !paths.conf.is_file() {
+            return Err(Error::ConfigNotFile(paths.conf.display().to_string()));
+        }
+
+        let contents = fs::read_to_string(&paths.conf)?;
+        let toml_settings: TomlSettings = toml::from_str(&contents)
+            .map_err(|e| Error::ConfigInvalid(e, paths.conf.display().to_string()))?;
 
         let settings = Settings {
             connection: ConnectionSettings {
@@ -70,10 +74,10 @@ impl Config {
     }
 }
 
-fn url_from_toml(conn_settings: &TomlConnectionSettings) -> Result<String, String> {
+fn url_from_toml(conn_settings: &TomlConnectionSettings) -> Result<String> {
     Ok(match &conn_settings.strategy {
         ConnectionStrategy::EnvUrlString { var_name } => {
-            env::var(var_name).map_err(|e| format!("{}: {}", e, var_name))?
+            env::var(var_name).map_err(|e| Error::BadEnvVar(e, var_name.clone()))?
         }
     })
 }

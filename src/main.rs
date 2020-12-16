@@ -3,7 +3,7 @@ use clap::{clap_app, AppSettings};
 use log::{info, warn, LevelFilter};
 use std::path::PathBuf;
 
-use jrny::{commands, Config, Executor, Logger};
+use jrny::{commands, Config, Executor, Logger, Result};
 
 static LOGGER: Logger = Logger;
 
@@ -14,7 +14,7 @@ fn main() {
         .unwrap();
 
     let app = clap_app! {jrny =>
-        (about: "Data modeling is a journey; manage yours with jrny - simple PostgreSQL schema management")
+        (about: "PostgreSQL schema revisions made easy - just add SQL")
         (version: env!("CARGO_PKG_VERSION"))
         (setting: AppSettings::SubcommandRequired)
 
@@ -24,28 +24,36 @@ fn main() {
         )
 
         (@subcommand plan =>
-            (about: "Generates a timestamped SQL revision")
+            (about: "Generates a timestamped SQL revision file")
             (@arg name: +required "Name of the revision")
-            (@arg config: -c --config [FILE] +takes_value "Sets a custom config file")
+            (@arg config: -c --config [FILE] +takes_value "Path to TOML config file")
         )
 
         (@subcommand review =>
-            (about: "Reviews which plans need to be applied, which have been applied and when, and whether or not plans already applied appear to differ from the plan file")
-            (@arg config: -c --config [FILE] +takes_value "Sets a custom config file")
+            (about: "Provides a summary of applied and pending revisions, including whether any applied have changed or are not found")
+            (@arg config: -c --config [FILE] +takes_value "Path to TOML config file")
         )
 
         (@subcommand embark =>
-            (about: "Reviews and applies the available revisions")
-            (@arg config: -c --config [FILE] +takes_value "Sets a custom config file")
+            (about: "Applies pending revisions upon successful review")
+            (@arg config: -c --config [FILE] +takes_value "Path to TOML config file")
             (@arg commit: --commit !takes_value "Commits the transaction, false by default to encourage dry runs")
         )
     };
 
     let result = match app.clone().get_matches().subcommand() {
-        ("begin", Some(cmd)) => begin(cmd.value_of("dirpath").unwrap()),
-        ("plan", Some(cmd)) => plan(cmd.value_of("name").unwrap(), cmd.value_of("config")),
-        ("review", Some(cmd)) => review(cmd.value_of("config")),
-        ("embark", Some(cmd)) => embark(cmd.value_of("config"), cmd.is_present("commit")),
+        ("begin", Some(cmd)) => {
+            begin(cmd.value_of("dirpath").unwrap())
+        }
+        ("plan", Some(cmd)) => {
+            plan(cmd.value_of("name").unwrap(), cmd.value_of("config"))
+        }
+        ("review", Some(cmd)) => {
+            review(cmd.value_of("config"))
+        }
+        ("embark", Some(cmd)) => {
+            embark(cmd.value_of("config"), cmd.is_present("commit"))
+        }
         _ => unreachable!(),
     };
 
@@ -60,7 +68,7 @@ fn main() {
 /// that there is an empty `revisions` directory nested within it or
 /// create it if not already present. If any error occurs, any changes
 /// to the file system will be attempted to be reversed.
-pub fn begin(path: &str) -> Result<(), String> {
+pub fn begin(path: &str) -> Result<()> {
     let cmd = commands::Begin::new_project(path)?;
 
     info!("A journey has begun");
@@ -75,7 +83,7 @@ pub fn begin(path: &str) -> Result<(), String> {
 /// Accepts a name for the migration file and an optional path to a config file.
 /// If no path is provided, it will add a timestamped SQL file relative to current
 /// working directory; otherwise it will add file in a directory relative to config.
-pub fn plan(name: &str, conf_path_name: Option<&str>) -> Result<(), String> {
+pub fn plan(name: &str, conf_path_name: Option<&str>) -> Result<()> {
     let config = Config::new(conf_path_name)?;
     let cmd = commands::Plan::new_revision(&config, name)?;
 
@@ -84,7 +92,7 @@ pub fn plan(name: &str, conf_path_name: Option<&str>) -> Result<(), String> {
     Ok(())
 }
 
-pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
+pub fn review(conf_path_name: Option<&str>) -> Result<()> {
     let config = Config::new(conf_path_name)?;
     let mut exec = Executor::new(&config)?;
 
@@ -92,7 +100,6 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
 
     if cmd.revisions.is_empty() {
         info!("No revisions found. Create your first revision with `jrny plan <some-name>`.");
-
         return Ok(());
     }
 
@@ -135,7 +142,7 @@ pub fn review(conf_path_name: Option<&str>) -> Result<(), String> {
     Ok(())
 }
 
-pub fn embark(conf_path_name: Option<&str>, commit: bool) -> Result<(), String> {
+pub fn embark(conf_path_name: Option<&str>, commit: bool) -> Result<()> {
     let config = Config::new(conf_path_name)?;
     let mut exec = Executor::new(&config)?;
 
