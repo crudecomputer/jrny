@@ -51,23 +51,25 @@ homebrew install kevlarr/jrny/jrny
 
 ### From source
 
-While `jrny` has only been fully tested on macOS (CI runs unit tests on Ubuntu, but the actual application has not been tested), there are zero external dependencies and it
+While `jrny` has only been fully tested on macOS (CI runs unit tests on Ubuntu, but no tests currently interact with filesystem or database), there are zero external dependencies and it
 *Should Just Work™* on other platforms, as long as you compile it yourself.
 Assuming `cargo` is installed (easiest is using [rustup](https://rustup.rs/)) then simply run:
 
 ```bash
-$ cargo install --git https://github.com/kevlarr/jrny
+$ cargo install jrny
 
 # Sample output on macOS
-    Updating git repository `https://github.com/kevlarr/jrny`
-  Installing jrny v1.1.0 (https://github.com/kevlarr/jrny#b13fcd5b)
+    Updating crates.io index
+  Downloaded jrny v1.2.0
+  Downloaded 1 crate (28.6 KB) in 0.39s
+  Installing jrny v1.2.0
    ...
    ...
    ...
-   Compiling jrny v1.1.0 (/Users/<user>/.cargo/git/checkouts/jrny-baae2c5af4e7941b/b13fcd5)
-    Finished release [optimized] target(s) in 1m 05s
+   Compiling jrny v1.2.0
+    Finished release [optimized] target(s) in 2m 03s
   Installing /Users/<user>/.cargo/bin/jrny
-   Installed package `jrny v1.1.0 (https://github.com/kevlarr/jrny#b13fcd5b)` (executable `jrny`)
+   Installed package `jrny v1.2.0` (executable `jrny`)
 ```
 
 ---
