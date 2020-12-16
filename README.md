@@ -41,24 +41,33 @@ but there are (subjectively) some big annoyances and I just don't like them.
 
 ## Installation
 
-`jrny` is currently only pre-compiled for macOS but has zero external dependencies, so it should be available soon [on other platforms](https://github.com/kevlarr/jrny/issues/14). If you feel like testing, feel free to clone and build from source and let me know how it goes!
+### Pre-compiled
 
-### macOS
-
-`jrny` can easily be installed via [Homebrew](https://brew.sh/)...
+`jrny` is currently only pre-compiled for mac and can be installed either via direct download from [releases](https://github.com/kevlarr/jrny/tags) or via `homebrew`:
 
 ```bash
-brew tap kevlarr/jrny
-brew install jrny
+homebrew install kevlarr/jrny/jrny
 ```
 
-... or be built from source if you have `cargo` installed (easiest is using [rustup](https://rustup.rs/)).
+### From source
+
+While `jrny` has only been fully tested on macOS (CI runs unit tests on Ubuntu, but the actual application has not been tested), there are zero external dependencies and it
+*Should Just Work™* on other platforms, as long as you compile it yourself.
+Assuming `cargo` is installed (easiest is using [rustup](https://rustup.rs/)) then simply run:
 
 ```bash
-git clone https://github.com/kevlarr/jrny.git jrny
-cd jrny
-cargo build --release
-cp target/release/jrny /usr/bin/local
+$ cargo install --git https://github.com/kevlarr/jrny
+
+# Sample output on macOS
+    Updating git repository `https://github.com/kevlarr/jrny`
+  Installing jrny v1.1.0 (https://github.com/kevlarr/jrny#b13fcd5b)
+   ...
+   ...
+   ...
+   Compiling jrny v1.1.0 (/Users/<user>/.cargo/git/checkouts/jrny-baae2c5af4e7941b/b13fcd5)
+    Finished release [optimized] target(s) in 1m 05s
+  Installing /Users/<user>/.cargo/bin/jrny
+   Installed package `jrny v1.1.0 (https://github.com/kevlarr/jrny#b13fcd5b)` (executable `jrny`)
 ```
 
 ---
@@ -241,11 +250,15 @@ No revisions to apply
 
 ## Planned improvements, or "things that are missing"
 
+### Code cleanup
+
+Refactoring in Rust is fun - which is good, because there's a lot of room for clearer patterns and modules.
+
 ### Revision archiving
 
 Revisions are great, but we don't normally need revisions from 2 years ago sitting in the directory.
-There should be a command to help 'reset' history, potentially archiving them into another table somewhere.
+There should be a command to help 'reset' history, potentially archiving them into a table..?
 
 ### Tests and automation
 
-No description necessary; there's barely any test coverage, and there's no CI.
+No description necessary; there's barely any test coverage, and there's hardly any CI.

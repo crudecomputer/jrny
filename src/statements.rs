@@ -37,7 +37,7 @@ impl TryFrom<&str> for StatementGroup {
 
             for command in ["begin", "savepoint", "rollback", "commit"].iter() {
                 if lowered.starts_with(command) {
-                    return Err(Error::TransactionCommandFound(command.to_string()));
+                    return Err(Error::TransactionCommandFound((*command).to_string()));
                 }
             }
         }
