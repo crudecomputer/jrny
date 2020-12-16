@@ -1,7 +1,7 @@
 //! Utilities for working with paths.
 use std::path::PathBuf;
 
-use crate::{CONF, Error, Result};
+use crate::{Error, Result, CONF};
 
 /// A container for the various paths of interest for a project.
 pub struct ProjectPaths {
@@ -71,9 +71,6 @@ impl ProjectPaths {
 
     /// Determines whether the path buf corresponds to an empty directory.
     fn is_empty_dir(p: &PathBuf) -> Result<bool> {
-        Ok(
-            p.is_dir() &&
-            p.read_dir()?.next().is_none()
-        )
+        Ok(p.is_dir() && p.read_dir()?.next().is_none())
     }
 }

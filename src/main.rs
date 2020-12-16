@@ -3,7 +3,7 @@ use clap::{clap_app, AppSettings};
 use log::{info, warn, LevelFilter};
 use std::path::PathBuf;
 
-use jrny::{Config, Executor, Logger, Result, commands};
+use jrny::{commands, Config, Executor, Logger, Result};
 
 static LOGGER: Logger = Logger;
 

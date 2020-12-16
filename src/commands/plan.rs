@@ -1,7 +1,7 @@
 use chrono::Utc;
 use std::{fs, io::Write, path::PathBuf};
 
-use crate::{Result, config::Config};
+use crate::{config::Config, Result};
 
 pub struct Plan {
     pub filename: String,
@@ -26,11 +26,9 @@ impl Plan {
     }
 
     fn create_file(self) -> Result<Self> {
-        fs::File::create(&self.path)?
-            .write_all(format!(
-                "-- Journey revision\n--\n-- {}\n--\n\n",
-                self.filename,).as_bytes()
-            )?;
+        fs::File::create(&self.path)?.write_all(
+            format!("-- Journey revision\n--\n-- {}\n--\n\n", self.filename,).as_bytes(),
+        )?;
 
         Ok(self)
     }

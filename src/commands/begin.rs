@@ -1,6 +1,6 @@
 use std::{fs, io::Write};
 
-use crate::{CONF_TEMPLATE, Error, Result, paths::ProjectPaths};
+use crate::{paths::ProjectPaths, Error, Result, CONF_TEMPLATE};
 
 pub struct Begin {
     pub paths: ProjectPaths,

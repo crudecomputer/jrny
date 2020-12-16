@@ -12,9 +12,7 @@ impl TryFrom<&Config> for Client {
     type Error = crate::Error;
 
     fn try_from(config: &Config) -> Result<Self, Self::Error> {
-        let mut config = ClientConfig::from_str(
-            config.settings.connection.database_url.as_str()
-        )?;
+        let mut config = ClientConfig::from_str(config.settings.connection.database_url.as_str())?;
 
         config.application_name("jrny");
 

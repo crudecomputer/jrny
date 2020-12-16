@@ -5,7 +5,7 @@
 use std::convert::TryFrom;
 use std::slice::Iter;
 
-use crate::{Error, parser::Parser};
+use crate::{parser::Parser, Error};
 
 /// An individual raw SQL statement.
 #[derive(Debug, Default, PartialEq)]
@@ -90,29 +90,29 @@ insert into "some;thing" (name) -- here we go;
     #[test]
     fn test_errors_from_transaction_commands() {
         let is_err = |statement, cmd| match StatementGroup::try_from(statement) {
-            Err(Error::TransactionCommandFound(c)) if c == cmd => {},
+            Err(Error::TransactionCommandFound(c)) if c == cmd => {}
             result => panic!("received {:?}", result),
         };
 
-        is_err(" beGIN ",         "begin");
+        is_err(" beGIN ", "begin");
         is_err("one; begin; two", "begin");
         is_err("ONE; BEGIN; TWO", "begin");
 
-        is_err("  savEPOint ",        "savepoint");
+        is_err("  savEPOint ", "savepoint");
         is_err("one; savepoint; two", "savepoint");
         is_err("ONE; SAVEPOINT; TWO", "savepoint");
 
-        is_err("  rOLLBack ",        "rollback");
+        is_err("  rOLLBack ", "rollback");
         is_err("one; rollback; two", "rollback");
         is_err("ONE; ROLLBACK; TWO", "rollback");
 
-        is_err("  coMMIt ",        "commit");
+        is_err("  coMMIt ", "commit");
         is_err("one; commit; two", "commit");
         is_err("ONE; COMMIT; TWO", "commit");
 
         is_err("begin; rollback; savepoint; commit", "begin");
         is_err("rollback; begin; savepoint; commit", "rollback");
         is_err("savepoint; begin; rollback; commit", "savepoint");
-        is_err("commit; begin; rollback; commit",    "commit");
+        is_err("commit; begin; rollback; commit", "commit");
     }
 }

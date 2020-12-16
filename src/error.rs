@@ -60,29 +60,31 @@ impl fmt::Display for Error {
                 write!(f, "`{}` is not an empty directory", pathstr)
             }
             RevisionNameInvalid(filename) => {
-                write!(f, "Invalid revision name `{}`: expected [timestamp].[name].sql", filename)
+                write!(
+                    f,
+                    "Invalid revision name `{}`: expected [timestamp].[name].sql",
+                    filename
+                )
             }
             RevisionTimestampInvalid(err, filename) => {
                 write!(f, "Invalid revision timestamp `{}`: {}", filename, err)
             }
             RevisionTimestampOutOfRange(filename) => {
-                write!(f, "Invalid revision timestamp `{}`: timestamp out of range", filename)
+                write!(
+                    f,
+                    "Invalid revision timestamp `{}`: timestamp out of range",
+                    filename
+                )
             }
             RevisionsFailedReview { changed, missing } => {
                 let mut errs = String::new();
 
                 if *changed > 0 {
-                    errs.push_str(&format!(
-                        "\n\t{} changed since being applied",
-                        changed,
-                    ));
+                    errs.push_str(&format!("\n\t{} changed since being applied", changed,));
                 }
 
                 if *missing > 0 {
-                    errs.push_str(&format!(
-                        "\n\t{} no longer present on disk",
-                        missing,
-                    ));
+                    errs.push_str(&format!("\n\t{} no longer present on disk", missing,));
                 }
 
                 write!(f, "Revisions review failed:{}", errs)
@@ -95,13 +97,13 @@ impl fmt::Display for Error {
 }
 
 impl From<postgres::Error> for Error {
-   fn from(e: postgres::Error) -> Self {
-       Self::DatabaseError(e)
-   } 
+    fn from(e: postgres::Error) -> Self {
+        Self::DatabaseError(e)
+    }
 }
 
 impl From<io::Error> for Error {
-   fn from(e: io::Error) -> Self {
-       Self::IoError(e)
-   } 
+    fn from(e: io::Error) -> Self {
+        Self::IoError(e)
+    }
 }

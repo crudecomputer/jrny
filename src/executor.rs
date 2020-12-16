@@ -2,9 +2,9 @@ use log::info;
 use postgres::Client;
 use std::convert::TryFrom;
 
-use crate::{Result, config::Config};
 use crate::revisions::{AnnotatedRevision, RevisionRecord};
 use crate::statements::StatementGroup;
+use crate::{config::Config, Result};
 
 const CREATE_SCHEMA: &str = "CREATE SCHEMA $$schema$$";
 

@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::{env, fs};
 
-use crate::{Error, Result, paths::ProjectPaths};
+use crate::{paths::ProjectPaths, Error, Result};
 
 /// Strategy for locating connection details.
 /// Currently only supports whole URL-style string but it could be extended to support
@@ -77,8 +77,7 @@ impl Config {
 fn url_from_toml(conn_settings: &TomlConnectionSettings) -> Result<String> {
     Ok(match &conn_settings.strategy {
         ConnectionStrategy::EnvUrlString { var_name } => {
-            env::var(var_name)
-                .map_err(|e| Error::BadEnvVar(e, var_name.clone()))?
+            env::var(var_name).map_err(|e| Error::BadEnvVar(e, var_name.clone()))?
         }
     })
 }

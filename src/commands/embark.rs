@@ -3,12 +3,8 @@ use std::convert::TryFrom;
 
 use super::Review;
 use crate::{
-    Error,
-    Result,
-    config::Config,
-    executor::Executor,
-    revisions::AnnotatedRevision,
-    statements::StatementGroup,
+    config::Config, executor::Executor, revisions::AnnotatedRevision, statements::StatementGroup,
+    Error, Result,
 };
 
 pub struct Embark {

@@ -1,10 +1,10 @@
 use std::{collections::HashMap, rc::Rc};
 
 use crate::{
-    Result,
     config::Config,
     executor::Executor,
     revisions::{AnnotatedRevision, RevisionFile, RevisionRecord},
+    Result,
 };
 
 pub struct Review {

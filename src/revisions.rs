@@ -128,7 +128,8 @@ impl TryFrom<&str> for RevisionTitle {
         }
 
         let name = parts[1..parts.len() - 1].join(".");
-        let timestamp: i64 = parts[0].parse()
+        let timestamp: i64 = parts[0]
+            .parse()
             .map_err(|e| Error::RevisionTimestampInvalid(e, filename.to_string()))?;
 
         // Utc.timestamp will panic, hence timestamp_opt
