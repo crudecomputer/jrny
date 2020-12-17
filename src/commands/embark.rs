@@ -1,9 +1,6 @@
-use log::warn;
-use std::convert::TryFrom;
-
 use super::Review;
 use crate::{
-    config::Config, executor::Executor, revisions::AnnotatedRevision, statements::StatementGroup,
+    config::Config, executor::Executor, revisions::AnnotatedRevision,
     Error, Result,
 };
 
@@ -41,27 +38,8 @@ impl Embark {
         Ok(Self { to_apply })
     }
 
-    /// Parse all pending revisions into individual statements and then applies each.
-    pub fn apply(self, exec: &mut Executor, commit: bool) -> Result<()> {
-        let mut groups = vec![];
-
-        for revision in self.to_apply {
-            // If `unwrap` panics then it's actually a bug, since all revisions at
-            // this point SHOULD be loaded from disk and hence SHOULD have content.
-            let contents = revision.contents.as_ref().unwrap().as_str();
-
-            match StatementGroup::try_from(contents) {
-                Ok(group) => {
-                    groups.push((revision, group));
-                }
-                Err(e) => {
-                    warn!("\nFound error in \"{}\"", revision.filename);
-                    return Err(e);
-                }
-            }
-        }
-
-        exec.run_revisions(&groups, commit)?;
+    pub fn apply(self, exec: &mut Executor) -> Result<()> {
+        exec.run_revisions(&self.to_apply)?;
 
         Ok(())
     }

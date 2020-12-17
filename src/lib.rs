@@ -5,14 +5,12 @@ use std::path::PathBuf;
 pub mod commands;
 pub mod paths;
 pub mod revisions;
-pub mod statements;
 
 mod client;
 mod config;
 mod error;
 mod executor;
 mod logger;
-mod parser;
 
 pub use config::Config;
 pub use error::Error;
@@ -123,7 +121,7 @@ pub fn review(conf_path_name: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-pub fn embark(conf_path_name: Option<&str>, commit: bool) -> Result<()> {
+pub fn embark(conf_path_name: Option<&str>) -> Result<()> {
     let config = Config::new(conf_path_name)?;
     let mut exec = Executor::new(&config)?;
 
@@ -140,13 +138,7 @@ pub fn embark(conf_path_name: Option<&str>, commit: bool) -> Result<()> {
         info!("\t{}", revision.filename);
     }
 
-    cmd.apply(&mut exec, commit)?;
-
-    if commit {
-        println!("\nCommitting the transaction")
-    } else {
-        println!("\nRolling back the transaction - use `--commit` to persist changes")
-    }
+    cmd.apply(&mut exec)?;
 
     Ok(())
 }

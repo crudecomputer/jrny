@@ -3,7 +3,6 @@ use postgres::Client;
 use std::convert::TryFrom;
 
 use crate::revisions::{AnnotatedRevision, RevisionRecord};
-use crate::statements::StatementGroup;
 use crate::{config::Config, Result};
 
 const CREATE_SCHEMA: &str = "CREATE SCHEMA $$schema$$";
@@ -95,37 +94,21 @@ impl Executor {
         Ok(revisions)
     }
 
-    /// Executes all statement groups inside a single transaction, only committing
-    /// if explicitly specified.
-    pub fn run_revisions(
-        &mut self,
-        groups: &[(AnnotatedRevision, StatementGroup)],
-        commit: bool,
-    ) -> Result<()> {
+    pub fn run_revisions(&mut self, revisions: &[AnnotatedRevision]) -> Result<()> {
         let insert_revision = INSERT_REVISION
             .replace("$$schema$$", &self.schema)
             .replace("$$table$$", &self.table);
 
-        let mut tx = self.client.transaction()?;
-
-        for (revision, group) in groups.iter() {
+        for revision in revisions.iter() {
             info!("\nApplying \"{}\"", revision.filename);
 
-            for statement in group.iter() {
-                let preview = statement
-                    .0
-                    .lines()
-                    .filter(|l| !l.is_empty())
-                    .take(3)
-                    .fold(String::new(), |a, b| a + b.trim() + " ")
-                    + "...";
+            let statements = revision.contents
+                .as_ref()
+                .expect(format!("No content for {}", revision.filename).as_str());
 
-                info!("\t{}", preview);
+            let _ = self.client.batch_execute(statements.as_str())?;
 
-                let _ = tx.execute(statement.0.as_str(), &[])?;
-            }
-
-            let _ = tx.execute(
+            let _ = self.client.execute(
                 insert_revision.as_str(),
                 &[
                     &revision.created_at,
@@ -134,10 +117,6 @@ impl Executor {
                     &revision.name,
                 ],
             )?;
-        }
-
-        if commit {
-            tx.commit()?;
         }
 
         Ok(())
