@@ -1,3 +1,5 @@
+use log::info;
+
 use super::Review;
 use crate::{
     config::Config, executor::Executor, revisions::AnnotatedRevision,
@@ -39,7 +41,12 @@ impl Embark {
     }
 
     pub fn apply(self, exec: &mut Executor) -> Result<()> {
-        exec.run_revisions(&self.to_apply)?;
+        info!("Applying {} revision(s)\n", self.to_apply.len());
+
+        for revision in &self.to_apply {
+            info!("  {}", revision.filename);
+            exec.run_revision(&revision)?;
+        }
 
         Ok(())
     }

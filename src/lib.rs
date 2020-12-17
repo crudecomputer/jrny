@@ -132,12 +132,6 @@ pub fn embark(conf_path_name: Option<&str>) -> Result<()> {
         return Ok(());
     }
 
-    info!("Found {} revision(s) to apply", cmd.to_apply.len());
-
-    for revision in &cmd.to_apply {
-        info!("\t{}", revision.filename);
-    }
-
     cmd.apply(&mut exec)?;
 
     Ok(())

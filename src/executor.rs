@@ -94,30 +94,26 @@ impl Executor {
         Ok(revisions)
     }
 
-    pub fn run_revisions(&mut self, revisions: &[AnnotatedRevision]) -> Result<()> {
+    pub fn run_revision(&mut self, revision: &AnnotatedRevision) -> Result<()> {
         let insert_revision = INSERT_REVISION
             .replace("$$schema$$", &self.schema)
             .replace("$$table$$", &self.table);
 
-        for revision in revisions.iter() {
-            info!("\nApplying \"{}\"", revision.filename);
+        let statements = revision.contents
+            .as_ref()
+            .expect(format!("No content for {}", revision.filename).as_str());
 
-            let statements = revision.contents
-                .as_ref()
-                .expect(format!("No content for {}", revision.filename).as_str());
+        let _ = self.client.batch_execute(statements.as_str())?;
 
-            let _ = self.client.batch_execute(statements.as_str())?;
-
-            let _ = self.client.execute(
-                insert_revision.as_str(),
-                &[
-                    &revision.created_at,
-                    &revision.checksum,
-                    &revision.filename,
-                    &revision.name,
-                ],
-            )?;
-        }
+        let _ = self.client.execute(
+            insert_revision.as_str(),
+            &[
+                &revision.created_at,
+                &revision.checksum,
+                &revision.filename,
+                &revision.name,
+            ],
+        )?;
 
         Ok(())
     }
