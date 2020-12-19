@@ -188,40 +188,19 @@ Error: Failed to run revisions:
 	1 no longer present on disk
 ```
 
-If the files were restored and reverted, `jrny` would move forward with applying `1606749809.so many things.sql`.
+If the files were restored and reverted, `jrny` would move forward with applying `1606749809.so many things.sql` and you would instead see...
 
-```
-$ jrny plan create-pets
-
-Created revisions/1606753722.create-pets.sql
-
-$ echo "
-CREATE TABLE pet (
-  id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL
-);
-
-INSERT INTO pet (name) VALUES
-  ('Eiyre'),
-  ('Cupid'),
-  ('My imaginary iguana');
-" >> revisions/1606753722.create-pets.sql
-```
-
-... then `jrny embark` would output:
-
-```
+```bash
 $ jrny embark
 
-jpplying 1 revision(s)
+Applying 1 revision(s)
 
-  1606753722.create-pets.sql
+  1606749809.so many things.sql
 ```
 
 Attempting to apply revisions again would simply find none available.
 
-```
-
+```bash
 $ jrny embark
 
 No revisions to apply
