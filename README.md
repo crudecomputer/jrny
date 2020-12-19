@@ -60,16 +60,16 @@ $ cargo install jrny
 
 # Sample output on macOS
     Updating crates.io index
-  Downloaded jrny v1.2.0
+  Downloaded jrny v1.3.0
   Downloaded 1 crate (28.6 KB) in 0.39s
-  Installing jrny v1.2.0
+  Installing jrny v1.3.0
    ...
    ...
    ...
-   Compiling jrny v1.2.0
+   Compiling jrny v1.3.0
     Finished release [optimized] target(s) in 2m 03s
   Installing /Users/<user>/.cargo/bin/jrny
-   Installed package `jrny v1.2.0` (executable `jrny`)
+   Installed package `jrny v1.3.0` (executable `jrny`)
 ```
 
 ---
@@ -120,8 +120,6 @@ The config file can be freely renamed if desired; however, this requires passing
 To create a new SQL revision, run `jrny plan [-c <path-to-config>]` either specifying the path to the
 config file via `-c` or (if ommitted) by looking for `jrny.toml` in the current directory.
 
-This will create an empty SQL file for you to populate with wonderful statements.
-
 ```bash
 $ jrny plan create-users
 
@@ -130,6 +128,22 @@ Created revisions/1606743300.create-users.sql
 $ jrny plan 'name with spaces' -c /path/to/my/config.toml
 
 Created /path/to/my/revisions/1606743400.name with spaces.sql
+```
+
+This will create a (mostly) empty SQL file for you to populate with wonderful statements.
+Notice that `jrny` **encourages transactions per-revision** but you are free to remove these,
+particularly if you need to execute statements outside of a transaction.
+
+``` bash
+$ cat /path/to/my/revisions/1606743400.name with spaces.sql
+-- 1606743400.name with spaces.sql
+
+begin;
+-- Start revisions
+
+
+-- End revisions
+commit;
 ```
 
 ### Review the journey
@@ -159,11 +173,7 @@ Revision                                          Created                  Appli
 
 ### Embark on the journey!
 
-To apply pending revisions, run `jrny embark [-c <path-to-config> --commit]`.
-All statements will be executed *within a single transaction* that is **rolled back by default** upon completion,
-unless explicitly told to commit via the `--commit` flag.
-This is to encourage dry-runs, which is particularly helpful while developing migrations -
-each statement can be added and tested incrementally, without requiring a down migration to undo changes.
+To apply pending revisions, run `jrny embark [-c <path-to-config>]`.
 
 Revisions will be reviewed prior to applying any pending, and if files have changed or are no longer
 present on disk, `jrny` will issue an error and exit without applying any new revisions.
@@ -178,9 +188,7 @@ Error: Failed to run revisions:
 	1 no longer present on disk
 ```
 
-If the files were restored and reverted, `jrny` would go ahead with applying `1606749809.so many things.sql`.
-In the process, it would preview each individual statement<sup>3</sup> as it is being applied. For instance,
-if a new multi-statement revision is added...
+If the files were restored and reverted, `jrny` would move forward with applying `1606749809.so many things.sql`.
 
 ```
 $ jrny plan create-pets
@@ -205,48 +213,19 @@ INSERT INTO pet (name) VALUES
 ```
 $ jrny embark
 
-Found 1 revision(s) to apply
-	1606753722.create-pets.sql
+jpplying 1 revision(s)
 
-Applying "1606753722.create-pets.sql"
-	CREATE TABLE pet ( id SERIAL PRIMARY KEY, name TEXT NOT NULL ...
-	INSERT INTO pet (name) VALUES ('Eiyre'), ('Cupid'), ...
-
-Rolling back the transaction - use `--commit` to persist changes`
-```
-
-As the output indicates, pass `--commit` to do just that.
-
-```
-$ jrny embark --commit
-
-Found 1 revision(s) to apply
-	1606753722.create-pets.sql
-
-Applying "1606753722.create-pets.sql"
-	CREATE TABLE pet ( id SERIAL PRIMARY KEY, name TEXT NOT NULL ...
-	INSERT INTO pet (name) VALUES ('Eiyre'), ('Cupid'), ...
-
-Committing the transaction
+  1606753722.create-pets.sql
 ```
 
 Attempting to apply revisions again would simply find none available.
 
 ```
 
-$ jrny embark --commit
+$ jrny embark
 
 No revisions to apply
 ```
-
-<small>
-
-> <sup>3</sup> `jrny` uses a state machine-based parser to split multi-statement files into
-> individual statements. No validations are performed (preferring to fully leverage database
-> for that) other than issuing an **error if transaction commands are found**, as the
-> assumption is that `jrny` should fully manage the transaction.
-
-</small>
 
 ---
 
