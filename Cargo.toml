@@ -1,14 +1,15 @@
 [package]
 name = "jrny"
-authors = ["Kevin Larrabee <6306496+kevlarr@users.noreply.github.com>"]
-categories = ["command-line-utilities"]
-description = "Simple SQL-based PostgreSQL schema revisions"
+version = "1.3.0"
 edition = "2018"
-keywords = ["sql", "postgres", "schema", "migration", "revision"]
-license = "MIT OR Apache-2.0"
-readme = "README.md"
+
+authors = ["Kevin Larrabee <6306496+kevlarr@users.noreply.github.com>"]
+description = "Simple SQL-based PostgreSQL schema revisions"
 repository = "https://github.com/kevlarr/jrny"
-version = "1.2.0"
+categories = ["command-line-utilities"]
+keywords = ["sql", "postgres", "schema", "migration", "revision"]
+readme = "README.md"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 clap = "2.33"
