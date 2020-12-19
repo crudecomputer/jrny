@@ -35,7 +35,6 @@ fn main() {
         (@subcommand embark =>
             (about: "Applies pending revisions upon successful review")
             (@arg config: -c --config [FILE] +takes_value "Path to TOML config file")
-            (@arg commit: --commit !takes_value "Commits the transaction, false by default to encourage dry runs")
         )
     };
 
@@ -43,7 +42,7 @@ fn main() {
         ("begin", Some(cmd)) => jrny::begin(cmd.value_of("dirpath").unwrap()),
         ("plan", Some(cmd)) => jrny::plan(cmd.value_of("name").unwrap(), cmd.value_of("config")),
         ("review", Some(cmd)) => jrny::review(cmd.value_of("config")),
-        ("embark", Some(cmd)) => jrny::embark(cmd.value_of("config"), cmd.is_present("commit")),
+        ("embark", Some(cmd)) => jrny::embark(cmd.value_of("config")),
         _ => unreachable!(),
     };
 
