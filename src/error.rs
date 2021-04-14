@@ -62,7 +62,7 @@ impl fmt::Display for Error {
             RevisionNameInvalid(filename) => {
                 write!(
                     f,
-                    "Invalid revision name `{}`: expected [timestamp].[name].sql",
+                    "Invalid revision name `{}`: expected `[id].[timestamp].[name].sql` eg. `001.1618370298.my-first-revision.sql`",
                     filename
                 )
             }

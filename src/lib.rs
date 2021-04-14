@@ -36,6 +36,11 @@ strategy = { type = "env-url-string", var-name = "JRNY_DATABASE_URL" }
 
 [table]
 # Specifies which schema and table `jrny` will use to track revision history.
+#
+# These can freely be changed for new projects. To update these for existing projects
+# with revisions already executed, you would need to first manually create the new table
+# and then copy all existing revision records from the old table into the new one prior
+# to running any commands with `jrny`. Otherwise, `jrny` will attempt to run all again.
 schema = "public"
 name = "jrny_revision"
 "#

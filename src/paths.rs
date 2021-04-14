@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use crate::{Error, Result, CONF};
 
 /// A container for the various paths of interest for a project.
+#[derive(Debug)]
 pub struct ProjectPaths {
     pub conf: PathBuf,
     pub revisions: PathBuf,

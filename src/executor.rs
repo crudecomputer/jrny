@@ -5,10 +5,13 @@ use std::convert::TryFrom;
 use crate::revisions::{AnnotatedRevision, RevisionRecord};
 use crate::{config::Config, Result};
 
-const CREATE_SCHEMA: &str = "CREATE SCHEMA $$schema$$";
+const CREATE_SCHEMA: &str = "
+CREATE SCHEMA $$schema$$
+";
 
-const CREATE_TABLE: &str = "CREATE TABLE $$schema$$.$$table$$ (
-    id          SERIAL       PRIMARY KEY,
+const CREATE_TABLE: &str = "
+CREATE TABLE $$schema$$.$$table$$ (
+    id          INT          PRIMARY KEY,
     applied_on  TIMESTAMPTZ  NOT NULL,
     created_at  TIMESTAMPTZ  NOT NULL,
     filename    TEXT         NOT NULL UNIQUE,
@@ -16,17 +19,21 @@ const CREATE_TABLE: &str = "CREATE TABLE $$schema$$.$$table$$ (
     checksum    TEXT         NOT NULL
 )";
 
-const TABLE_EXISTS: &str = "SELECT EXISTS (
+const TABLE_EXISTS: &str = "
+SELECT EXISTS (
    SELECT FROM pg_tables
    WHERE schemaname = $1 AND tablename  = $2
 )";
 
-const SCHEMA_EXISTS: &str = "SELECT EXISTS (
+const SCHEMA_EXISTS: &str = "
+SELECT EXISTS (
     SELECT FROM information_schema.schemata
     WHERE schema_name = $1
 )";
 
-const SELECT_REVISIONS: &str = "SELECT
+const SELECT_REVISIONS: &str = "
+SELECT
+    id,
     applied_on,
     checksum,
     created_at,
@@ -36,13 +43,15 @@ FROM $$schema$$.$$table$$
 ORDER BY created_at ASC
 ";
 
-const INSERT_REVISION: &str = "INSERT INTO $$schema$$.$$table$$ (
+const INSERT_REVISION: &str = "
+INSERT INTO $$schema$$.$$table$$ (
     applied_on,
+    id,
     created_at,
     checksum,
     filename,
     name
-) VALUES (now(), $1, $2, $3, $4)
+) VALUES (now(), $1, $2, $3, $4, $5)
 ";
 
 pub struct Executor {
@@ -83,6 +92,7 @@ impl Executor {
         let revisions = rows
             .iter()
             .map(|r| RevisionRecord {
+                id: r.get("id"),
                 applied_on: r.get("applied_on"),
                 checksum: r.get("checksum"),
                 created_at: r.get("created_at"),
@@ -108,6 +118,7 @@ impl Executor {
         let _ = self.client.execute(
             insert_revision.as_str(),
             &[
+                &revision.id,
                 &revision.created_at,
                 &revision.checksum,
                 &revision.filename,

@@ -1,7 +1,13 @@
-use serde::Deserialize;
 use std::{env, fs};
 
-use crate::{paths::ProjectPaths, Error, Result};
+use serde::Deserialize;
+
+use crate::{
+    paths::ProjectPaths,
+    revisions::RevisionFile,
+    Error,
+    Result,
+};
 
 /// Strategy for locating connection details.
 /// Currently only supports whole URL-style string but it could be extended to support
@@ -42,9 +48,11 @@ struct TomlSettings {
     pub table: TableSettings,
 }
 
+#[derive(Debug)]
 pub struct Config {
     pub paths: ProjectPaths,
     pub settings: Settings,
+    pub next_id: i32,
 }
 
 impl Config {
@@ -70,7 +78,13 @@ impl Config {
             table: toml_settings.table,
         };
 
-        Ok(Self { paths, settings })
+        let last_id = RevisionFile::all_from_disk(&paths.revisions)?.iter()
+            .reduce(|a, b| if a.created_at > b.created_at { a } else { b })
+            .map_or(0, |rf| rf.created_at.timestamp());
+
+        let config = Self { paths, settings, next_id: last_id as i32 + 1 };
+
+        Ok(config)
     }
 }
 

@@ -10,6 +10,7 @@ use crate::{Error, Result};
 /// Metadata and contents for a revision loaded from disk.
 #[derive(Debug)]
 pub struct RevisionFile {
+    pub id: i32,
     pub checksum: String,
     pub contents: String,
     pub created_at: DateTime<Utc>,
@@ -47,6 +48,7 @@ impl TryFrom<&PathBuf> for RevisionFile {
         let contents = fs::read_to_string(p)?;
 
         Ok(Self {
+            id: title.id,
             checksum: to_checksum(&contents),
             contents,
             created_at: title.created_at,
@@ -59,6 +61,7 @@ impl TryFrom<&PathBuf> for RevisionFile {
 /// Metadata stored for a revision that has already been applied.
 #[derive(Debug)]
 pub struct RevisionRecord {
+    pub id: i32,
     pub applied_on: DateTime<Utc>,
     pub checksum: String,
     pub created_at: DateTime<Utc>,
@@ -71,6 +74,7 @@ pub struct RevisionRecord {
 /// Comprehensive metadata for a revision detected on disk or in the database.
 #[derive(Debug, Eq)]
 pub struct AnnotatedRevision {
+    pub id: i32,
     pub applied_on: Option<DateTime<Utc>>,
     pub checksum: Option<String>,
     pub checksums_match: Option<bool>,
@@ -97,13 +101,16 @@ impl PartialOrd for AnnotatedRevision {
 
 impl PartialEq for AnnotatedRevision {
     fn eq(&self, other: &Self) -> bool {
-        self.created_at == other.created_at && self.filename == other.filename
+        self.id         == other.id         &&
+        self.created_at == other.created_at &&
+        self.filename   == other.filename
     }
 }
 
 /// Creation date and extension-less name extracted from a revision filename.
 #[derive(Debug, PartialEq)]
 struct RevisionTitle {
+    id: i32,
     created_at: DateTime<Utc>,
     name: String,
 }
@@ -116,29 +123,35 @@ impl TryFrom<&str> for RevisionTitle {
 
         // Regex would work too, but not sure it's worth the dependencies and
         // binary size increase.
-        // TODO maybe just use nightly?
         //
-        // let (timestamp, name) = match parts.as_slice() {
-        //     [timestamp, .. name, "sql"] => (timestamp, name.join(".")),
-        //     _ => return Err(err()),
-        // };
+        // TODO maybe just use nightly? Eg.
+        //
+        //     let (timestamp, name) = match parts.as_slice() {
+        //         [timestamp, .. name, "sql"] => (timestamp, name.join(".")),
+        //         _ => return Err(err()),
+        //     };
 
-        if parts.len() < 3 || parts[parts.len() - 1] != "sql" {
+        if parts.len() < 4 || parts.last() != Some(&"sql") {
             return Err(Error::RevisionNameInvalid(filename.to_string()));
         }
 
-        let name = parts[1..parts.len() - 1].join(".");
-        let timestamp: i64 = parts[0]
+        let id: i32 = parts[0].parse()
+            .map_err(|_| Error::RevisionNameInvalid(filename.to_string()))?;
+
+        let timestamp: i64 = parts[1]
             .parse()
             .map_err(|e| Error::RevisionTimestampInvalid(e, filename.to_string()))?;
 
-        // Utc.timestamp will panic, hence timestamp_opt
+        // Utc.timestamp can panic, hence `timestamp_opt`
         let created_at = Utc
             .timestamp_opt(timestamp, 0)
             .single()
             .ok_or_else(|| Error::RevisionTimestampOutOfRange(filename.to_string()))?;
 
+        let name = parts[2..parts.len() - 1].join(".");
+
         Ok(Self {
+            id,
             created_at,
             name: (*name).to_string(),
         })

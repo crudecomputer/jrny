@@ -22,7 +22,7 @@ impl Plan {
     pub fn new_revision(config: &Config, name: &str) -> Result<Self> {
         let timestamp = Utc::now().timestamp();
 
-        let filename = format!("{}.{}.sql", timestamp, name);
+        let filename = format!("{:03}.{}.{}.sql", config.next_id, timestamp, name);
         let revision_path = config
             .paths
             .revisions

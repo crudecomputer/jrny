@@ -56,6 +56,7 @@ impl Review {
     fn annotate(mut self) -> Self {
         for file in self.files.iter() {
             let mut anno = AnnotatedRevision {
+                id: file.id,
                 applied_on: None,
                 checksum: Some(file.checksum.clone()),
                 checksums_match: None,
@@ -80,6 +81,7 @@ impl Review {
             }
 
             let anno = AnnotatedRevision {
+                id: record.id,
                 applied_on: Some(record.applied_on),
                 checksum: None,
                 checksums_match: None,
