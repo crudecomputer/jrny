@@ -14,27 +14,43 @@ impl Embark {
     pub fn prepare(config: &Config, exec: &mut Executor) -> Result<Self> {
         let Review { mut revisions, .. } = Review::annotated_revisions(config, exec)?;
 
-        // If checksum comparison is missing, it hasn't been applied so ignore it
-        let changed: Vec<_> = revisions
-            .iter()
-            .filter(|anno| !anno.checksums_match.unwrap_or(true))
-            .collect();
+        // TODO this is copypasta
+        let mut last_applied_index = -1;
 
-        let missing: Vec<_> = revisions
-            .iter()
-            .filter(|anno| !anno.on_disk)
-            .collect();
+        for (i, revision) in revisions.iter().enumerate() {
+            if revision.applied_on.is_some() {
+                last_applied_index = i as isize;
+            }
+        }
 
-        if !changed.is_empty() || !missing.is_empty() {
+        let (mut changed, mut missing, mut predate_applied) = (0, 0, 0);
+
+        for (i, revision) in revisions.iter().enumerate() {
+            if revision.applied_on.is_none() && (i as isize) < last_applied_index {
+                predate_applied += 1;
+            }
+
+            // If checksum comparison is missing, it hasn't been applied so ignore it
+            if !revision.checksums_match.unwrap_or(true) {
+                changed += 1;
+            }
+
+            if !revision.on_disk {
+                missing += 1;
+            }
+        }
+
+        if changed + missing + predate_applied > 0 {
             return Err(Error::RevisionsFailedReview {
-                changed: changed.len(),
-                missing: missing.len(),
+                changed,
+                missing,
+                predate_applied,
             });
         }
 
         let to_apply: Vec<_> = revisions
             .drain(..)
-            .filter(|anno| anno.on_disk && anno.applied_on.is_none())
+            .filter(|anno| anno.applied_on.is_none())
             .collect();
 
         Ok(Self { to_apply })

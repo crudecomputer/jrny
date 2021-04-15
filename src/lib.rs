@@ -88,11 +88,21 @@ pub fn review(conf_path_name: Option<&str>) -> Result<()> {
     }
 
     info!("The journey thus far\n");
-    info!("{:50}{:25}{:25}", "Revision", "Created", "Applied");
+    info!("  {:3}  {:43}{:25}{:25}", "Id", "Revision", "Created", "Applied");
 
-    let format_local = |dt: DateTime<Utc>| DateTime::<Local>::from(dt).format("%v %X").to_string();
+    let format_local = |dt: DateTime<Utc>| DateTime::<Local>::from(dt)
+        .format("%v %X")
+        .to_string();
 
-    for revision in cmd.revisions {
+    let mut last_applied_index = -1;
+
+    for (i, revision) in cmd.revisions.iter().enumerate() {
+        if revision.applied_on.is_some() {
+            last_applied_index = i as isize;
+        }
+    }
+
+    for (i, revision) in cmd.revisions.iter().enumerate() {
         let applied_on = match revision.applied_on {
             Some(a) => format_local(a),
             _ => "--".to_string(),
@@ -102,21 +112,25 @@ pub fn review(conf_path_name: Option<&str>) -> Result<()> {
             Some("The file has changed after being applied")
         } else if !revision.on_disk {
             Some("No corresponding file could not be found")
+        } else if revision.applied_on.is_none() && (i as isize) < last_applied_index {
+            Some("Later revisions have already been applied")
         } else {
             None
         };
 
         match error {
             Some(error) => warn!(
-                "{:50}{:25}{:25}{}",
-                revision.filename,
+                "  {:3}  {:43}{:25}{:25}{}",
+                revision.id,
+                revision.name,
                 format_local(revision.created_at),
                 applied_on,
                 error,
             ),
             None => info!(
-                "{:50}{:25}{:25}",
-                revision.filename,
+                "  {:3}  {:43}{:25}{:25}",
+                revision.id,
+                revision.name,
                 format_local(revision.created_at),
                 applied_on,
             ),

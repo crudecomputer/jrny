@@ -17,7 +17,7 @@ pub enum Error {
     RevisionNameInvalid(String),
     RevisionTimestampInvalid(num::ParseIntError, String),
     RevisionTimestampOutOfRange(String),
-    RevisionsFailedReview { changed: usize, missing: usize },
+    RevisionsFailedReview { changed: usize, missing: usize, predate_applied: usize },
     TransactionCommandFound(String),
 }
 
@@ -76,15 +76,19 @@ impl fmt::Display for Error {
                     filename
                 )
             }
-            RevisionsFailedReview { changed, missing } => {
+            RevisionsFailedReview { changed, missing, predate_applied } => {
                 let mut errs = String::new();
 
                 if *changed > 0 {
-                    errs.push_str(&format!("\n\t{} changed since being applied", changed,));
+                    errs.push_str(&format!("\n\t{} changed since being applied", changed));
                 }
 
                 if *missing > 0 {
-                    errs.push_str(&format!("\n\t{} no longer present on disk", missing,));
+                    errs.push_str(&format!("\n\t{} applied no longer present", missing));
+                }
+
+                if *predate_applied > 0 {
+                    errs.push_str(&format!("\n\t{} pending occur before applied revisions", predate_applied));
                 }
 
                 write!(f, "Revisions review failed:{}", errs)
