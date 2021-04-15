@@ -12,8 +12,8 @@ CREATE SCHEMA $$schema$$
 const CREATE_TABLE: &str = "
 CREATE TABLE $$schema$$.$$table$$ (
     id          INT          PRIMARY KEY,
-    applied_on  TIMESTAMPTZ  NOT NULL,
     created_at  TIMESTAMPTZ  NOT NULL,
+    applied_on  TIMESTAMPTZ  NOT NULL,
     filename    TEXT         NOT NULL UNIQUE,
     name        TEXT         NOT NULL,
     checksum    TEXT         NOT NULL
@@ -40,7 +40,7 @@ SELECT
     filename,
     name
 FROM $$schema$$.$$table$$
-ORDER BY created_at ASC
+ORDER BY id ASC
 ";
 
 const INSERT_REVISION: &str = "
@@ -94,8 +94,8 @@ impl Executor {
             .map(|r| RevisionRecord {
                 id: r.get("id"),
                 applied_on: r.get("applied_on"),
-                checksum: r.get("checksum"),
                 created_at: r.get("created_at"),
+                checksum: r.get("checksum"),
                 filename: r.get("filename"),
                 name: r.get("name"),
             })

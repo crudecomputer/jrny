@@ -78,11 +78,12 @@ impl Config {
             table: toml_settings.table,
         };
 
-        let last_id = RevisionFile::all_from_disk(&paths.revisions)?.iter()
-            .reduce(|a, b| if a.created_at > b.created_at { a } else { b })
-            .map_or(0, |rf| rf.created_at.timestamp());
+        let next_id = RevisionFile::all_from_disk(&paths.revisions)?.iter()
+            .reduce(|rf1, rf2| if rf1.id > rf2.id { rf1 } else { rf2 })
+            .map_or(0, |rf| rf.id as i32)
+            + 1;
 
-        let config = Self { paths, settings, next_id: last_id as i32 + 1 };
+        let config = Self { paths, settings, next_id };
 
         Ok(config)
     }

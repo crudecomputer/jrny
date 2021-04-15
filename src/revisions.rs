@@ -10,13 +10,17 @@ use crate::{Error, Result};
 /// Metadata and contents for a revision loaded from disk.
 #[derive(Debug)]
 pub struct RevisionFile {
+    /// The file id of the revision
     pub id: i32,
+    /// The hash of the contents
     pub checksum: String,
+    /// Contents of revision file, if present
     pub contents: String,
+    /// Moment the revision was created
     pub created_at: DateTime<Utc>,
-    /// The full name of the file, including timestamp and extension
+    /// The full name of the file, including id, timestamp, and extension
     pub filename: String,
-    /// The name of the file, excluding timestamp and extension
+    /// The name of the file, excluding id, timestamp, and extension
     pub name: String,
 }
 
@@ -61,9 +65,13 @@ impl TryFrom<&PathBuf> for RevisionFile {
 /// Metadata stored for a revision that has already been applied.
 #[derive(Debug)]
 pub struct RevisionRecord {
+    /// The database id of the revision
     pub id: i32,
+    /// Moment the revision was applied to the database
     pub applied_on: DateTime<Utc>,
+    /// The hash of the contents
     pub checksum: String,
+    /// Moment the revision was created
     pub created_at: DateTime<Utc>,
     /// The full name of the file, including timestamp and extension
     pub filename: String,
@@ -72,24 +80,31 @@ pub struct RevisionRecord {
 }
 
 /// Comprehensive metadata for a revision detected on disk or in the database.
-#[derive(Debug, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct AnnotatedRevision {
+    /// The id of both the record and the revision file
     pub id: i32,
+    /// Moment the revision was applied to the database
     pub applied_on: Option<DateTime<Utc>>,
+    /// Checksum of the revision file on disk, if present
     pub checksum: Option<String>,
+    /// Whether or not checksums for file and record match, if both are present
     pub checksums_match: Option<bool>,
+    /// Contents of revision file, if present
     pub contents: Option<String>,
+    /// Moment the revision was created
     pub created_at: DateTime<Utc>,
-    /// The full name of the file, including timestamp and extension
+    /// The full name of the file, including id, timestamp, and extension
     pub filename: String,
-    /// The name of the file, excluding timestamp and extension
+    /// The name of the file, excluding id, timestamp, and extension
     pub name: String,
+    /// Whether or not the file for an applied revision is found on disk
     pub on_disk: bool,
 }
 
 impl Ord for AnnotatedRevision {
     fn cmp(&self, other: &Self) -> Ordering {
-        (&self.created_at, &self.filename).cmp(&(&other.created_at, &other.filename))
+        self.id.cmp(&other.id)
     }
 }
 
@@ -99,19 +114,14 @@ impl PartialOrd for AnnotatedRevision {
     }
 }
 
-impl PartialEq for AnnotatedRevision {
-    fn eq(&self, other: &Self) -> bool {
-        self.id         == other.id         &&
-        self.created_at == other.created_at &&
-        self.filename   == other.filename
-    }
-}
-
 /// Creation date and extension-less name extracted from a revision filename.
 #[derive(Debug, PartialEq)]
 struct RevisionTitle {
+    /// The numeric id extracted from the filename
     id: i32,
+    /// The file creation moment extracted from the filename
     created_at: DateTime<Utc>,
+    /// The remaining portion of the filename, excluding extension
     name: String,
 }
 
