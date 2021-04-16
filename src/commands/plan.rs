@@ -22,21 +22,20 @@ impl Plan {
     pub fn new_revision(config: &Config, name: &str) -> Result<Self> {
         let timestamp = Utc::now().timestamp();
 
-        let filename = format!("{}.{}.sql", timestamp, name);
-        let revision_path = config
-            .paths
-            .revisions
-            .join(&filename);
+        let filename = format!("{:03}.{}.{}.sql", config.next_id, timestamp, name);
+        let revision_path = config.paths.revisions.join(&filename);
 
-        let cmd = Self { filename, path: revision_path };
+        let cmd = Self {
+            filename,
+            path: revision_path,
+        };
 
         Ok(cmd.create_file()?)
     }
 
     fn create_file(self) -> Result<Self> {
-        fs::File::create(&self.path)?.write_all(
-            TEMPLATE.replace(":filename", &self.filename).as_bytes()
-        )?;
+        fs::File::create(&self.path)?
+            .write_all(TEMPLATE.replace(":filename", &self.filename).as_bytes())?;
 
         Ok(self)
     }

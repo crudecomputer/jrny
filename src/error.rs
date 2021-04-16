@@ -1,6 +1,9 @@
 use std::{env, fmt, io, num};
 use toml::de::Error as TomlError;
 
+// TODO This has gotten a bit unwieldy.
+// Should these just be individual structs now to avoid
+// big matches anywhere?
 #[derive(Debug)]
 pub enum Error {
     BadEnvVar(env::VarError, String),
@@ -17,7 +20,12 @@ pub enum Error {
     RevisionNameInvalid(String),
     RevisionTimestampInvalid(num::ParseIntError, String),
     RevisionTimestampOutOfRange(String),
-    RevisionsFailedReview { changed: usize, missing: usize },
+    RevisionsFailedReview {
+        changed: usize,
+        duplicate_ids: usize,
+        missing: usize,
+        predate_applied: usize,
+    },
     TransactionCommandFound(String),
 }
 
@@ -62,7 +70,7 @@ impl fmt::Display for Error {
             RevisionNameInvalid(filename) => {
                 write!(
                     f,
-                    "Invalid revision name `{}`: expected [timestamp].[name].sql",
+                    "Invalid revision name `{}`: expected `[id].[timestamp].[name].sql` eg. `001.1618370298.my-first-revision.sql`",
                     filename
                 )
             }
@@ -76,15 +84,36 @@ impl fmt::Display for Error {
                     filename
                 )
             }
-            RevisionsFailedReview { changed, missing } => {
+            RevisionsFailedReview {
+                changed,
+                duplicate_ids,
+                missing,
+                predate_applied,
+            } => {
                 let mut errs = String::new();
 
                 if *changed > 0 {
-                    errs.push_str(&format!("\n\t{} changed since being applied", changed,));
+                    errs.push_str(&format!("\n\t{} changed since being applied", changed));
+                }
+
+                if *duplicate_ids > 0 {
+                    let (verb, id) = if *duplicate_ids > 1 {
+                        ("have", "ids")
+                    } else {
+                        ("has a", "id")
+                    };
+                    errs.push_str(&format!("\n\t{} {} duplicate {}", duplicate_ids, verb, id));
                 }
 
                 if *missing > 0 {
-                    errs.push_str(&format!("\n\t{} no longer present on disk", missing,));
+                    errs.push_str(&format!("\n\t{} applied no longer present", missing));
+                }
+
+                if *predate_applied > 0 {
+                    errs.push_str(&format!(
+                        "\n\t{} pending occur before applied revisions",
+                        predate_applied
+                    ));
                 }
 
                 write!(f, "Revisions review failed:{}", errs)
