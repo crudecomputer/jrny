@@ -102,6 +102,9 @@ pub fn review(conf_path_name: Option<&str>) -> Result<()> {
         }
     }
 
+    // TODO clean up? this isn't elegant
+    let mut previous_id = None;
+
     for (i, revision) in cmd.revisions.iter().enumerate() {
         let applied_on = match revision.applied_on {
             Some(a) => format_local(a),
@@ -114,6 +117,8 @@ pub fn review(conf_path_name: Option<&str>) -> Result<()> {
             Some("No corresponding file could not be found")
         } else if revision.applied_on.is_none() && (i as isize) < last_applied_index {
             Some("Later revisions have already been applied")
+        } else if previous_id == Some(revision.id) {
+            Some("Revision has duplicate id")
         } else {
             None
         };
@@ -135,6 +140,8 @@ pub fn review(conf_path_name: Option<&str>) -> Result<()> {
                 applied_on,
             ),
         }
+
+        previous_id = Some(revision.id);
     }
 
     Ok(())

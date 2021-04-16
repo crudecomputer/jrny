@@ -51,7 +51,7 @@ INSERT INTO $$schema$$.$$table$$ (
     checksum,
     filename,
     name
-) VALUES (now(), $1, $2, $3, $4, $5)
+) VALUES (clock_timestamp(), $1, $2, $3, $4, $5)
 ";
 
 pub struct Executor {

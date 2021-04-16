@@ -23,13 +23,12 @@ impl Embark {
             }
         }
 
-        let (mut changed, mut missing, mut predate_applied) = (0, 0, 0);
+        // This has gotten pretty inelegant, so refactor at some point,
+        // and there's more copy-pasta with the "previous id" thing
+        let (mut changed, mut duplicate_ids, mut missing, mut predate_applied) = (0, 0, 0, 0);
+        let mut previous_id = None;
 
         for (i, revision) in revisions.iter().enumerate() {
-            if revision.applied_on.is_none() && (i as isize) < last_applied_index {
-                predate_applied += 1;
-            }
-
             // If checksum comparison is missing, it hasn't been applied so ignore it
             if !revision.checksums_match.unwrap_or(true) {
                 changed += 1;
@@ -38,11 +37,22 @@ impl Embark {
             if !revision.on_disk {
                 missing += 1;
             }
+
+            if revision.applied_on.is_none() && (i as isize) < last_applied_index {
+                predate_applied += 1;
+            }
+
+            if previous_id == Some(revision.id) {
+                duplicate_ids += 1;
+            }
+
+            previous_id = Some(revision.id);
         }
 
-        if changed + missing + predate_applied > 0 {
+        if changed + duplicate_ids + missing + predate_applied > 0 {
             return Err(Error::RevisionsFailedReview {
                 changed,
+                duplicate_ids,
                 missing,
                 predate_applied,
             });
