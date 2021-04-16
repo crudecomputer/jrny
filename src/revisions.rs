@@ -180,8 +180,9 @@ mod tests {
     #[test]
     fn revision_title_parses_sql_filename() {
         assert_eq!(
-            RevisionTitle::try_from("1577836800.some-file.sql").unwrap(),
+            RevisionTitle::try_from("001.1577836800.some-file.sql").unwrap(),
             RevisionTitle {
+                id: 1,
                 created_at: Utc.ymd(2020, 1, 1).and_hms(0, 0, 0),
                 name: "some-file".to_string(),
             }
@@ -191,8 +192,9 @@ mod tests {
     #[test]
     fn revision_title_allows_multiple_periods() {
         assert_eq!(
-            RevisionTitle::try_from("1577836800.some.file.sql").unwrap(),
+            RevisionTitle::try_from("003.1577836800.some.file.sql").unwrap(),
             RevisionTitle {
+                id: 3,
                 created_at: Utc.ymd(2020, 1, 1).and_hms(0, 0, 0),
                 name: "some.file".to_string(),
             }
@@ -201,9 +203,9 @@ mod tests {
 
     #[test]
     fn revision_title_fails_non_sql() {
-        match RevisionTitle::try_from("1577836800.some-file.wat") {
+        match RevisionTitle::try_from("001.1577836800.some-file.wat") {
             Err(Error::RevisionNameInvalid(filename)) => {
-                assert_eq!(filename, "1577836800.some-file.wat".to_string());
+                assert_eq!(filename, "001.1577836800.some-file.wat".to_string());
             }
             _ => unreachable!(),
         }
@@ -211,15 +213,15 @@ mod tests {
 
     #[test]
     fn revision_title_fails_bad_timestamp() {
-        match RevisionTitle::try_from("a.some-file.sql") {
+        match RevisionTitle::try_from("001.asdf.some-file.sql") {
             Err(Error::RevisionTimestampInvalid(_, filename)) => {
-                assert_eq!(filename, "a.some-file.sql".to_string());
+                assert_eq!(filename, "001.asdf.some-file.sql".to_string());
             }
             result => panic!("received {:?}", result),
         }
-        match RevisionTitle::try_from("9999999999999999.some-file.sql") {
+        match RevisionTitle::try_from("001.9999999999999999.some-file.sql") {
             Err(Error::RevisionTimestampOutOfRange(filename)) => {
-                assert_eq!(filename, "9999999999999999.some-file.sql".to_string());
+                assert_eq!(filename, "001.9999999999999999.some-file.sql".to_string());
             }
             result => panic!("received {:?}", result),
         }
