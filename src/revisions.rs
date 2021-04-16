@@ -145,7 +145,8 @@ impl TryFrom<&str> for RevisionTitle {
             return Err(Error::RevisionNameInvalid(filename.to_string()));
         }
 
-        let id: i32 = parts[0].parse()
+        let id: i32 = parts[0]
+            .parse()
             .map_err(|_| Error::RevisionNameInvalid(filename.to_string()))?;
 
         let timestamp: i64 = parts[1]

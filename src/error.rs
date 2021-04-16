@@ -84,7 +84,12 @@ impl fmt::Display for Error {
                     filename
                 )
             }
-            RevisionsFailedReview { changed, duplicate_ids, missing, predate_applied } => {
+            RevisionsFailedReview {
+                changed,
+                duplicate_ids,
+                missing,
+                predate_applied,
+            } => {
                 let mut errs = String::new();
 
                 if *changed > 0 {
@@ -92,7 +97,11 @@ impl fmt::Display for Error {
                 }
 
                 if *duplicate_ids > 0 {
-                    let (verb, id) = if *duplicate_ids > 1 { ("have", "ids") } else { ("has a", "id") };
+                    let (verb, id) = if *duplicate_ids > 1 {
+                        ("have", "ids")
+                    } else {
+                        ("has a", "id")
+                    };
                     errs.push_str(&format!("\n\t{} {} duplicate {}", duplicate_ids, verb, id));
                 }
 
@@ -101,7 +110,10 @@ impl fmt::Display for Error {
                 }
 
                 if *predate_applied > 0 {
-                    errs.push_str(&format!("\n\t{} pending occur before applied revisions", predate_applied));
+                    errs.push_str(&format!(
+                        "\n\t{} pending occur before applied revisions",
+                        predate_applied
+                    ));
                 }
 
                 write!(f, "Revisions review failed:{}", errs)

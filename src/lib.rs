@@ -88,7 +88,10 @@ pub fn review(conf_path_name: Option<&str>) -> Result<()> {
     }
 
     info!("The journey thus far\n");
-    info!("  {:3}  {:43}{:25}{:25}", "Id", "Revision", "Created", "Applied");
+    info!(
+        "  {:3}  {:43}{:25}{:25}",
+        "Id", "Revision", "Created", "Applied"
+    );
 
     let format_local = |dt: DateTime<Utc>| DateTime::<Local>::from(dt)
         .format("%v %X")

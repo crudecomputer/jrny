@@ -109,7 +109,8 @@ impl Executor {
             .replace("$$schema$$", &self.schema)
             .replace("$$table$$", &self.table);
 
-        let statements = revision.contents
+        let statements = revision
+            .contents
             .as_ref()
             .expect(format!("No content for {}", revision.filename).as_str());
 
