@@ -1,5 +1,5 @@
-use clap::{clap_app, AppSettings};
-use log::{warn, LevelFilter};
+use clap::{clap_app, App};
+use log::{info, warn, LevelFilter};
 
 use jrny::{self, Logger};
 
@@ -11,10 +11,12 @@ fn main() {
         .map_err(|e| e.to_string())
         .unwrap();
 
-    let app = clap_app! {jrny =>
+    // This explicitly doesn't use `AppSettings::SubcommandRequired)` since that makes it
+    // harder to print help by default in absence of a subcommand, rather than printing
+    // an error that prompts to use `--help`
+    let mut app = clap_app! {jrny =>
         (about: "PostgreSQL schema revisions made easy - just add SQL")
         (version: env!("CARGO_PKG_VERSION"))
-        (setting: AppSettings::SubcommandRequired)
 
         (@subcommand begin =>
             (about: "Sets up relevant files and directories for a new revision timeline")
@@ -39,14 +41,40 @@ fn main() {
     };
 
     let result = match app.clone().get_matches().subcommand() {
-        ("begin", Some(cmd)) => jrny::begin(cmd.value_of("dirpath").unwrap()),
-        ("plan", Some(cmd)) => jrny::plan(cmd.value_of("name").unwrap(), cmd.value_of("config")),
-        ("review", Some(cmd)) => jrny::review(cmd.value_of("config")),
-        ("embark", Some(cmd)) => jrny::embark(cmd.value_of("config")),
+        ("begin", Some(cmd)) => jrny::begin(
+            cmd.value_of("dirpath").unwrap()
+        ),
+        ("plan", Some(cmd)) => jrny::plan(
+            cmd.value_of("name").unwrap(),
+            cmd.value_of("config")
+        ),
+        ("review", Some(cmd)) => jrny::review(
+            cmd.value_of("config")
+        ),
+        ("embark", Some(cmd)) => jrny::embark(
+            cmd.value_of("config")
+        ),
+        ("", None) => {
+            log_help(&mut app);
+            Ok(())
+        },
         _ => unreachable!(),
     };
 
     if let Err(e) = result {
         warn!("Error: {}", e);
     }
+}
+
+/// Uses Logger facade to print long help message, rather than
+/// printing to stdout explicitly.
+fn log_help(app: &mut App) {
+    let msg = {
+        let mut bytes = Vec::new();
+        app.write_long_help(&mut bytes).unwrap();
+
+        String::from_utf8(bytes).unwrap()
+    };
+
+    info!("{}", msg);
 }
