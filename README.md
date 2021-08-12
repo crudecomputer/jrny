@@ -4,6 +4,12 @@
 
 ---
 
+**Disclaimer:** As far as I am aware, I am the only one using this tool, and that's only on hobby projects.
+While it is functional for personal use cases, it is far from battle-tested. Or even unit/integration tested.
+**Use at your own risk.**
+
+---
+
 ## Overview
 
 A lot of schema-migration tools already exist. They work, and they work pretty well at that,
