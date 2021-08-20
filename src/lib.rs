@@ -20,19 +20,12 @@ pub use logger::Logger;
 pub type Result<T> = std::result::Result<T, Error>;
 
 const CONF: &str = "jrny.toml";
-const CONF_TEMPLATE: &[u8] = r#"# jrny config
+const CONF_TEMPLATE: &str = r#"# jrny config
 
-[connection]
-# Specifies how `jrny` will connect to the target database. Available strategies are:
+# Project-level configuration options that should not change across environments
+# or contain any sensitive information.
 #
-#   env-url-string:  Use a single connection string of any supported format, the value
-#                    of which is read from an environment variable whose name is specified
-#                    by `var-name`
-#
-# NOTE: Only this single strategy is supported currently, but this is likely to be
-# extended in the future.
-#
-strategy = { type = "env-url-string", var-name = "JRNY_DATABASE_URL" }
+# This file MUST BE INCLUDED in version control.
 
 [table]
 # Specifies which schema and table `jrny` will use to track revision history.
@@ -43,8 +36,38 @@ strategy = { type = "env-url-string", var-name = "JRNY_DATABASE_URL" }
 # to running any commands with `jrny`. Otherwise, `jrny` will attempt to run all again.
 schema = "public"
 name = "jrny_revision"
-"#
-.as_bytes();
+"#;
+
+const ENV: &str = "jrny-env.toml";
+const ENV_TEMPLATE: &str = r#"# jrny environment
+
+# Environment-specific configuration options, including secrets such as database
+# authentication. Runtime command flags will take precedence over any values provided.
+#
+# This file MUST BE EXCULUDED from version control.
+
+[database]
+url = ""
+"#;
+
+const ENV_EX: &str = "jrny-env.example.toml";
+const ENV_EX_TEMPLATE: &str = r#"# jrny environment EXAMPLE FILE
+
+# This is an example file specifying optional environment-specific to include within
+# a `jrny-env.toml` file. If that file is not present, `jrny` will require
+# that necessary secrets are passed in via command flags.
+#
+# If `jrny-secret.toml` is present, runtime command flags will take precedence
+# over any values contained within the file.
+#
+# This file SHOULD BE INCLUDED in version control.
+
+[database]
+
+# Database connection string - for permissible formats and options see:
+# https://docs.rs/postgres/0.19.1/postgres/config/struct.Config.html
+url = "postgresql://user:password@host:port/dbname"
+"#;
 
 /// Accepts a path string targeting a directory to set up project files:
 /// The directory will be created if it does not exist or will fail if
@@ -57,9 +80,13 @@ pub fn begin(path: &str) -> Result<()> {
 
     info!("A journey has begun");
 
-    print_path("  ", cmd.created_root, &cmd.paths.root);
-    print_path("  ├── ", cmd.created_revisions, &cmd.paths.revisions);
-    print_path("  └── ", cmd.created_conf, &cmd.paths.conf);
+    print_path("  ",     &cmd.paths.root,      cmd.created_root);
+    print_path("  ├── ", &cmd.paths.revisions, cmd.created_revisions);
+
+    // The command would have failed had either of these files existed
+    print_path("  └── ", &cmd.paths.conf, true);
+    print_path("  └── ", &cmd.paths.env,  true);
+    print_path("  └── ", &cmd.paths.root.join(ENV_EX), true);
 
     Ok(())
 }
@@ -168,7 +195,7 @@ pub fn embark(conf_path_name: Option<&str>) -> Result<()> {
 
 /// Prints path string with optional prefix and "[created]" suffix if the created
 /// condition is true.
-fn print_path(prefix: &str, created: bool, path: &PathBuf) {
+fn print_path(prefix: &str, path: &PathBuf, created: bool) {
     info!(
         "{}{}{}",
         prefix,

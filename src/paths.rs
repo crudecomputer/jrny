@@ -1,27 +1,27 @@
 //! Utilities for working with paths.
 use std::path::PathBuf;
 
-use crate::{Error, Result, CONF};
+use crate::{Error, Result, CONF, ENV};
 
 /// A container for the various paths of interest for a project.
 #[derive(Debug)]
 pub struct ProjectPaths {
     pub conf: PathBuf,
+    pub env: PathBuf,
     pub revisions: PathBuf,
     pub root: PathBuf,
 }
 
 impl ProjectPaths {
     /// Creates path bufs for a new project given a root directory, ensuring that
-    /// there is not already a config file or a non-empty revisions directory.
+    /// there is not already a config & env file or a non-empty revisions directory.
     pub fn for_new_project(root_dir: &str) -> Result<Self> {
         let root = PathBuf::from(root_dir);
-        let revisions = root.join("revisions");
-        let conf = root.join(CONF);
 
         let paths = Self {
-            conf,
-            revisions,
+            conf: root.join(CONF),
+            env: root.join(ENV),
+            revisions: root.join("revisions"),
             root,
         };
 
@@ -40,18 +40,17 @@ impl ProjectPaths {
             .ok_or_else(|| Error::PathInvalid(conf.display().to_string()))?
             .to_path_buf();
 
-        let revisions = root.join("revisions");
-
         Ok(Self {
             conf,
-            revisions,
+            env: root.join(ENV),
+            revisions: root.join("revisions"),
             root,
         })
     }
 
     /// Ensures that own path bufs are valid for a new project, namely that the
     /// root path is a directory if exists, that the revisions directory is empty
-    /// if exists, and that no config file exists.
+    /// if exists, and that no config or environment file exists
     fn valid_for_new(&self) -> Result<()> {
         use Error::*;
 
@@ -65,6 +64,10 @@ impl ProjectPaths {
 
         if self.conf.exists() {
             return Err(PathAlreadyExists(self.conf.display().to_string()));
+        }
+
+        if self.env.exists() {
+            return Err(PathAlreadyExists(self.env.display().to_string()));
         }
 
         Ok(())
