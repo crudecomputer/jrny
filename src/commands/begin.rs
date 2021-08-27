@@ -51,8 +51,7 @@ impl Begin {
         Ok(cmd)
     }
 
-    /// Attempts to create the project root directory if it doesn't exist,
-    /// marking created as true if newly created.
+    /// Attempts to create the project root directory if it doesn't exist.
     fn create_root(&mut self) -> Result<()> {
         if !self.paths.root.exists() {
             fs::create_dir(&self.paths.root)?;
@@ -85,7 +84,7 @@ impl Begin {
         Ok(())
     }
 
-    /// Attempts to create the default environment file.
+    /// Attempts to create the default environment file & example file.
     fn create_env(&mut self) -> Result<()> {
         let mut f = fs::File::create(&self.paths.env)?;
         self.created_env = true;
@@ -109,6 +108,7 @@ impl Begin {
         if self.created_env {
             fs::remove_file(&self.paths.env)?;
         }
+
         if self.created_env_example {
             fs::remove_file(&self.paths.root.join(ENV_EX))?;
         }

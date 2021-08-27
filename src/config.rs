@@ -59,12 +59,17 @@ impl Config {
     pub fn new(conf_path_name: Option<&str>) -> Result<Self> {
         let paths = ProjectPaths::from_conf_path(conf_path_name)?;
 
+        // TODO This is unwieldy now...
         if !paths.conf.exists() {
             return Err(Error::ConfigNotFound(paths.conf.display().to_string()));
         }
 
         if !paths.conf.is_file() {
-            return Err(Error::ConfigNotFile(paths.conf.display().to_string()));
+            return Err(Error::FileNotValid(paths.conf.display().to_string()));
+        }
+
+        if paths.env.exists() && !paths.env.is_file() {
+            return Err(Error::FileNotValid(paths.env.display().to_string()));
         }
 
         let contents = fs::read_to_string(&paths.conf)?;

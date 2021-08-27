@@ -8,7 +8,6 @@ use toml::de::Error as TomlError;
 pub enum Error {
     BadEnvVar(env::VarError, String),
     ConfigNotFound(String),
-    ConfigNotFile(String),
     ConfigInvalid(TomlError, String),
     DatabaseError(postgres::Error),
     FileNotValid(String),
@@ -39,9 +38,6 @@ impl fmt::Display for Error {
             }
             ConfigNotFound(pathstr) => {
                 write!(f, "`{}` not found - run in directory with `jrny.toml` file or specify path to config with `-c /path/to/config`", pathstr)
-            }
-            ConfigNotFile(pathstr) => {
-                write!(f, "`{}` must be a valid file", pathstr)
             }
             ConfigInvalid(err, pathstr) => {
                 write!(f, "`{}` is invalid - {}", pathstr, err)
