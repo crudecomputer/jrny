@@ -1,25 +1,22 @@
 use chrono::{DateTime, Local, Utc};
 use log::{info, warn};
-use std::path::PathBuf;
 
 pub mod commands;
-pub mod paths;
-pub mod revisions;
 
 mod client;
-mod config;
 mod error;
 mod executor;
 mod logger;
+mod project;
+mod revisions;
 
-pub use config::Config;
 pub use error::Error;
-pub use executor::Executor;
 pub use logger::Logger;
 
-pub type Result<T> = std::result::Result<T, Error>;
 
-const CONF: &str = "jrny.toml";
+pub type Result<T> = std::result::Result<T, error::Error>;
+
+pub const CONF: &str = "jrny.toml";
 const CONF_TEMPLATE: &str = r#"# jrny config
 
 # Project-level configuration options that should not change across environments
@@ -38,7 +35,7 @@ schema = "public"
 name = "jrny_revision"
 "#;
 
-const ENV: &str = "jrny-env.toml";
+pub const ENV: &str = "jrny-env.toml";
 const ENV_TEMPLATE: &str = r#"# jrny environment
 
 # Environment-specific configuration options, including secrets such as database
@@ -50,7 +47,7 @@ const ENV_TEMPLATE: &str = r#"# jrny environment
 url = ""
 "#;
 
-const ENV_EX: &str = "jrny-env.example.toml";
+pub const ENV_EX: &str = "jrny-env.example.toml";
 const ENV_EX_TEMPLATE: &str = r#"# jrny environment EXAMPLE FILE
 
 # This is an example file specifying optional environment-specific to include within
@@ -69,6 +66,7 @@ const ENV_EX_TEMPLATE: &str = r#"# jrny environment EXAMPLE FILE
 url = "postgresql://user:password@host:port/dbname"
 "#;
 
+/*
 /// Accepts a path string targeting a directory to set up project files:
 /// The directory will be created if it does not exist or will fail if
 /// pointing to an existing non-directory. This will then either verify
@@ -203,3 +201,4 @@ fn print_path(prefix: &str, path: &PathBuf, created: bool) {
         if created { " [created]" } else { "" },
     );
 }
+*/

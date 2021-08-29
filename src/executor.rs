@@ -3,7 +3,7 @@ use postgres::Client;
 use std::convert::TryFrom;
 
 use crate::revisions::{AnnotatedRevision, RevisionRecord};
-use crate::{config::Config, Result};
+use crate::Result;
 
 const CREATE_SCHEMA: &str = "
 CREATE SCHEMA $$schema$$
@@ -60,6 +60,7 @@ pub struct Executor {
     table: String,
 }
 
+/*
 impl Executor {
     pub fn new(config: &Config) -> Result<Self> {
         let client = Client::try_from(config)?;
@@ -162,3 +163,4 @@ impl Executor {
         Ok(())
     }
 }
+*/

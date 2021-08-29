@@ -1,27 +1,23 @@
-use std::{fs, io::Write, path::PathBuf};
-
-use log::info;
+use std::{fs, io::Write};
 
 use crate::{
+    paths::ProjectPaths,
+    Result,
     CONF_TEMPLATE,
-    ENV,
     ENV_TEMPLATE,
     ENV_EX,
     ENV_EX_TEMPLATE,
-    Result,
-    project::ProjectPaths,
 };
 
-/// Sets up relevant files and directories for a new revision timeline
-#[derive(Debug)]
 pub struct Begin {
+    pub paths: ProjectPaths,
+
     // TODO This has gotten gross
-    paths: ProjectPaths,
-    created_revisions: bool,
-    created_root: bool,
+    pub created_revisions: bool,
+    pub created_root: bool,
     created_conf: bool,
     created_env: bool,
-    created_env_ex: bool,
+    created_env_example: bool,
 }
 
 impl Begin {
@@ -31,14 +27,12 @@ impl Begin {
     /// that there is an empty `revisions` directory nested within it or
     /// create it if not already present. If any error occurs, any changes
     /// to the file system will be attempted to be reversed.
-    pub fn execute(dirpath: &PathBuf) -> Result<()> {
-        let paths = ProjectPaths::for_new_project(&dirpath)?;
-
+    pub fn new_project(p: &str) -> Result<Self> {
         let mut cmd = Self {
-            paths,
+            paths: ProjectPaths::for_new_project(p)?,
             created_conf: false,
             created_env: false,
-            created_env_ex: false,
+            created_env_example: false,
             created_revisions: false,
             created_root: false,
         };
@@ -54,21 +48,13 @@ impl Begin {
                 Err(err) => err,
             })?;
 
-        info!("A journey has begun");
-
-        print_path("  ",     &cmd.paths.root_dir,      cmd.created_root);
-        print_path("  ├── ", &cmd.paths.revisions_dir, cmd.created_revisions);
-        print_path("  └── ", &cmd.paths.conf_file,     cmd.created_conf);
-        print_path("  └── ", &cmd.paths.env_file,      cmd.created_env);
-        print_path("  └── ", &cmd.paths.env_ex_file,   cmd.created_env_ex);
-
-        Ok(())
+        Ok(cmd)
     }
 
     /// Attempts to create the project root directory if it doesn't exist.
     fn create_root(&mut self) -> Result<()> {
-        if !self.paths.root_dir.exists() {
-            fs::create_dir(&self.paths.root_dir)?;
+        if !self.paths.root.exists() {
+            fs::create_dir(&self.paths.root)?;
             self.created_root = true;
         }
 
@@ -77,8 +63,8 @@ impl Begin {
 
     /// Attempts to create the revisions directory if it doesn't exist.
     fn create_revisions(&mut self) -> Result<()> {
-        if !self.paths.revisions_dir.exists() {
-            fs::create_dir(&self.paths.revisions_dir)?;
+        if !self.paths.revisions.exists() {
+            fs::create_dir(&self.paths.revisions)?;
             self.created_revisions = true;
         }
 
@@ -91,7 +77,7 @@ impl Begin {
         // the paths having already checked that the file isn't present.
         //
         // TODO Clean up that logic.
-        let mut f = fs::File::create(&self.paths.conf_file)?;
+        let mut f = fs::File::create(&self.paths.conf)?;
         self.created_conf = true;
         f.write_all(CONF_TEMPLATE.as_bytes())?;
 
@@ -100,12 +86,14 @@ impl Begin {
 
     /// Attempts to create the default environment file & example file.
     fn create_env(&mut self) -> Result<()> {
-        let mut f = fs::File::create(&self.paths.env_file)?;
+        let mut f = fs::File::create(&self.paths.env)?;
         self.created_env = true;
         f.write_all(ENV_TEMPLATE.as_bytes())?;
 
-        let mut f = fs::File::create(&self.paths.env_ex_file)?;
-        self.created_env_ex = true;
+        // This isn't stored on `paths` because the file is completely ignored
+        // on every command other than `begin`
+        let mut f = fs::File::create(&self.paths.root.join(ENV_EX))?;
+        self.created_env_example = true;
         f.write_all(ENV_EX_TEMPLATE.as_bytes())?;
 
         Ok(())
@@ -114,36 +102,25 @@ impl Begin {
     /// Attempts to remove any directories or files created during command execution.
     fn revert(&self) -> Result<()> {
         if self.created_conf {
-            fs::remove_file(&self.paths.conf_file)?;
+            fs::remove_file(&self.paths.conf)?;
         }
 
         if self.created_env {
-            fs::remove_file(&self.paths.env_file)?;
+            fs::remove_file(&self.paths.env)?;
         }
 
-        if self.created_env_ex {
-            fs::remove_file(&self.paths.env_ex_file)?;
+        if self.created_env_example {
+            fs::remove_file(&self.paths.root.join(ENV_EX))?;
         }
 
         if self.created_revisions {
-            fs::remove_dir(&self.paths.revisions_dir)?;
+            fs::remove_dir(&self.paths.revisions)?;
         }
 
         if self.created_root {
-            fs::remove_dir(&self.paths.root_dir)?;
+            fs::remove_dir(&self.paths.root)?;
         }
 
         Ok(())
     }
-}
-
-/// Prints path string with optional prefix and "[created]" suffix if the created
-/// condition is true.
-fn print_path(prefix: &str, path: &PathBuf, created: bool) {
-    info!(
-        "{}{}{}",
-        prefix,
-        path.display(),
-        if created { " [created]" } else { "" },
-    );
 }

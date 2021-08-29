@@ -1,3 +1,4 @@
+/*
 use postgres::NoTls;
 use std::convert::TryFrom;
 use std::str::FromStr;
@@ -25,3 +26,4 @@ impl TryFrom<&Config> for Client {
         Ok(client)
     }
 }
+*/
