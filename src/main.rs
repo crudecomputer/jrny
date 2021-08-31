@@ -36,6 +36,9 @@ struct Begin {
 #[derive(Clap, Debug)]
 #[clap(setting = AppSettings::ColoredHelp)]
 struct Plan {
+    /// Name for the new revision file
+    name: String,
+
     /// Path to TOML configuration file
     #[clap(short, long, default_value = CONF)]
     config: PathBuf,
@@ -85,10 +88,10 @@ fn main() {
 
     let result = match &opts.subcmd {
         SubCommand::Begin(cmd) => {
-            commands::Begin::execute(&cmd.dirpath)
+            commands::begin(&cmd.dirpath)
         },
         SubCommand::Plan(cmd) => {
-            Ok(())
+            commands::plan(&cmd.config, &cmd.name)
         },
         SubCommand::Review(cmd) => {
             Ok(())

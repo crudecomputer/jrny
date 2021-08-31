@@ -33,18 +33,15 @@ impl ProjectPaths {
         Ok(paths)
     }
 
-    /// Creates path bufs for a project either relative to the given config filepath name
-    /// or to the current working directory if no path name is provided.
-    pub fn from_conf_path(conf_path_name: Option<&str>) -> Result<Self> {
-        let conf_file = PathBuf::from(conf_path_name.unwrap_or(CONF));
-
+    /// Creates a set of path bufs for the project based on the given config file path.
+    pub fn from_conf(conf_file: &PathBuf) -> Result<Self> {
         let root_dir = conf_file
             .parent()
             .ok_or_else(|| Error::PathInvalid(conf_file.display().to_string()))?
             .to_path_buf();
 
         Ok(Self {
-            conf_file,
+            conf_file: conf_file.clone(),
             env_file: root_dir.join(ENV),
             env_ex_file: root_dir.join(ENV_EX),
             revisions_dir: root_dir.join("revisions"),
