@@ -48,34 +48,32 @@ struct Plan {
 #[derive(Clap, Debug)]
 #[clap(setting = AppSettings::ColoredHelp)]
 struct Review {
-    /// Path to TOML configuration file
-    #[clap(short, long, default_value = CONF)]
-    config: PathBuf,
-
-    /// Database connection string
-    #[clap(short, long)]
-    database_url: Option<String>,
-
-    /// Path to optional TOML environment file
-    #[clap(short, long, default_value = ENV)]
-    environment: PathBuf,
+    #[clap(flatten)]
+    context: Context,
 }
 
 /// Applies pending revisions upon successful review
 #[derive(Clap, Debug)]
 #[clap(setting = AppSettings::ColoredHelp)]
 struct Embark {
+    #[clap(flatten)]
+    context: Context,
+}
+
+#[derive(clap::Args, Debug)]
+struct Context {
     /// Path to TOML configuration file
     #[clap(short, long, default_value = CONF)]
     config: PathBuf,
 
-    /// Database connection string
+    /// Database connection string if not supplied by environment file
+    /// or if overriding connection string from environment file
     #[clap(short, long)]
     database_url: Option<String>,
 
     /// Path to optional TOML environment file
-    #[clap(short, long, default_value = ENV)]
-    environment: PathBuf,
+    #[clap(short, long)]
+    environment: Option<PathBuf>,
 }
 
 fn main() {
@@ -94,7 +92,11 @@ fn main() {
             commands::plan(&cmd.config, &cmd.name)
         },
         SubCommand::Review(cmd) => {
-            Ok(())
+            commands::review(commands::ReviewArgs {
+                confpath: cmd.context.config.clone(),
+                envpath: cmd.context.environment.clone(),
+                database_url: cmd.context.database_url.clone(),
+            })
         },
         SubCommand::Embark(cmd) => {
             Ok(())
@@ -104,33 +106,6 @@ fn main() {
     if let Err(e) = result {
         warn!("Error: {}", e);
     }
-
-    /*
-    // Gets a value for config if supplied by user, or defaults to "default.conf"
-    println!("Value for config: {}", opts.config);
-    println!("Using input file: {}", opts.input);
-
-    // Vary the output based on how many times the user used the "verbose" flag
-    // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'
-    match opts.verbose {
-        0 => println!("No verbose info"),
-        1 => println!("Some verbose info"),
-        2 => println!("Tons of verbose info"),
-        _ => println!("Don't be ridiculous"),
-    }
-
-    // You can handle information about subcommands by requesting their matches by name
-    // (as below), requesting just the name used, or both at the same time
-    match opts.subcmd {
-        SubCommand::Test(t) => {
-            if t.debug {
-                println!("Printing debug info...");
-            } else {
-                println!("Printing normally...");
-            }
-        }
-    }
-    */
 }
 
 /*
@@ -138,22 +113,12 @@ use clap::{clap_app, App};
 
 fn main() {
 
-    log::set_logger(&LOGGER)
-        .map(|()| log::set_max_level(LevelFilter::Info))
-        .map_err(|e| e.to_string())
-        .unwrap();
-
     // This explicitly doesn't use `AppSettings::SubcommandRequired)` since that makes it
     // harder to print help by default in absence of a subcommand, rather than printing
     // an error that prompts to use `--help`
     let mut app = clap_app! {jrny =>
         (version: env!("CARGO_PKG_VERSION"))
 
-
-        (@subcommand plan =>
-            (@arg name: +required "Name of the revision")
-            (@arg config: -c --config [FILE] +takes_value "Path to TOML config file")
-        )
 
         (@subcommand review =>
             (@arg config: -c --config [FILE] +takes_value "Path to TOML config file")

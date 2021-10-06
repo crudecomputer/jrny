@@ -33,6 +33,7 @@ impl ProjectPaths {
         Ok(paths)
     }
 
+    #[deprecated = "env file path should be customizable"]
     /// Creates a set of path bufs for the project based on the given config file path.
     pub fn from_conf(conf_file: &PathBuf) -> Result<Self> {
         let root_dir = conf_file
