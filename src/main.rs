@@ -9,14 +9,14 @@ use jrny::{commands, Logger, CONF, ENV};
 /// PostgreSQL schema revisions made easy - just add SQL!
 #[derive(Clap, Debug)]
 #[clap(version = crate_version!())]
-#[clap(setting = AppSettings::ColoredHelp)]
+//#[clap(setting = AppSettings::ColoredHelp)]
 struct Opts {
     #[clap(subcommand)]
     subcmd: SubCommand,
 }
 
 #[derive(Clap, Debug)]
-#[clap(setting = AppSettings::ColoredHelp)]
+//#[clap(setting = AppSettings::ColoredHelp)]
 enum SubCommand {
     Begin(Begin),
     Plan(Plan),
@@ -26,15 +26,15 @@ enum SubCommand {
 
 /// Sets up relevant files and directories for a new revision timeline
 #[derive(Clap, Debug)]
-#[clap(setting = AppSettings::ColoredHelp)]
+//#[clap(setting = AppSettings::ColoredHelp)]
 struct Begin {
     /// The directory in which to set up new project files - will be created if does not exist
     dirpath: PathBuf,
 }
 
-/// Generates a timestamped SQL revision file
+/// Generates a new SQL revision file
 #[derive(Clap, Debug)]
-#[clap(setting = AppSettings::ColoredHelp)]
+//#[clap(setting = AppSettings::ColoredHelp)]
 struct Plan {
     /// Name for the new revision file
     name: String,
@@ -44,9 +44,9 @@ struct Plan {
     config: PathBuf,
 }
 
-/// Provides a summary of applied and pending revisions, including whether any applied have changed or are not found
+/// Summarizes the state of revisions on disk and in database
 #[derive(Clap, Debug)]
-#[clap(setting = AppSettings::ColoredHelp)]
+//#[clap(setting = AppSettings::ColoredHelp)]
 struct Review {
     #[clap(flatten)]
     context: Context,
@@ -54,7 +54,7 @@ struct Review {
 
 /// Applies pending revisions upon successful review
 #[derive(Clap, Debug)]
-#[clap(setting = AppSettings::ColoredHelp)]
+//#[clap(setting = AppSettings::ColoredHelp)]
 struct Embark {
     #[clap(flatten)]
     context: Context,
@@ -89,14 +89,16 @@ fn main() {
             commands::begin(&cmd.dirpath)
         },
         SubCommand::Plan(cmd) => {
-            commands::plan(&cmd.config, &cmd.name)
+            //commands::plan(&cmd.config, &cmd.name)
+            Ok(())
         },
         SubCommand::Review(cmd) => {
-            commands::review(commands::ReviewArgs {
-                confpath: cmd.context.config.clone(),
-                envpath: cmd.context.environment.clone(),
-                database_url: cmd.context.database_url.clone(),
-            })
+            //commands::review(commands::ReviewArgs {
+                //confpath: cmd.context.config.clone(),
+                //envpath: cmd.context.environment.clone(),
+                //database_url: cmd.context.database_url.clone(),
+            //})
+            Ok(())
         },
         SubCommand::Embark(cmd) => {
             Ok(())

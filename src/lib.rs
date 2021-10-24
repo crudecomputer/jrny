@@ -24,6 +24,13 @@ const CONF_TEMPLATE: &str = r#"# jrny config
 #
 # This file MUST BE INCLUDED in version control.
 
+[project]
+# The directory in which to store revisions.
+#
+# This folder can be freely renamed or moved at any point, as long as
+# the revisions within do not themselves change.
+revisions_directory = "revisions"
+
 [table]
 # Specifies which schema and table `jrny` will use to track revision history.
 #

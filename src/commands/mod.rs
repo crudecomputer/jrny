@@ -27,9 +27,7 @@ use review::Review;
 /// create it if not already present. If any error occurs, any changes
 /// to the file system will be attempted to be reversed.
 pub fn begin(dirpath: &PathBuf) -> Result<()> {
-    let paths = ProjectPaths::for_new_project(&dirpath)?;
-
-    let mut cmd = Begin::new(paths);
+    let mut cmd = Begin::new(dirpath)?;
 
     cmd.create_root()
         .and_then(|_| cmd.create_revisions())
@@ -44,11 +42,13 @@ pub fn begin(dirpath: &PathBuf) -> Result<()> {
 
     info!("A journey has begun");
 
+    // Only some paths could have been created by the command, so those
+    // need to be dynamically labeled as such.
     print_path("  ",     &cmd.paths.root_dir,      cmd.created_root);
     print_path("  ├── ", &cmd.paths.revisions_dir, cmd.created_revisions);
-    print_path("  └── ", &cmd.paths.conf_file,     cmd.created_conf);
-    print_path("  └── ", &cmd.paths.env_file,      cmd.created_env);
-    print_path("  └── ", &cmd.paths.env_ex_file,   cmd.created_env_ex);
+    print_path("  └── ", &cmd.paths.conf_file,     true);
+    print_path("  └── ", &cmd.paths.env_file,      true);
+    print_path("  └── ", &cmd.paths.env_ex_file,   true);
 
     Ok(())
 }

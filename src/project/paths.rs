@@ -4,8 +4,9 @@ use std::path::PathBuf;
 
 use crate::{Error, Result, CONF, ENV, ENV_EX};
 
-/// A container for the various paths of interest for a project.
+/// A container for the various paths of interest for a new project.
 #[derive(Debug)]
+#[deprecated = "remove this"]
 pub struct ProjectPaths {
     pub conf_file: PathBuf,
     pub env_file: PathBuf,
@@ -17,7 +18,7 @@ pub struct ProjectPaths {
 impl ProjectPaths {
     /// Creates path bufs for a new project given a root directory, ensuring that
     /// there is not already a config & env file or a non-empty revisions directory.
-    pub fn for_new_project(root_dir: &PathBuf) -> Result<Self> {
+    pub fn new(root_dir: &PathBuf) -> Result<Self> {
         let root_dir = root_dir.clone();
 
         let paths = Self {

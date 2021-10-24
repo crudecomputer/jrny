@@ -1,36 +1,157 @@
-use std::{fs, io::Write};
+use std::{
+    fs,
+    io::Write,
+    path::PathBuf,
+};
 
 use crate::{
-    project::ProjectPaths,
-    CONF_TEMPLATE,
+    CONF,
     ENV,
-    ENV_TEMPLATE,
     ENV_EX,
-    ENV_EX_TEMPLATE,
+    Error,
     Result,
 };
 
+const CONF_TEMPLATE: &str = r#"# jrny config
+
+# Project-level configuration options that should not change across environments
+# or contain any sensitive information.
+#
+# This file MUST BE INCLUDED in version control.
+
+# General settings for the revisions.
+[revisions]
+
+# The directory in which to store revisions.
+#
+# This folder can be freely renamed or moved at any point, as long as
+# the revisions within do not themselves change.
+directory = "revisions"
+
+# General settings for the database table that tracks applied revisions.
+[table]
+
+# Specifies which schema and table `jrny` will use to track revision history.
+#
+# These can freely be changed for new projects. To update these for existing projects
+# with revisions already executed, you would need to first manually create the new table
+# and then copy all existing revision records from the old table into the new one prior
+# to running any commands with `jrny`. Otherwise, `jrny` will attempt to run all again.
+schema = "public"
+name = "jrny_revision"
+"#;
+
+const ENV_TEMPLATE: &str = r#"# jrny environment
+
+# Environment-specific configuration options, including secrets such as database
+# authentication. Runtime command flags will take precedence over any values provided.
+#
+# This file MUST BE EXCULUDED from version control.
+
+# General environment settings for the database connection.
+[database]
+
+# Database connection string - for permissible formats and options see:
+# https://docs.rs/postgres/0.19.1/postgres/config/struct.Config.html
+url = ""
+"#;
+
+const ENV_EX_TEMPLATE: &str = r#"# jrny environment EXAMPLE FILE
+
+# This is an example file specifying optional environment-specific to include within
+# a `jrny-env.toml` file. If that file is not present, `jrny` will require
+# that necessary secrets are passed in via command flags.
+#
+# If `jrny-secret.toml` is present, runtime command flags will take precedence
+# over any values contained within the file.
+#
+# This file SHOULD BE INCLUDED in version control.
+
+# General environment settings for the database connection.
+[database]
+
+# Database connection string - for permissible formats and options see:
+# https://docs.rs/postgres/0.19.1/postgres/config/struct.Config.html
+url = "postgresql://user:password@host:port/dbname"
+"#;
+
+fn is_empty_dir(p: &PathBuf) -> Result<bool> {
+    Ok(p.is_dir() && p.read_dir()?.next().is_none())
+}
+
+
+#[derive(Debug)]
+pub(super) struct BeginPaths {
+    pub conf_file: PathBuf,
+    pub env_file: PathBuf,
+    pub env_ex_file: PathBuf,
+    pub revisions_dir: PathBuf,
+    pub root_dir: PathBuf,
+}
+
+impl BeginPaths {
+    pub fn new(root_dir: &PathBuf) -> Result<Self> {
+        let root_dir = root_dir.clone();
+
+        let paths = Self {
+            conf_file: root_dir.join(CONF),
+            env_file: root_dir.join(ENV),
+            env_ex_file: root_dir.join(ENV_EX),
+            revisions_dir: root_dir.join("revisions"),
+            root_dir,
+        };
+
+        paths.valid_for_new()?;
+
+        Ok(paths)
+    }
+
+    fn valid_for_new(&self) -> Result<()> {
+        use Error::*;
+
+        // TODO Returning MULTIPLE errors might actually be nicer for the user
+        // rather than whichever fails first
+
+        if self.root_dir.exists() && !self.root_dir.is_dir() {
+            return Err(PathNotDirectory(self.root_dir.display().to_string()));
+        }
+
+        if self.revisions_dir.exists() && !is_empty_dir(&self.revisions_dir)? {
+            return Err(PathNotEmptyDirectory(self.revisions_dir.display().to_string()));
+        }
+
+        for f in [&self.conf_file, &self.env_file, &self.env_ex_file] {
+            if f.exists() {
+                return Err(PathAlreadyExists(f.display().to_string()));
+            }
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Debug)]
 pub(super) struct Begin {
-    // TODO This has gotten gross
-    pub(super) paths: ProjectPaths,
     pub(super) created_revisions: bool,
     pub(super) created_root: bool,
-    pub(super) created_conf: bool,
-    pub(super) created_env: bool,
-    pub(super) created_env_ex: bool,
+    pub(super) paths: BeginPaths,
+    created_conf: bool,
+    created_env: bool,
+    created_env_ex: bool,
 }
 
 impl Begin {
-    pub(super) fn new(paths: ProjectPaths) -> Self {
-        Self {
+    pub(super) fn new(project_directory: &PathBuf) -> Result<Self> {
+        let paths = BeginPaths::new(project_directory)?;
+
+        Ok(Self {
             paths,
             created_conf: false,
             created_env: false,
             created_env_ex: false,
             created_revisions: false,
             created_root: false,
-        }
+        })
     }
 
     pub(super) fn create_root(&mut self) -> Result<()> {
