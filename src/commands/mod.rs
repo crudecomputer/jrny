@@ -57,29 +57,30 @@ pub fn begin(dirpath: &PathBuf) -> Result<()> {
 /// If no path is provided, it will add a timestamped SQL file relative to current
 /// working directory; otherwise it will add file in a directory relative to config.
 pub fn plan(confpath: &PathBuf, name: &str) -> Result<()> {
-    let paths = ProjectPaths::from_conf(confpath)?;
+    let config = ProjectConfig::new(confpath)?;
+
     let timestamp = Utc::now().timestamp();
-    let next_id = RevisionFile::all_from_disk(&paths.revisions_dir)?
+    let next_id = RevisionFile::all_from_disk(&config.revisions.directory)?
         .iter()
         .reduce(|rf1, rf2| if rf1.id > rf2.id { rf1 } else { rf2 })
         .map_or(0, |rf| rf.id as i32)
         + 1;
 
     let new_filename = format!("{:03}.{}.{}.sql", next_id, timestamp, name);
-    let new_path = paths.revisions_dir.join(&new_filename);
+    let new_path = config.revisions.directory.join(&new_filename);
 
-    let template = "-- :filename
+    let contents = format!("-- Revision: {name}
+--
+-- Add description here
 
 begin;
--- Start revisions
 
+-- Add SQL here
 
--- End revisions
 commit;
-";
+", name=name);
 
-    fs::File::create(&new_path)?
-        .write_all(template.replace(":filename", &new_filename).as_bytes())?;
+    fs::File::create(&new_path)?.write_all(contents.as_bytes())?;
 
     info!("Created {}", new_path.display());
     

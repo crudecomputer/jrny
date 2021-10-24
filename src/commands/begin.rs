@@ -22,7 +22,8 @@ const CONF_TEMPLATE: &str = r#"# jrny config
 # General settings for the revisions.
 [revisions]
 
-# The directory in which to store revisions.
+# The directory in which to store revisions, relative to this
+# config file.
 #
 # This folder can be freely renamed or moved at any point, as long as
 # the revisions within do not themselves change.

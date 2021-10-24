@@ -8,6 +8,11 @@ use crate::{
 };
 
 #[derive(Clone, Debug, Deserialize)]
+pub struct RevisionsSettings {
+    pub directory: PathBuf,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 pub struct TableSettings {
     pub schema: String,
     pub name: String,
@@ -15,6 +20,7 @@ pub struct TableSettings {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct ProjectConfig {
+    pub revisions: RevisionsSettings,
     pub table: TableSettings,
 }
 
@@ -29,8 +35,14 @@ impl ProjectConfig {
         }
 
         let contents = fs::read_to_string(&confpath)?;
-        let config: Self = toml::from_str(&contents)
+        let mut config: Self = toml::from_str(&contents)
             .map_err(|e| Error::TomlInvalid(e, confpath.display().to_string()))?;
+
+        // The revisions directory is relative to the config file itself,
+        // not the current working directory.
+        config.revisions.directory = confpath
+            .parent().unwrap()
+            .join(&config.revisions.directory);
 
         Ok(config)
     }

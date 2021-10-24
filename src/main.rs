@@ -89,8 +89,7 @@ fn main() {
             commands::begin(&cmd.dirpath)
         },
         SubCommand::Plan(cmd) => {
-            //commands::plan(&cmd.config, &cmd.name)
-            Ok(())
+            commands::plan(&cmd.config, &cmd.name)
         },
         SubCommand::Review(cmd) => {
             //commands::review(commands::ReviewArgs {
