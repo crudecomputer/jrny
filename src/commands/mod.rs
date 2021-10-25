@@ -16,9 +16,11 @@ use crate::{
 };
 
 mod begin;
+mod embark;
 mod review;
 
 use begin::Begin;
+use embark::Embark;
 use review::Review;
 
 /// Accepts a path string targeting a directory to set up project files:
@@ -157,6 +159,22 @@ pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
 
     Ok(())
 }
+
+pub fn embark(cfg: &Config, env: &Environment) -> Result<()> {
+    let mut exec = Executor::new(&cfg, &env)?;
+
+    let cmd = Embark::prepare(&cfg, &mut exec)?;
+
+    if cmd.to_apply.is_empty() {
+        info!("No revisions to apply");
+        return Ok(());
+    }
+
+    cmd.apply(&mut exec)?;
+
+    Ok(())
+}
+
 
 fn print_path(prefix: &str, path: &PathBuf, created: bool) {
     // Prints path string with optional prefix and "[created]" suffix if the created

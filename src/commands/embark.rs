@@ -2,8 +2,11 @@ use log::info;
 
 use super::Review;
 use crate::{
-    config::Config, executor::Executor, revisions::AnnotatedRevision,
-    Error, Result,
+    executor::Executor,
+    revisions::AnnotatedRevision,
+    Config,
+    Error,
+    Result,
 };
 
 pub struct Embark {
@@ -11,8 +14,11 @@ pub struct Embark {
 }
 
 impl Embark {
-    pub fn prepare(config: &Config, exec: &mut Executor) -> Result<Self> {
-        let Review { mut revisions, .. } = Review::annotated_revisions(config, exec)?;
+    pub fn prepare(cfg: &Config, exec: &mut Executor) -> Result<Self> {
+        let Review { mut revisions, .. } = Review::annotated_revisions(
+            exec,
+            &cfg.revisions.directory,
+        )?;
 
         // TODO this is copypasta
         let mut last_applied_index = -1;

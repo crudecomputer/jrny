@@ -105,7 +105,7 @@ fn main() {
             review(cmd)
         },
         SubCommand::Embark(cmd) => {
-            Ok(())
+            embark(cmd)
         },
     };
 
@@ -124,12 +124,12 @@ fn plan(cmd: Plan) -> JrnyResult<()> {
 fn review(cmd: Review) -> JrnyResult<()> {
     let confpath = cmd.config.unwrap_or_else(|| PathBuf::from(CONF));
 
-    let config = Config::from_filepath(&confpath)?;
+    let cfg = Config::from_filepath(&confpath)?;
 
     let envpath = cmd.environment
         .as_ref()
         .cloned()
-        .unwrap_or_else(|| config.revisions.directory
+        .unwrap_or_else(|| cfg.revisions.directory
             .parent()
             .unwrap()
             .join(ENV)
@@ -141,8 +141,33 @@ fn review(cmd: Review) -> JrnyResult<()> {
         env.database.url = url.clone();
     }
 
-    commands::review(&config, &env)
+    commands::review(&cfg, &env)
 }
+
+fn embark(cmd: Embark) -> JrnyResult<()> {
+    let confpath = cmd.config.unwrap_or_else(|| PathBuf::from(CONF));
+
+    let cfg = Config::from_filepath(&confpath)?;
+
+    let envpath = cmd.environment
+        .as_ref()
+        .cloned()
+        .unwrap_or_else(|| cfg.revisions.directory
+            .parent()
+            .unwrap()
+            .join(ENV)
+        );
+
+    let mut env = Environment::from_filepath(&envpath)?;
+
+    if let Some(url) = cmd.database_url {
+        env.database.url = url.clone();
+    }
+
+    commands::embark(&cfg, &env)
+}
+
+
 
 /*
 use clap::{clap_app, App};
