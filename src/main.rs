@@ -4,13 +4,12 @@ use clap::{Clap, crate_version};
 use log::{warn, LevelFilter};
 
 use jrny::{
-    commands,
+    CONF,
+    ENV,
     Config,
     Environment,
     Logger,
     Result as JrnyResult,
-    CONF,
-    ENV
 };
 
 
@@ -108,14 +107,14 @@ fn main() {
 }
 
 fn begin(cmd: Begin) -> JrnyResult<()> {
-    commands::begin(&cmd.dirpath)
+    jrny::begin(&cmd.dirpath)
 }
 
 fn plan(cmd: Plan) -> JrnyResult<()> {
     let confpath = cmd.config.unwrap_or_else(|| PathBuf::from(CONF));
     let cfg = Config::from_filepath(&confpath)?;
 
-    commands::plan(&cfg, &cmd.name)
+    jrny::plan(&cfg, &cmd.name)
 }
 
 fn review(cmd: Review) -> JrnyResult<()> {
@@ -138,7 +137,7 @@ fn review(cmd: Review) -> JrnyResult<()> {
         env.database.url = url.clone();
     }
 
-    commands::review(&cfg, &env)
+    jrny::review(&cfg, &env)
 }
 
 fn embark(cmd: Embark) -> JrnyResult<()> {
@@ -161,69 +160,5 @@ fn embark(cmd: Embark) -> JrnyResult<()> {
         env.database.url = url.clone();
     }
 
-    commands::embark(&cfg, &env)
+    jrny::embark(&cfg, &env)
 }
-
-
-
-/*
-use clap::{clap_app, App};
-
-fn main() {
-
-    // This explicitly doesn't use `AppSettings::SubcommandRequired)` since that makes it
-    // harder to print help by default in absence of a subcommand, rather than printing
-    // an error that prompts to use `--help`
-    let mut app = clap_app! {jrny =>
-        (version: env!("CARGO_PKG_VERSION"))
-
-
-        (@subcommand review =>
-            (@arg config: -c --config [FILE] +takes_value "Path to TOML config file")
-        )
-
-        (@subcommand embark =>
-            (about: "Applies pending revisions upon successful review")
-            (@arg config: -c --config [FILE] +takes_value "Path to TOML config file")
-        )
-    };
-
-    let result = match app.clone().get_matches().subcommand() {
-        ("begin", Some(cmd)) => jrny::begin(
-            cmd.value_of("dirpath").unwrap()
-        ),
-        ("plan", Some(cmd)) => jrny::plan(
-            cmd.value_of("name").unwrap(),
-            cmd.value_of("config")
-        ),
-        ("review", Some(cmd)) => jrny::review(
-            cmd.value_of("config")
-        ),
-        ("embark", Some(cmd)) => jrny::embark(
-            cmd.value_of("config")
-        ),
-        ("", None) => {
-            log_help(&mut app);
-            Ok(())
-        },
-        _ => unreachable!(),
-    };
-
-    if let Err(e) = result {
-        warn!("Error: {}", e);
-    }
-}
-
-/// Uses Logger facade to print long help message, rather than
-/// printing to stdout explicitly.
-fn log_help(app: &mut App) {
-    let msg = {
-        let mut bytes = Vec::new();
-        app.write_long_help(&mut bytes).unwrap();
-
-        String::from_utf8(bytes).unwrap()
-    };
-
-    info!("{}", msg);
-}
-*/

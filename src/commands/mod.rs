@@ -47,18 +47,17 @@ pub fn begin(dirpath: &PathBuf) -> Result<()> {
 
     // Only some paths could have been created by the command, so those
     // need to be dynamically labeled as such.
-    print_path("  ",     &cmd.paths.root_dir,      cmd.created_root);
-    print_path("  ├── ", &cmd.paths.revisions_dir, cmd.created_revisions);
-    print_path("  └── ", &cmd.paths.conf_file,     true);
-    print_path("  └── ", &cmd.paths.env_file,      true);
-    print_path("  └── ", &cmd.paths.env_ex_file,   true);
+    log_path("  ",     &cmd.paths.root_dir,      cmd.created_root);
+    log_path("  ├── ", &cmd.paths.revisions_dir, cmd.created_revisions);
+    log_path("  └── ", &cmd.paths.conf_file,     true);
+    log_path("  └── ", &cmd.paths.env_file,      true);
+    log_path("  └── ", &cmd.paths.env_ex_file,   true);
 
     Ok(())
 }
 
-/// Accepts a name for the migration file and an optional path to a config file.
-/// If no path is provided, it will add a timestamped SQL file relative to current
-/// working directory; otherwise it will add file in a directory relative to config.
+/// Generates a new empty revision file with the given name in the
+/// revisions directory specified by the provided config.
 pub fn plan(cfg: &Config, name: &str) -> Result<()> {
     let timestamp = Utc::now().timestamp();
     let next_id = RevisionFile::all_from_disk(&cfg.revisions.directory)?
@@ -88,6 +87,8 @@ commit;
     Ok(())
 }
 
+/// Reviews the status of all revisions specified by the config as well as
+/// their status in the database.
 pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
     let mut exec = Executor::new(&cfg, &env)?;
     let cmd = Review::annotated_revisions(&mut exec, &cfg.revisions.directory)?;
@@ -160,6 +161,8 @@ pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
     Ok(())
 }
 
+/// Applies all pending revisions specified by the given config to the
+/// database specified by the environment.
 pub fn embark(cfg: &Config, env: &Environment) -> Result<()> {
     let mut exec = Executor::new(&cfg, &env)?;
 
@@ -176,9 +179,9 @@ pub fn embark(cfg: &Config, env: &Environment) -> Result<()> {
 }
 
 
-fn print_path(prefix: &str, path: &PathBuf, created: bool) {
-    // Prints path string with optional prefix and "[created]" suffix if the created
-    // condition is true.
+/// Logs the path string with optional prefix and "[created]" suffix if the created
+/// condition is true.
+fn log_path(prefix: &str, path: &PathBuf, created: bool) {
     info!(
         "{}{}{}",
         prefix,
