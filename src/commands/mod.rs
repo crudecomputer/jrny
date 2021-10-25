@@ -8,7 +8,6 @@ use chrono::{DateTime, Local, Utc};
 use log::{info, warn};
 
 use crate::{
-    ENV,
     executor::Executor,
     revisions::RevisionFile,
     Config,

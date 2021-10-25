@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use clap::{AppSettings, Clap, crate_version};
-use log::{info, warn, LevelFilter};
+use clap::{Clap, crate_version};
+use log::{warn, LevelFilter};
 
 use jrny::{
     commands,
@@ -16,14 +16,12 @@ use jrny::{
 /// PostgreSQL schema revisions made easy - just add SQL!
 #[derive(Clap, Debug)]
 #[clap(version = crate_version!())]
-//#[clap(setting = AppSettings::ColoredHelp)]
 struct Opts {
     #[clap(subcommand)]
     subcmd: SubCommand,
 }
 
 #[derive(Clap, Debug)]
-//#[clap(setting = AppSettings::ColoredHelp)]
 enum SubCommand {
     Begin(Begin),
     Plan(Plan),
@@ -33,7 +31,6 @@ enum SubCommand {
 
 /// Sets up relevant files and directories for a new revision timeline
 #[derive(Clap, Debug)]
-//#[clap(setting = AppSettings::ColoredHelp)]
 struct Begin {
     /// The directory in which to set up new project files - will be created if does not exist
     dirpath: PathBuf,
@@ -41,7 +38,6 @@ struct Begin {
 
 /// Generates a new SQL revision file
 #[derive(Clap, Debug)]
-//#[clap(setting = AppSettings::ColoredHelp)]
 struct Plan {
     /// Name for the new revision file
     name: String,
@@ -54,7 +50,6 @@ struct Plan {
 
 /// Summarizes the state of revisions on disk and in database
 #[derive(Clap, Debug)]
-//#[clap(setting = AppSettings::ColoredHelp)]
 struct Review {
     /// Path to TOML configuration file, defaulting to `jrny.toml`
     /// in current directory
@@ -74,7 +69,6 @@ struct Review {
 
 /// Applies pending revisions upon successful review
 #[derive(Clap, Debug)]
-//#[clap(setting = AppSettings::ColoredHelp)]
 struct Embark {
     /// Path to TOML configuration file, defaulting to `jrny.toml`
     /// in current directory

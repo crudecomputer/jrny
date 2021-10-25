@@ -6,7 +6,6 @@ use std::{
 use serde::Deserialize;
 
 use crate::{
-    CONF,
     Error,
     Result,
 };

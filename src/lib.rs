@@ -1,15 +1,17 @@
 pub mod commands;
 
 mod client;
+mod config;
+mod environment;
 mod error;
 mod executor;
 mod logger;
-mod project;
 mod revisions;
 
+pub use config::Config;
+pub use environment::Environment;
 pub use error::Error;
 pub use logger::Logger;
-pub use project::{Config, Environment};
 
 // Crate result type
 pub type Result<T> = std::result::Result<T, error::Error>;
