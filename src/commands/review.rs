@@ -1,14 +1,17 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    rc::Rc,
+};
 
 use crate::{
-    config::Config,
     executor::Executor,
     revisions::{AnnotatedRevision, RevisionFile, RevisionRecord},
     Result,
 };
 
-pub struct Review {
-    pub revisions: Vec<AnnotatedRevision>,
+pub(super) struct Review {
+    pub(super) revisions: Vec<AnnotatedRevision>,
     files: Vec<Rc<RevisionFile>>,
     records: Vec<Rc<RevisionRecord>>,
     files_map: HashMap<String, Rc<RevisionFile>>,
@@ -16,14 +19,14 @@ pub struct Review {
 }
 
 impl Review {
-    pub fn annotated_revisions(config: &Config, exec: &mut Executor) -> Result<Self> {
-        Ok(Self::new(config, exec)?.annotate())
+    pub(super) fn annotated_revisions(exec: &mut Executor, revision_dir: &PathBuf) -> Result<Self> {
+        Ok(Self::new(exec, revision_dir)?.annotate())
     }
 
-    fn new(config: &Config, exec: &mut Executor) -> Result<Self> {
+    fn new(exec: &mut Executor, revision_dir: &PathBuf) -> Result<Self> {
         exec.ensure_table_exists()?;
 
-        let mut files = RevisionFile::all_from_disk(&config.paths.revisions)?;
+        let mut files = RevisionFile::all_from_disk(revision_dir)?;
         let mut records = exec.load_revisions()?;
 
         let files: Vec<Rc<RevisionFile>> = files.drain(..).map(Rc::new).collect();

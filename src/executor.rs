@@ -1,9 +1,14 @@
-use log::info;
-use postgres::Client;
 use std::convert::TryFrom;
 
-use crate::revisions::{AnnotatedRevision, RevisionRecord};
-use crate::{config::Config, Result};
+use log::info;
+use postgres::Client;
+
+use crate::{
+    revisions::{AnnotatedRevision, RevisionRecord},
+    Config,
+    Environment,
+    Result,
+};
 
 const CREATE_SCHEMA: &str = "
 CREATE SCHEMA $$schema$$
@@ -61,13 +66,13 @@ pub struct Executor {
 }
 
 impl Executor {
-    pub fn new(config: &Config) -> Result<Self> {
-        let client = Client::try_from(config)?;
+    pub fn new(config: &Config, env: &Environment) -> Result<Self> {
+        let client = Client::try_from(env)?;
 
         Ok(Self {
             client,
-            schema: config.settings.table.schema.clone(),
-            table: config.settings.table.name.clone(),
+            schema: config.table.schema.clone(),
+            table: config.table.name.clone(),
         })
     }
 

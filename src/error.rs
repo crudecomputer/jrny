@@ -8,9 +8,8 @@ use toml::de::Error as TomlError;
 pub enum Error {
     BadEnvVar(env::VarError, String),
     ConfigNotFound(String),
-    ConfigNotFile(String),
-    ConfigInvalid(TomlError, String),
     DatabaseError(postgres::Error),
+    EnvNotFound,
     FileNotValid(String),
     IoError(io::Error),
     PathAlreadyExists(String),
@@ -26,6 +25,7 @@ pub enum Error {
         missing: usize,
         predate_applied: usize,
     },
+    TomlInvalid(TomlError, String),
     TransactionCommandFound(String),
 }
 
@@ -40,14 +40,11 @@ impl fmt::Display for Error {
             ConfigNotFound(pathstr) => {
                 write!(f, "`{}` not found - run in directory with `jrny.toml` file or specify path to config with `-c /path/to/config`", pathstr)
             }
-            ConfigNotFile(pathstr) => {
-                write!(f, "`{}` must be a valid file", pathstr)
-            }
-            ConfigInvalid(err, pathstr) => {
-                write!(f, "`{}` is invalid - {}", pathstr, err)
-            }
             DatabaseError(err) => {
                 write!(f, "{}", err)
+            }
+            EnvNotFound => {
+                write!(f, "`jrny-env.toml` must exist within same directory as config file or `--database-url` must be provided")
             }
             FileNotValid(pathstr) => {
                 write!(f, "`{}` is not a valid file", pathstr)
@@ -117,6 +114,9 @@ impl fmt::Display for Error {
                 }
 
                 write!(f, "Revisions review failed:{}", errs)
+            }
+            TomlInvalid(err, pathstr) => {
+                write!(f, "`{}` is invalid - {}", pathstr, err)
             }
             TransactionCommandFound(cmd) => {
                 write!(f, "Cannot use transaction commands: found `{}`", cmd)

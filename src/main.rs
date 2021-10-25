@@ -1,64 +1,144 @@
-use clap::{clap_app, App};
-use log::{info, warn, LevelFilter};
+use std::path::PathBuf;
 
-use jrny::{self, Logger};
+use clap::{Clap, crate_version};
+use log::{warn, LevelFilter};
 
-static LOGGER: Logger = Logger;
+use jrny::{
+    CONF,
+    ENV,
+    Config,
+    Environment,
+    Error as JrnyError,
+    Logger,
+    Result as JrnyResult,
+};
+
+
+/// PostgreSQL schema revisions made easy - just add SQL!
+#[derive(Clap, Debug)]
+#[clap(version = crate_version!())]
+struct Opts {
+    #[clap(subcommand)]
+    subcmd: SubCommand,
+}
+
+#[derive(Clap, Debug)]
+enum SubCommand {
+    Begin(Begin),
+    Plan(Plan),
+    Review(Review),
+    Embark(Embark),
+}
+
+/// Sets up relevant files and directories for a new revision timeline
+#[derive(Clap, Debug)]
+struct Begin {
+    /// The directory in which to set up new project files - will be created if does not exist
+    dirpath: PathBuf,
+}
+
+/// Generates a new SQL revision file
+#[derive(Clap, Debug)]
+struct Plan {
+    #[clap(flatten)]
+    cfg: CliConfig,
+
+    /// Name for the new revision file
+    name: String,
+}
+
+/// Summarizes the state of revisions on disk and in database
+#[derive(Clap, Debug)]
+struct Review {
+    #[clap(flatten)]
+    cfg: CliConfig,
+
+    #[clap(flatten)]
+    env: CliEnvironment
+}
+
+/// Applies pending revisions upon successful review
+#[derive(Clap, Debug)]
+struct Embark {
+    #[clap(flatten)]
+    cfg: CliConfig,
+
+    #[clap(flatten)]
+    env: CliEnvironment,
+}
+
+#[derive(Clap, Debug)]
+struct CliConfig {
+    /// Path to TOML configuration file, defaulting to `jrny.toml`
+    /// in current directory
+    #[clap(short = 'c', long = "config", name = "CFG")]
+    filepath: Option<PathBuf>,
+}
+
+impl CliConfig {
+    fn to_cfg(self) -> JrnyResult<Config> {
+        let confpath = self.filepath.unwrap_or_else(|| PathBuf::from(CONF));
+        Config::from_filepath(&confpath)
+    }
+}
+
+#[derive(Clap, Debug)]
+struct CliEnvironment {
+    /// Database connection string if overriding value from or not using
+    /// an environment file.
+    #[clap(short = 'd', long = "database-url", name = "URL")]
+    database_url: Option<String>,
+
+    /// Path to optional TOML environment file, defaulting to `jrny-env.toml`
+    /// in directory relative to config file
+    #[clap(short = 'e', long = "environment", name = "ENV")]
+    filepath: Option<PathBuf>,
+}
+
+// Can't implement from/into traits if `Config` is involved, since it's technically foreign
+impl CliEnvironment {
+    fn to_env(self, cfg: &Config) -> JrnyResult<Environment> {
+        let envpath = self.filepath
+            .unwrap_or_else(|| cfg.revisions.directory
+                .parent()
+                .unwrap()
+                .join(ENV)
+            );
+
+        // This validates the env file, even if someone overrides it with the
+        // database url flag. The file itself is optional as long as the
+        // database url is supplied.
+        let env_file = (match Environment::from_filepath(&envpath) {
+            Ok(env) => Ok(Some(env)),
+            Err(err) => match err {
+                JrnyError::EnvNotFound => Ok(None),
+                e => Err(e),
+            }
+        })?;
+
+        match self.database_url {
+            Some(url) => Ok(Environment::from_database_url(&url)),
+            None => match env_file {
+                Some(env) => Ok(env),
+                None => Err(JrnyError::EnvNotFound),
+            }
+        }
+    }
+}
 
 fn main() {
-    log::set_logger(&LOGGER)
+    log::set_logger(&Logger)
         .map(|()| log::set_max_level(LevelFilter::Info))
         .map_err(|e| e.to_string())
         .unwrap();
+    
+    let opts: Opts = Opts::parse();
 
-    // This explicitly doesn't use `AppSettings::SubcommandRequired)` since that makes it
-    // harder to print help by default in absence of a subcommand, rather than printing
-    // an error that prompts to use `--help`
-    let mut app = clap_app! {jrny =>
-        (about: "PostgreSQL schema revisions made easy - just add SQL")
-        (version: env!("CARGO_PKG_VERSION"))
-
-        (@subcommand begin =>
-            (about: "Sets up relevant files and directories for a new revision timeline")
-            (@arg dirpath: +required "The directory in which to set up new project files - will be created if does not exist")
-        )
-
-        (@subcommand plan =>
-            (about: "Generates a timestamped SQL revision file")
-            (@arg name: +required "Name of the revision")
-            (@arg config: -c --config [FILE] +takes_value "Path to TOML config file")
-        )
-
-        (@subcommand review =>
-            (about: "Provides a summary of applied and pending revisions, including whether any applied have changed or are not found")
-            (@arg config: -c --config [FILE] +takes_value "Path to TOML config file")
-        )
-
-        (@subcommand embark =>
-            (about: "Applies pending revisions upon successful review")
-            (@arg config: -c --config [FILE] +takes_value "Path to TOML config file")
-        )
-    };
-
-    let result = match app.clone().get_matches().subcommand() {
-        ("begin", Some(cmd)) => jrny::begin(
-            cmd.value_of("dirpath").unwrap()
-        ),
-        ("plan", Some(cmd)) => jrny::plan(
-            cmd.value_of("name").unwrap(),
-            cmd.value_of("config")
-        ),
-        ("review", Some(cmd)) => jrny::review(
-            cmd.value_of("config")
-        ),
-        ("embark", Some(cmd)) => jrny::embark(
-            cmd.value_of("config")
-        ),
-        ("", None) => {
-            log_help(&mut app);
-            Ok(())
-        },
-        _ => unreachable!(),
+    let result = match opts.subcmd {
+        SubCommand::Begin(cmd)  => begin(cmd),
+        SubCommand::Plan(cmd)   => plan(cmd),
+        SubCommand::Review(cmd) => review(cmd),
+        SubCommand::Embark(cmd) => embark(cmd),
     };
 
     if let Err(e) = result {
@@ -66,15 +146,26 @@ fn main() {
     }
 }
 
-/// Uses Logger facade to print long help message, rather than
-/// printing to stdout explicitly.
-fn log_help(app: &mut App) {
-    let msg = {
-        let mut bytes = Vec::new();
-        app.write_long_help(&mut bytes).unwrap();
+fn begin(cmd: Begin) -> JrnyResult<()> {
+    jrny::begin(&cmd.dirpath)
+}
 
-        String::from_utf8(bytes).unwrap()
-    };
+fn plan(cmd: Plan) -> JrnyResult<()> {
+    let cfg = cmd.cfg.to_cfg()?;
 
-    info!("{}", msg);
+    jrny::plan(&cfg, &cmd.name)
+}
+
+fn review(cmd: Review) -> JrnyResult<()> {
+    let cfg = cmd.cfg.to_cfg()?;
+    let env = cmd.env.to_env(&cfg)?;
+
+    jrny::review(&cfg, &env)
+}
+
+fn embark(cmd: Embark) -> JrnyResult<()> {
+    let cfg = cmd.cfg.to_cfg()?;
+    let env = cmd.env.to_env(&cfg)?;
+
+    jrny::embark(&cfg, &env)
 }

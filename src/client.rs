@@ -1,18 +1,19 @@
-use postgres::NoTls;
-use std::convert::TryFrom;
-use std::str::FromStr;
-use std::time::Duration;
+use std::{
+    convert::TryFrom,
+    str::FromStr,
+    time::Duration,
+};
 
-use postgres::config::Config as ClientConfig;
+use postgres::{config::Config, NoTls};
 pub use postgres::Client;
 
-use crate::config::Config;
+use crate::Environment;
 
-impl TryFrom<&Config> for Client {
+impl TryFrom<&Environment> for Client {
     type Error = crate::Error;
 
-    fn try_from(config: &Config) -> Result<Self, Self::Error> {
-        let mut config = ClientConfig::from_str(config.settings.connection.database_url.as_str())?;
+    fn try_from(env: &Environment) -> Result<Self, Self::Error> {
+        let mut config = Config::from_str(&env.database.url)?;
 
         config.application_name("jrny");
 
