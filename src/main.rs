@@ -8,6 +8,7 @@ use jrny::{
     ENV,
     Config,
     Environment,
+    Error as JrnyError,
     Logger,
     Result as JrnyResult,
 };
@@ -39,51 +40,90 @@ struct Begin {
 /// Generates a new SQL revision file
 #[derive(Clap, Debug)]
 struct Plan {
+    #[clap(flatten)]
+    cfg: CliConfig,
+
     /// Name for the new revision file
     name: String,
-
-    /// Path to TOML configuration file, defaulting to `jrny.toml`
-    /// in current directory
-    #[clap(short, long)]
-    config: Option<PathBuf>,
 }
 
 /// Summarizes the state of revisions on disk and in database
 #[derive(Clap, Debug)]
 struct Review {
-    /// Path to TOML configuration file, defaulting to `jrny.toml`
-    /// in current directory
-    #[clap(short, long)]
-    config: Option<PathBuf>,
+    #[clap(flatten)]
+    cfg: CliConfig,
 
-    /// Database connection string if not supplied by environment file
-    /// or if overriding connection string from environment file
-    #[clap(short, long)]
-    database_url: Option<String>,
-
-    /// Path to optional TOML environment file, defaulting to `jrny-env.toml`
-    /// in directory relative to config file
-    #[clap(short, long)]
-    environment: Option<PathBuf>,
+    #[clap(flatten)]
+    env: CliEnvironment
 }
 
 /// Applies pending revisions upon successful review
 #[derive(Clap, Debug)]
 struct Embark {
+    #[clap(flatten)]
+    cfg: CliConfig,
+
+    #[clap(flatten)]
+    env: CliEnvironment,
+}
+
+#[derive(Clap, Debug)]
+struct CliConfig {
     /// Path to TOML configuration file, defaulting to `jrny.toml`
     /// in current directory
-    #[clap(short, long)]
-    config: Option<PathBuf>,
+    #[clap(short = 'c', long = "config", name = "CFG")]
+    filepath: Option<PathBuf>,
+}
 
-    /// Database connection string if not supplied by environment file
-    /// or if overriding connection string from environment file
-    #[clap(short, long)]
+impl CliConfig {
+    fn to_cfg(self) -> JrnyResult<Config> {
+        let confpath = self.filepath.unwrap_or_else(|| PathBuf::from(CONF));
+        Config::from_filepath(&confpath)
+    }
+}
+
+#[derive(Clap, Debug)]
+struct CliEnvironment {
+    /// Database connection string if overriding value from or not using
+    /// an environment file.
+    #[clap(short = 'd', long = "database-url", name = "URL")]
     database_url: Option<String>,
 
     /// Path to optional TOML environment file, defaulting to `jrny-env.toml`
     /// in directory relative to config file
-    #[clap(short, long)]
-    environment: Option<PathBuf>,
+    #[clap(short = 'e', long = "environment", name = "ENV")]
+    filepath: Option<PathBuf>,
+}
+
+// Can't implement from/into traits if `Config` is involved, since it's technically foreign
+impl CliEnvironment {
+    fn to_env(self, cfg: &Config) -> JrnyResult<Environment> {
+        let envpath = self.filepath
+            .unwrap_or_else(|| cfg.revisions.directory
+                .parent()
+                .unwrap()
+                .join(ENV)
+            );
+
+        // This validates the env file, even if someone overrides it with the
+        // database url flag. The file itself is optional as long as the
+        // database url is supplied.
+        let env_file = (match Environment::from_filepath(&envpath) {
+            Ok(env) => Ok(Some(env)),
+            Err(err) => match err {
+                JrnyError::EnvNotFound => Ok(None),
+                e => Err(e),
+            }
+        })?;
+
+        match self.database_url {
+            Some(url) => Ok(Environment::from_database_url(&url)),
+            None => match env_file {
+                Some(env) => Ok(env),
+                None => Err(JrnyError::EnvNotFound),
+            }
+        }
+    }
 }
 
 fn main() {
@@ -111,54 +151,21 @@ fn begin(cmd: Begin) -> JrnyResult<()> {
 }
 
 fn plan(cmd: Plan) -> JrnyResult<()> {
-    let confpath = cmd.config.unwrap_or_else(|| PathBuf::from(CONF));
-    let cfg = Config::from_filepath(&confpath)?;
+    let cfg = cmd.cfg.to_cfg()?;
 
     jrny::plan(&cfg, &cmd.name)
 }
 
 fn review(cmd: Review) -> JrnyResult<()> {
-    let confpath = cmd.config.unwrap_or_else(|| PathBuf::from(CONF));
-
-    let cfg = Config::from_filepath(&confpath)?;
-
-    let envpath = cmd.environment
-        .as_ref()
-        .cloned()
-        .unwrap_or_else(|| cfg.revisions.directory
-            .parent()
-            .unwrap()
-            .join(ENV)
-        );
-
-    let mut env = Environment::from_filepath(&envpath)?;
-
-    if let Some(url) = cmd.database_url {
-        env.database.url = url.clone();
-    }
+    let cfg = cmd.cfg.to_cfg()?;
+    let env = cmd.env.to_env(&cfg)?;
 
     jrny::review(&cfg, &env)
 }
 
 fn embark(cmd: Embark) -> JrnyResult<()> {
-    let confpath = cmd.config.unwrap_or_else(|| PathBuf::from(CONF));
-
-    let cfg = Config::from_filepath(&confpath)?;
-
-    let envpath = cmd.environment
-        .as_ref()
-        .cloned()
-        .unwrap_or_else(|| cfg.revisions.directory
-            .parent()
-            .unwrap()
-            .join(ENV)
-        );
-
-    let mut env = Environment::from_filepath(&envpath)?;
-
-    if let Some(url) = cmd.database_url {
-        env.database.url = url.clone();
-    }
+    let cfg = cmd.cfg.to_cfg()?;
+    let env = cmd.env.to_env(&cfg)?;
 
     jrny::embark(&cfg, &env)
 }

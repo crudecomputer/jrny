@@ -36,4 +36,12 @@ impl Environment {
 
         env
     }
+
+    pub fn from_database_url(url: &str) -> Self {
+        Self {
+            database: DatabaseEnvironment {
+                url: url.to_owned(),
+            },
+        }
+    }
 }
