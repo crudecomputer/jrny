@@ -10,7 +10,8 @@ use jrny::{
     Logger,
     Result as JrnyResult,
     CONF,
-    ENV};
+    ENV
+};
 
 
 /// PostgreSQL schema revisions made easy - just add SQL!
@@ -95,23 +96,19 @@ fn main() {
     let opts: Opts = Opts::parse();
 
     let result = match opts.subcmd {
-        SubCommand::Begin(cmd) => {
-            commands::begin(&cmd.dirpath)
-        },
-        SubCommand::Plan(cmd) => {
-            plan(cmd)
-        },
-        SubCommand::Review(cmd) => {
-            review(cmd)
-        },
-        SubCommand::Embark(cmd) => {
-            embark(cmd)
-        },
+        SubCommand::Begin(cmd)  => begin(cmd),
+        SubCommand::Plan(cmd)   => plan(cmd),
+        SubCommand::Review(cmd) => review(cmd),
+        SubCommand::Embark(cmd) => embark(cmd),
     };
 
     if let Err(e) = result {
         warn!("Error: {}", e);
     }
+}
+
+fn begin(cmd: Begin) -> JrnyResult<()> {
+    commands::begin(&cmd.dirpath)
 }
 
 fn plan(cmd: Plan) -> JrnyResult<()> {

@@ -8,6 +8,7 @@ mod executor;
 mod logger;
 mod revisions;
 
+pub use commands::*;
 pub use config::Config;
 pub use environment::Environment;
 pub use error::Error;
