@@ -9,6 +9,7 @@ mod revisions;
 
 pub use error::Error;
 pub use logger::Logger;
+pub use project::{Config, Environment};
 
 // Crate result type
 pub type Result<T> = std::result::Result<T, error::Error>;

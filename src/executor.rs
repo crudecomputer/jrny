@@ -4,8 +4,9 @@ use log::info;
 use postgres::Client;
 
 use crate::{
-    project::{ProjectConfig, ProjectEnvironment},
     revisions::{AnnotatedRevision, RevisionRecord},
+    Config,
+    Environment,
     Result,
 };
 
@@ -65,7 +66,7 @@ pub struct Executor {
 }
 
 impl Executor {
-    pub fn new(config: &ProjectConfig, env: &ProjectEnvironment) -> Result<Self> {
+    pub fn new(config: &Config, env: &Environment) -> Result<Self> {
         let client = Client::try_from(env)?;
 
         Ok(Self {

@@ -7,12 +7,12 @@ use std::{
 use postgres::{config::Config, NoTls};
 pub use postgres::Client;
 
-use crate::project::ProjectEnvironment;
+use crate::Environment;
 
-impl TryFrom<&ProjectEnvironment> for Client {
+impl TryFrom<&Environment> for Client {
     type Error = crate::Error;
 
-    fn try_from(env: &ProjectEnvironment) -> Result<Self, Self::Error> {
+    fn try_from(env: &Environment) -> Result<Self, Self::Error> {
         let mut config = Config::from_str(&env.database.url)?;
 
         config.application_name("jrny");

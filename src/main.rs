@@ -3,7 +3,14 @@ use std::path::PathBuf;
 use clap::{AppSettings, Clap, crate_version};
 use log::{info, warn, LevelFilter};
 
-use jrny::{commands, Logger, CONF, ENV};
+use jrny::{
+    commands,
+    Config,
+    Environment,
+    Logger,
+    Result as JrnyResult,
+    CONF,
+    ENV};
 
 
 /// PostgreSQL schema revisions made easy - just add SQL!
@@ -39,39 +46,48 @@ struct Plan {
     /// Name for the new revision file
     name: String,
 
-    /// Path to TOML configuration file
-    #[clap(short, long, default_value = CONF)]
-    config: PathBuf,
+    /// Path to TOML configuration file, defaulting to `jrny.toml`
+    /// in current directory
+    #[clap(short, long)]
+    config: Option<PathBuf>,
 }
 
 /// Summarizes the state of revisions on disk and in database
 #[derive(Clap, Debug)]
 //#[clap(setting = AppSettings::ColoredHelp)]
 struct Review {
-    #[clap(flatten)]
-    context: Context,
-}
-
-/// Applies pending revisions upon successful review
-#[derive(Clap, Debug)]
-//#[clap(setting = AppSettings::ColoredHelp)]
-struct Embark {
-    #[clap(flatten)]
-    context: Context,
-}
-
-#[derive(clap::Args, Debug)]
-struct Context {
-    /// Path to TOML configuration file
-    #[clap(short, long, default_value = CONF)]
-    config: PathBuf,
+    /// Path to TOML configuration file, defaulting to `jrny.toml`
+    /// in current directory
+    #[clap(short, long)]
+    config: Option<PathBuf>,
 
     /// Database connection string if not supplied by environment file
     /// or if overriding connection string from environment file
     #[clap(short, long)]
     database_url: Option<String>,
 
-    /// Path to optional TOML environment file
+    /// Path to optional TOML environment file, defaulting to `jrny-env.toml`
+    /// in directory relative to config file
+    #[clap(short, long)]
+    environment: Option<PathBuf>,
+}
+
+/// Applies pending revisions upon successful review
+#[derive(Clap, Debug)]
+//#[clap(setting = AppSettings::ColoredHelp)]
+struct Embark {
+    /// Path to TOML configuration file, defaulting to `jrny.toml`
+    /// in current directory
+    #[clap(short, long)]
+    config: Option<PathBuf>,
+
+    /// Database connection string if not supplied by environment file
+    /// or if overriding connection string from environment file
+    #[clap(short, long)]
+    database_url: Option<String>,
+
+    /// Path to optional TOML environment file, defaulting to `jrny-env.toml`
+    /// in directory relative to config file
     #[clap(short, long)]
     environment: Option<PathBuf>,
 }
@@ -84,20 +100,15 @@ fn main() {
     
     let opts: Opts = Opts::parse();
 
-    let result = match &opts.subcmd {
+    let result = match opts.subcmd {
         SubCommand::Begin(cmd) => {
             commands::begin(&cmd.dirpath)
         },
         SubCommand::Plan(cmd) => {
-            commands::plan(&cmd.config, &cmd.name)
+            plan(cmd)
         },
         SubCommand::Review(cmd) => {
-            //commands::review(commands::ReviewArgs {
-                //confpath: cmd.context.config.clone(),
-                //envpath: cmd.context.environment.clone(),
-                //database_url: cmd.context.database_url.clone(),
-            //})
-            Ok(())
+            review(cmd)
         },
         SubCommand::Embark(cmd) => {
             Ok(())
@@ -107,6 +118,36 @@ fn main() {
     if let Err(e) = result {
         warn!("Error: {}", e);
     }
+}
+
+fn plan(cmd: Plan) -> JrnyResult<()> {
+    let confpath = cmd.config.unwrap_or_else(|| PathBuf::from(CONF));
+    let cfg = Config::from_filepath(&confpath)?;
+
+    commands::plan(&cfg, &cmd.name)
+}
+
+fn review(cmd: Review) -> JrnyResult<()> {
+    let confpath = cmd.config.unwrap_or_else(|| PathBuf::from(CONF));
+
+    let config = Config::from_filepath(&confpath)?;
+
+    let envpath = cmd.environment
+        .as_ref()
+        .cloned()
+        .unwrap_or_else(|| config.revisions.directory
+            .parent()
+            .unwrap()
+            .join(ENV)
+        );
+
+    let mut env = Environment::from_filepath(&envpath)?;
+
+    if let Some(url) = cmd.database_url {
+        env.database.url = url.clone();
+    }
+
+    commands::review(&config, &env)
 }
 
 /*

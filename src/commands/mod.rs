@@ -8,9 +8,11 @@ use chrono::{DateTime, Local, Utc};
 use log::{info, warn};
 
 use crate::{
+    ENV,
     executor::Executor,
-    project::{ProjectConfig, ProjectEnvironment, ProjectPaths},
     revisions::RevisionFile,
+    Config,
+    Environment,
     Result,
 };
 
@@ -56,18 +58,16 @@ pub fn begin(dirpath: &PathBuf) -> Result<()> {
 /// Accepts a name for the migration file and an optional path to a config file.
 /// If no path is provided, it will add a timestamped SQL file relative to current
 /// working directory; otherwise it will add file in a directory relative to config.
-pub fn plan(confpath: &PathBuf, name: &str) -> Result<()> {
-    let config = ProjectConfig::new(confpath)?;
-
+pub fn plan(cfg: &Config, name: &str) -> Result<()> {
     let timestamp = Utc::now().timestamp();
-    let next_id = RevisionFile::all_from_disk(&config.revisions.directory)?
+    let next_id = RevisionFile::all_from_disk(&cfg.revisions.directory)?
         .iter()
         .reduce(|rf1, rf2| if rf1.id > rf2.id { rf1 } else { rf2 })
         .map_or(0, |rf| rf.id as i32)
         + 1;
 
     let new_filename = format!("{:03}.{}.{}.sql", next_id, timestamp, name);
-    let new_path = config.revisions.directory.join(&new_filename);
+    let new_path = cfg.revisions.directory.join(&new_filename);
 
     let contents = format!("-- Revision: {name}
 --
@@ -87,26 +87,9 @@ commit;
     Ok(())
 }
 
-pub struct ReviewArgs {
-    /// Path to TOML configuration file
-    pub confpath: PathBuf,
-
-    /// Database connection string
-    pub database_url: Option<String>,
-
-    /// Path to optional TOML environment file
-    pub envpath: PathBuf,
-}
-
-pub fn review(args: ReviewArgs) -> Result<()> {
-    let ReviewArgs { confpath, database_url, envpath } = args;
-
-    let config = ProjectConfig::new(&confpath)?;
-    let env = ProjectEnvironment::new(&envpath, database_url)?;
-    let paths = ProjectPaths::from_conf(&confpath)?;
-
-    let mut exec = Executor::new(&config, &env)?;
-    let cmd = Review::annotated_revisions(&paths, &mut exec)?;
+pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
+    let mut exec = Executor::new(&cfg, &env)?;
+    let cmd = Review::annotated_revisions(&mut exec, &cfg.revisions.directory)?;
 
     if cmd.revisions.is_empty() {
         info!("No revisions found. Create your first revision with `jrny plan <some-name>`.");
