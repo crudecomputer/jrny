@@ -17,7 +17,7 @@ but there are (subjectively) some big annoyances and I just don't like them.
 
 `jrny` offers an alternative for people who...
 
-* ... think database revision files should be an 'immutable' record and are guaranteed to represent what was applied to database
+* ... think database revision files should be an 'immutable' record and are **guaranteed to represent** what was applied to database
 
 * ... would **rather write SQL** than translate it to method calls or YAML entries that are often more verbose and less documented
 
@@ -51,18 +51,12 @@ but there are (subjectively) some big annoyances and I just don't like them.
 
 ## Installation
 
-### Pre-compiled
-
-`jrny` is currently only pre-compiled for mac and can be installed either via direct download from [releases](https://github.com/kevlarr/jrny/tags) or via `homebrew`:
-
-```bash
-homebrew install kevlarr/jrny/jrny
-```
-
 ### From source
 
-While `jrny` has only been fully tested on macOS (CI runs unit tests on Ubuntu, but no tests currently interact with filesystem or database), there are zero external dependencies and it
-*Should Just Work™* on other platforms, as long as you compile it yourself.
+While `jrny` has only been fully tested on macOS and Ubuntu,
+there are zero external dependencies and it *Should Just Work™*
+on other platforms, as long as you compile it yourself.
+
 Assuming `cargo` is installed (easiest is using [rustup](https://rustup.rs/)) then simply run:
 
 ```bash
@@ -105,25 +99,45 @@ A journey has begun
   <project-dir>
   ├── <project-dir>/revisions [created]
   └── <project-dir>/jrny.toml [created]
+  └── <project-dir>/jrny-env.toml [created]
+  └── <project-dir>/jrny-env.example.toml [created]
+  
 ```
 
-The default `jrny.toml` file specifies how `jrny` will connect to the target database, for instance:
+The default `jrny.toml` file specifies the directory in which to
+locate revisions as well as the database schema & table in which
+to store details for applied revisions.
 
 ```
-[connection]
-strategy = { type = "env-url-string", var-name = "JRNY_DATABASE_URL" }
+# jrny.toml
+
+[revisions]
+directory = "revisions"
 
 [table]
 schema = "public"
 name = "jrny_revision"
 ```
 
-This means that `jrny` will look for a connection string in the `JRNY_DATABASE_URL` environment variable
-and store revision history in the `public.jrny_revision` table. The variable name can be changed any time
-but, once revisions are applied and tracked, the schema and table name should not be changed, as `jrny`
-would then attempt to apply all revisions from the beginning.
+Additionally, `jrny-env.toml` and `jrny-env.example.toml` files will be created.
+The `jrny-env.toml` environment file is optional but is used to store
+environment-specific information, including the database connection string.
 
-The config file can be freely renamed if desired; however, this requires passing the filepath in via `-c` to all commands.
+
+
+This means that `jrny` will look for a connection string in the `JRNY_DATABASE_URL` environment variable
+and store revision history in the `public.jrny_revision` table.
+
+The revision directory can be renamed any time, provided that the SQL
+files themselves do not changed,
+but the schena & table cannot be changed once any revisions have been applied.
+Otherwise, `jrny` will see an empty state table and attempt to
+apply all revisions again.
+
+Both the config and environment files can be freely renamed,
+but changing their names (or running `jrny` outside of the
+project directory) will require passing in their paths via
+`-c [or --config]` and `-e [or --environment]` respectively.
 
 ### Plan the journey
 
@@ -142,21 +156,25 @@ Created /path/to/my/revisions/002.1606743400.name with spaces.sql
 
 This will create a (mostly) empty SQL file for you to populate with wonderful statements.
 Notice that `jrny` **encourages transactions per-revision** but you are free to remove these,
-particularly if you need to execute statements outside of a transaction.
-
-For now, there are no checks that edits to the file keep the matching `begin;` and `commit;` commands.
+particularly if you need to execute statements outside of a transaction - or if you want to write several revision files that should
+span the same transaction.
 
 ``` bash
 $ cat /path/to/my/revisions/002.1606743400.name\ with\ spaces.sql
--- 002.1606743400.name with spaces.sql
+
+-- Revision: name with spaces
+--
+-- Add description here
 
 begin;
--- Start revisions
 
+-- Add SQL here
 
--- End revisions
 commit;
 ```
+
+> Note: It's encouraged to comment-out the `commit;` line so that you
+> can run the revision in the database without changes actually persisting.
 
 Revision filenames follow the pattern of `[id].[timestamp].[name].sql`.
 
@@ -170,8 +188,33 @@ and ids can be manually changed as long as the revision hasn't been applied.
 
 ### Review the journey
 
-To summarize the state of revisions, run `jrny review [-c <path-to-config>]`, again either specifying the config
-file to use or defaulting to looking in current directory.
+To summarize the state of revisions, run `jrny review`.
+If you are outside of the project directory, you'll need to
+specify the config file location, and
+you will either need to specify the path to the environment
+file or provide the database URL directly, eg:
+
+```bash
+# From within project directory & default filenames
+$ jrny review
+
+# From outside the project directory *or* with a custom config filename.
+#
+# This will look for an environment file named `jrny-env.toml` in
+# the same directory as the custom config file.
+$ jrny review -c path/to/my-jrny-config.toml
+
+# Same as above except can specify custom environment file with different name
+# or in a different directory than the config file.
+$ jrny review -c path/to/my-jrny-config.toml -e path/to/my-jrny-env.toml
+
+# Specifying database URL within project directory & default config filename.
+# Can be used in conjunction with custom config and/or environment file paths.
+#
+# If there is a default environment file in the current directory, the URL option
+# will take precedence over the URL supplied by the environment file.
+$ jrny review -d 'postgresql://user:password@host:5432/dbname'
+```
 
 This will list all ordered revisions, each with time of creation as well as time of application, if applied to the specified database.
 
@@ -250,7 +293,10 @@ The journey thus far
 
 ### Embark on the journey!
 
-To apply pending revisions, run `jrny embark [-c <path-to-config>]`.
+To apply pending revisions, run `jrny embark`.
+
+As with `jrny review`, applying revisions looks for default config & environment files in the current directory,
+but either can be overridden and, again, the database URL can be supplied directly.
 
 Revisions will be reviewed prior to applying any pending, and if files have changed, are no longer
 present on disk, etc., then `jrny` will issue an error and exit without applying any new revisions.
@@ -304,12 +350,15 @@ No revisions to apply
 
 ### Code cleanup
 
-Refactoring in Rust is fun - which is good, because there's a lot of room for clearer patterns and modules.
+Refactoring in Rust is fun - which is good, because there's a lot of room in this project
+for clearer patterns and modules, better code, etc.
 
 ### Revision archiving
 
-Revisions are great, but we don't normally need revisions from 2 years ago sitting in the directory.
-There should be a command to help 'reset' history, potentially archiving them into a table..?
+Revisions are great, but we don't normally need revisions from 2 years ago sitting in the directory cluttering up the screen.
+
+This could take several forms but could possible involve concatenating all files into a single 'base' revision and resetting the revision
+table to mark that base as applied.
 
 ### Revision 'bundling'
 
