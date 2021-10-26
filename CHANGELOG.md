@@ -2,16 +2,54 @@
 
 All notable changes to this project _should_ be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project _attempts_ to adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+This project also attempts to adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
+(for whatever that's actually worth).
 
 ---
 
 ## [Planned]
 - Cross-platform testing and compilation
-- Enforcement of explicit revision sequence
 
 ---
+
+## [2.0.0-beta.5] - 2021-10-25
+
+### Changed
+- Disabled now-default colorized output from clap
+
+## [2.0.0-beta.4] - 2021-10-25
+
+### Changed
+- Updated all dependencies to latest, including clap 3 beta
+
+## [2.0.0-beta.3] - 2021-10-25
+
+### Added
+- Can specify custom revisions directory in config file
+- Can specify database url via environment file
+- Can specify database url via command-line option
+
+### Changed
+- `jrny` now looks for database url in either environment file or command-line flag
+- Library command functions (plan, etc.) now accept `Config` and `Environment` objects
+where appropriate, rather than `&str` and `PathBuf` fields and making assumptions about
+file and directory paths
+
+### Removed
+- Can no longer connect to database via environment variable
+- Database strategy removed from config file
+
+## [2.0.0-beta.2] - 2021-08-11
+
+### Changed
+- Help message printed instead of error when `jrny` is run without subcommand
+
+## [2.0.0-beta.1] - 2021-04-16
+
+### Changed
+- **Breaking:** Use an explicit revision sequence, prepending revisions with an id before the timestamp
 
 ## [1.3.0] - 2020-12-18
 
