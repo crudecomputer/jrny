@@ -48,7 +48,7 @@ but there is still room for others.
 Assuming `cargo` is installed (easiest is using [rustup](https://rustup.rs/)) then simply run:
 
 ```bash
-$ cargo install jrny
+$ cargo install jrny --version 2.0.0-beta.4
 
     Updating crates.io index
   Downloaded jrny v1.3.0

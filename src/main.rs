@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use clap::{Clap, crate_version};
+use clap::{Parser, crate_version};
 use log::{warn, LevelFilter};
 
 use jrny::{
@@ -13,16 +13,15 @@ use jrny::{
     Result as JrnyResult,
 };
 
-
 /// PostgreSQL schema revisions made easy - just add SQL!
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 #[clap(version = crate_version!())]
 struct Opts {
     #[clap(subcommand)]
     subcmd: SubCommand,
 }
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 enum SubCommand {
     Begin(Begin),
     Plan(Plan),
@@ -31,14 +30,14 @@ enum SubCommand {
 }
 
 /// Sets up relevant files and directories for a new revision timeline
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 struct Begin {
     /// The directory in which to set up new project files - will be created if does not exist
     dirpath: PathBuf,
 }
 
 /// Generates a new SQL revision file
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 struct Plan {
     #[clap(flatten)]
     cfg: CliConfig,
@@ -48,7 +47,7 @@ struct Plan {
 }
 
 /// Summarizes the state of revisions on disk and in database
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 struct Review {
     #[clap(flatten)]
     cfg: CliConfig,
@@ -58,7 +57,7 @@ struct Review {
 }
 
 /// Applies pending revisions upon successful review
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 struct Embark {
     #[clap(flatten)]
     cfg: CliConfig,
@@ -67,7 +66,7 @@ struct Embark {
     env: CliEnvironment,
 }
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 struct CliConfig {
     /// Path to TOML configuration file, defaulting to `jrny.toml`
     /// in current directory
@@ -82,7 +81,7 @@ impl CliConfig {
     }
 }
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 struct CliEnvironment {
     /// Database connection string if overriding value from or not using
     /// an environment file.
