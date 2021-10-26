@@ -2,22 +2,14 @@
 
 *Data modeling is a journey - manage yours with `jrny`*
 
----
-
-**Disclaimer:** As far as I am aware, I am the only one using this tool, and that's only on hobby projects.
-While it is functional for personal use cases, it is far from battle-tested. Or even unit/integration tested.
-**Use at your own risk.**
-
----
-
 ## Overview
 
-A lot of schema-migration tools already exist. They work, and they work pretty well at that,
-but there are (subjectively) some big annoyances and I just don't like them.
+A lot of schema migration tools already exist,
+but there is still room for others.
 
 `jrny` offers an alternative for people who...
 
-* ... think database revision files should be an 'immutable' record and are **guaranteed to represent** what was applied to database
+* ... think database revision files should be an immutable record and are **guaranteed to represent** what was applied to database
 
 * ... would **rather write SQL** than translate it to method calls or YAML entries that are often more verbose and less documented
 
@@ -53,16 +45,11 @@ but there are (subjectively) some big annoyances and I just don't like them.
 
 ### From source
 
-While `jrny` has only been fully tested on macOS and Ubuntu,
-there are zero external dependencies and it *Should Just Work™*
-on other platforms, as long as you compile it yourself.
-
 Assuming `cargo` is installed (easiest is using [rustup](https://rustup.rs/)) then simply run:
 
 ```bash
 $ cargo install jrny
 
-# Sample output on macOS
     Updating crates.io index
   Downloaded jrny v1.3.0
   Downloaded 1 crate (28.6 KB) in 0.39s
@@ -105,10 +92,10 @@ A journey has begun
 ```
 
 The default `jrny.toml` file specifies the directory in which to
-locate revisions as well as the database schema & table in which
-to store details for applied revisions.
+locate revisions as well as the database schema & name for the
+"state table" in which to record details for applied revisions.
 
-```
+```toml
 # jrny.toml
 
 [revisions]
@@ -119,20 +106,24 @@ schema = "public"
 name = "jrny_revision"
 ```
 
+The revision directory can be renamed any time, provided that the SQL
+files themselves do not change,
+but the schena & table cannot be changed once any revisions have been applied.
+Otherwise, `jrny` will see an empty state table and attempt to
+apply all revisions again.
+
 Additionally, `jrny-env.toml` and `jrny-env.example.toml` files will be created.
 The `jrny-env.toml` environment file is optional but is used to store
 environment-specific information, including the database connection string.
 
+```toml
+# jrny-env.example.toml
 
-
-This means that `jrny` will look for a connection string in the `JRNY_DATABASE_URL` environment variable
-and store revision history in the `public.jrny_revision` table.
-
-The revision directory can be renamed any time, provided that the SQL
-files themselves do not changed,
-but the schena & table cannot be changed once any revisions have been applied.
-Otherwise, `jrny` will see an empty state table and attempt to
-apply all revisions again.
+[database]
+# Database connection string - for permissible formats and options see:
+# https://docs.rs/postgres/0.19.1/postgres/config/struct.Config.html
+url = "postgresql://user:password@host:port/dbname"
+```
 
 Both the config and environment files can be freely renamed,
 but changing their names (or running `jrny` outside of the
