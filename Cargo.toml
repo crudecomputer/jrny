@@ -1,6 +1,6 @@
 [package]
 name = "jrny"
-version = "2.0.0-beta.4"
+version = "2.0.0-beta.5"
 edition = "2021"
 
 authors = ["Kevin Larrabee <6306496+kevlarr@users.noreply.github.com>"]
@@ -22,3 +22,5 @@ toml = "0.5.8"
 
 [dependencies.clap]
 version = "3.0.0-beta.5"
+default-features = false
+features = ["std", "cargo", "derive", "suggestions"]
