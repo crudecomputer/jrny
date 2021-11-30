@@ -39,6 +39,10 @@ but there is still room for others.
 
 </small>
 
+
+> See [hldr](https://github.com/kevlarr/hldr)
+> for a complementary data seeding tool.
+
 ---
 
 ## Installation
