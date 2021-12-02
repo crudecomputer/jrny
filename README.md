@@ -2,6 +2,9 @@
 
 *Data modeling is a journey - manage yours with `jrny`*
 
+> See [Placeholder](https://github.com/kevlarr/hldr)
+> for a complementary data seeding tool.
+
 ## Overview
 
 A lot of schema migration tools already exist,
@@ -21,9 +24,6 @@ but there is still room for others.
 
 * ... think **down-migrations are unnecessary**<sup>1</sup> at best and dangerous at worst, especially as they make it trivially easy to 'change' history by forgetting to add a preexisting index, check constraint, etc. during the upgrade/downgrade/edit/upgrade cycle.
 
-
-<small>
-
 > <sup>1</sup> Down-migrations are great for iteratively developing complex schema changes,
 > as it lets the developer make a small change, roll it back, add another change, etc. until
 > the migration performs as intended.
@@ -36,12 +36,6 @@ but there is still room for others.
 > A *second* alternative is to drop the local database and re-create it if a revisions needs
 > to be adjusted. This strongly encourages setting up seed files, too, which is huge for
 > having easily set-up developer environments.
-
-</small>
-
-
-> See [hldr](https://github.com/kevlarr/hldr)
-> for a complementary data seeding tool.
 
 ---
 
