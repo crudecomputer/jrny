@@ -1,4 +1,4 @@
-# jrny
+# Journey
 
 *Data modeling is a journey - manage yours with `jrny`*
 
