@@ -18,6 +18,8 @@ but there is still room for others.
 
 * ... would **rather write SQL** than translate it to method calls or YAML entries that are often more verbose and less documented
 
+* ... want **explicit control of transactions** and ignore them or leverage them across multiple revisions
+
 * ... prefer to **install compiled binaries** rather than manage a language and dependencies on whatever system(s) run migrations
 
 * ... like the idea of **single responsibility**, especially if multiple applications (potentially in different repos and written in different languages) access the same tables
@@ -53,16 +55,16 @@ Assuming `cargo` is installed (easiest is using [rustup](https://rustup.rs/)) th
 $ cargo install jrny --version 2.0.0-beta.5
 
     Updating crates.io index
-  Downloaded jrny v1.3.0
+  Downloaded jrny v2.0.0-beta.5
   Downloaded 1 crate (28.6 KB) in 0.39s
-  Installing jrny v1.3.0
+  Installing jrny v2.0.0-beta.5
    ...
    ...
    ...
    Compiling jrny v1.3.0
     Finished release [optimized] target(s) in 2m 03s
   Installing /Users/<user>/.cargo/bin/jrny
-   Installed package `jrny v1.3.0` (executable `jrny`)
+   Installed package `jrny v2.0.0-beta.5` (executable `jrny`)
 ```
 
 ---
