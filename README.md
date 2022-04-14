@@ -14,6 +14,8 @@ but there is still room for others.
 
 * ... think database revision files should be an immutable record and are **guaranteed to represent** what was applied to database
 
+* ... want a **guaranteed revision order** across all environments
+
 * ... would **rather write SQL** than translate it to method calls or YAML entries that are often more verbose and less documented
 
 * ... prefer to **install compiled binaries** rather than manage a language and dependencies on whatever system(s) run migrations
