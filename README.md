@@ -7,7 +7,7 @@
 
 ## Overview
 
-A lot of schema migration tools already exist,
+A lot of great schema migration tools already exist (like [dbmate](https://github.com/amacneil/dbmate)),
 but there is still room for others.
 
 `jrny` offers an alternative for people who...
@@ -36,6 +36,8 @@ but there is still room for others.
 > A *second* alternative is to drop the local database and re-create it if a revisions needs
 > to be adjusted. This strongly encourages setting up seed files, too, which is huge for
 > having easily set-up developer environments.
+>
+> Okay, okay, down migrations are useful in development. They'll probably be supported in the future.
 
 ---
 
