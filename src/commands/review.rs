@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    rc::Rc,
-};
+use std::{collections::HashMap, path::PathBuf, rc::Rc};
 
 use crate::{
     executor::Executor,

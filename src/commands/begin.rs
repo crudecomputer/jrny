@@ -1,16 +1,6 @@
-use std::{
-    fs,
-    io::Write,
-    path::PathBuf,
-};
+use std::{fs, io::Write, path::PathBuf};
 
-use crate::{
-    CONF,
-    ENV,
-    ENV_EX,
-    Error,
-    Result,
-};
+use crate::{Error, Result, CONF, ENV, ENV_EX};
 
 const CONF_TEMPLATE: &str = r#"# jrny config
 
@@ -80,7 +70,6 @@ fn is_empty_dir(p: &PathBuf) -> Result<bool> {
     Ok(p.is_dir() && p.read_dir()?.next().is_none())
 }
 
-
 #[derive(Debug)]
 pub(super) struct BeginPaths {
     pub conf_file: PathBuf,
@@ -118,7 +107,9 @@ impl BeginPaths {
         }
 
         if self.revisions_dir.exists() && !is_empty_dir(&self.revisions_dir)? {
-            return Err(PathNotEmptyDirectory(self.revisions_dir.display().to_string()));
+            return Err(PathNotEmptyDirectory(
+                self.revisions_dir.display().to_string(),
+            ));
         }
 
         for f in [&self.conf_file, &self.env_file, &self.env_ex_file] {

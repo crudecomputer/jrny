@@ -5,9 +5,7 @@ use postgres::Client;
 
 use crate::{
     revisions::{AnnotatedRevision, RevisionRecord},
-    Config,
-    Environment,
-    Result,
+    Config, Environment, Result,
 };
 
 const CREATE_SCHEMA: &str = "
@@ -136,7 +134,9 @@ impl Executor {
     }
 
     fn table_exists(&mut self) -> Result<bool> {
-        let row = self.client.query_one(TABLE_EXISTS, &[&self.schema, &self.table])?;
+        let row = self
+            .client
+            .query_one(TABLE_EXISTS, &[&self.schema, &self.table])?;
 
         Ok(row.get("exists"))
     }

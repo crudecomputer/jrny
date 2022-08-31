@@ -130,7 +130,7 @@ fn main() {
         .map(|()| log::set_max_level(LevelFilter::Info))
         .map_err(|e| e.to_string())
         .unwrap();
-    
+
     let opts: Opts = Opts::parse();
 
     let result = match opts.subcmd {
@@ -142,6 +142,7 @@ fn main() {
 
     if let Err(e) = result {
         warn!("Error: {}", e);
+        std::process::exit(101);
     }
 }
 

@@ -1,19 +1,9 @@
-use std::{
-    fs,
-    io::Write,
-    path::PathBuf,
-};
+use std::{fs, io::Write, path::PathBuf};
 
 use chrono::{DateTime, Local, Utc};
 use log::{info, warn};
 
-use crate::{
-    executor::Executor,
-    revisions::RevisionFile,
-    Config,
-    Environment,
-    Result,
-};
+use crate::{executor::Executor, revisions::RevisionFile, Config, Environment, Result};
 
 mod begin;
 mod embark;
@@ -47,11 +37,11 @@ pub fn begin(dirpath: &PathBuf) -> Result<()> {
 
     // Only some paths could have been created by the command, so those
     // need to be dynamically labeled as such.
-    log_path("  ",     &cmd.paths.root_dir,      cmd.created_root);
+    log_path("  ", &cmd.paths.root_dir, cmd.created_root);
     log_path("  ├── ", &cmd.paths.revisions_dir, cmd.created_revisions);
-    log_path("  └── ", &cmd.paths.conf_file,     true);
-    log_path("  └── ", &cmd.paths.env_file,      true);
-    log_path("  └── ", &cmd.paths.env_ex_file,   true);
+    log_path("  └── ", &cmd.paths.conf_file, true);
+    log_path("  └── ", &cmd.paths.env_file, true);
+    log_path("  └── ", &cmd.paths.env_ex_file, true);
 
     Ok(())
 }
@@ -69,7 +59,8 @@ pub fn plan(cfg: &Config, name: &str) -> Result<()> {
     let new_filename = format!("{:03}.{}.{}.sql", next_id, timestamp, name);
     let new_path = cfg.revisions.directory.join(&new_filename);
 
-    let contents = format!("-- Revision: {name}
+    let contents = format!(
+        "-- Revision: {name}
 --
 -- Add description here
 
@@ -78,12 +69,14 @@ begin;
 -- Add SQL here
 
 commit;
-", name=name);
+",
+        name = name
+    );
 
     fs::File::create(&new_path)?.write_all(contents.as_bytes())?;
 
     info!("Created {}", new_path.display());
-    
+
     Ok(())
 }
 
@@ -104,9 +97,7 @@ pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
         "Id", "Revision", "Created", "Applied"
     );
 
-    let format_local = |dt: DateTime<Utc>| DateTime::<Local>::from(dt)
-        .format("%v %X")
-        .to_string();
+    let format_local = |dt: DateTime<Utc>| DateTime::<Local>::from(dt).format("%v %X").to_string();
 
     let mut last_applied_index = -1;
 
@@ -177,7 +168,6 @@ pub fn embark(cfg: &Config, env: &Environment) -> Result<()> {
 
     Ok(())
 }
-
 
 /// Logs the path string with optional prefix and "[created]" suffix if the created
 /// condition is true.
