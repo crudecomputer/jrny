@@ -2,8 +2,11 @@
 
 *Data modeling is a journey - manage yours with `jrny`*
 
-> See [Placeholder](https://github.com/kevlarr/hldr)
-> for a complementary data seeding tool.
+**Important:** Journey is still very much a prototype; being version >= 1 simply means that it reached minimum required (and working) features, and development continues to be sporadic due to the responsibilities of life.
+
+In other words: **USE WITH DISCRETION**
+
+---
 
 ## Overview
 
