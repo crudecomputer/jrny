@@ -14,6 +14,11 @@ This project also attempts to adhere to [Semantic Versioning](https://semver.org
 
 ---
 
+## [2.0.0-beta.6] - 2023-03-01
+
+### Changed
+- Converted `&PathBuf` parameters to `&Path` per clippy
+
 ## [2.0.0-beta.5] - 2021-10-25
 
 ### Changed
