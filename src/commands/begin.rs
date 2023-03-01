@@ -1,4 +1,4 @@
-use std::{fs, io::Write, path::PathBuf};
+use std::{fs, io::Write, path::{Path, PathBuf}};
 
 use crate::{Error, Result, CONF, ENV, ENV_EX};
 
@@ -66,7 +66,7 @@ const ENV_EX_TEMPLATE: &str = r#"# jrny environment EXAMPLE FILE
 url = "postgresql://user:password@host:port/dbname"
 "#;
 
-fn is_empty_dir(p: &PathBuf) -> Result<bool> {
+fn is_empty_dir(p: &Path) -> Result<bool> {
     Ok(p.is_dir() && p.read_dir()?.next().is_none())
 }
 
@@ -80,8 +80,8 @@ pub(super) struct BeginPaths {
 }
 
 impl BeginPaths {
-    pub fn new(root_dir: &PathBuf) -> Result<Self> {
-        let root_dir = root_dir.clone();
+    pub fn new(root_dir: &Path) -> Result<Self> {
+        let root_dir = root_dir.to_path_buf();
 
         let paths = Self {
             conf_file: root_dir.join(CONF),
@@ -133,7 +133,7 @@ pub(super) struct Begin {
 }
 
 impl Begin {
-    pub(super) fn new(project_directory: &PathBuf) -> Result<Self> {
+    pub(super) fn new(project_directory: &Path) -> Result<Self> {
         let paths = BeginPaths::new(project_directory)?;
 
         Ok(Self {

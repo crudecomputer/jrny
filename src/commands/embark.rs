@@ -69,7 +69,7 @@ impl Embark {
 
         for revision in &self.to_apply {
             info!("  {}", revision.filename);
-            exec.run_revision(&revision)?;
+            exec.run_revision(revision)?;
         }
 
         Ok(())

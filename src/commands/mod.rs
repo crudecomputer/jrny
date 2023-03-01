@@ -1,4 +1,4 @@
-use std::{fs, io::Write, path::PathBuf};
+use std::{fs, io::Write, path::Path};
 
 use chrono::{DateTime, Local, Utc};
 use log::{info, warn};
@@ -19,7 +19,7 @@ use review::Review;
 /// that there is an empty `revisions` directory nested within it or
 /// create it if not already present. If any error occurs, any changes
 /// to the file system will be attempted to be reversed.
-pub fn begin(dirpath: &PathBuf) -> Result<()> {
+pub fn begin(dirpath: &Path) -> Result<()> {
     let mut cmd = Begin::new(dirpath)?;
 
     cmd.create_root()
@@ -53,11 +53,11 @@ pub fn plan(cfg: &Config, name: &str) -> Result<()> {
     let next_id = RevisionFile::all_from_disk(&cfg.revisions.directory)?
         .iter()
         .reduce(|rf1, rf2| if rf1.id > rf2.id { rf1 } else { rf2 })
-        .map_or(0, |rf| rf.id as i32)
+        .map_or(0, |rf| rf.id)
         + 1;
 
     let new_filename = format!("{:03}.{}.{}.sql", next_id, timestamp, name);
-    let new_path = cfg.revisions.directory.join(&new_filename);
+    let new_path = cfg.revisions.directory.join(new_filename);
 
     let contents = format!(
         "-- Revision: {name}
@@ -83,7 +83,7 @@ commit;
 /// Reviews the status of all revisions specified by the config as well as
 /// their status in the database.
 pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
-    let mut exec = Executor::new(&cfg, &env)?;
+    let mut exec = Executor::new(cfg, env)?;
     let cmd = Review::annotated_revisions(&mut exec, &cfg.revisions.directory)?;
 
     if cmd.revisions.is_empty() {
@@ -155,9 +155,9 @@ pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
 /// Applies all pending revisions specified by the given config to the
 /// database specified by the environment.
 pub fn embark(cfg: &Config, env: &Environment) -> Result<()> {
-    let mut exec = Executor::new(&cfg, &env)?;
+    let mut exec = Executor::new(cfg, env)?;
 
-    let cmd = Embark::prepare(&cfg, &mut exec)?;
+    let cmd = Embark::prepare(cfg, &mut exec)?;
 
     if cmd.to_apply.is_empty() {
         info!("No revisions to apply");
@@ -171,7 +171,7 @@ pub fn embark(cfg: &Config, env: &Environment) -> Result<()> {
 
 /// Logs the path string with optional prefix and "[created]" suffix if the created
 /// condition is true.
-fn log_path(prefix: &str, path: &PathBuf, created: bool) {
+fn log_path(prefix: &str, path: &Path, created: bool) {
     info!(
         "{}{}{}",
         prefix,

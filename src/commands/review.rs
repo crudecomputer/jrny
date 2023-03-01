@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf, rc::Rc};
+use std::{collections::HashMap, path::Path, rc::Rc};
 
 use crate::{
     executor::Executor,
@@ -15,11 +15,11 @@ pub(super) struct Review {
 }
 
 impl Review {
-    pub(super) fn annotated_revisions(exec: &mut Executor, revision_dir: &PathBuf) -> Result<Self> {
+    pub(super) fn annotated_revisions(exec: &mut Executor, revision_dir: &Path) -> Result<Self> {
         Ok(Self::new(exec, revision_dir)?.annotate())
     }
 
-    fn new(exec: &mut Executor, revision_dir: &PathBuf) -> Result<Self> {
+    fn new(exec: &mut Executor, revision_dir: &Path) -> Result<Self> {
         exec.ensure_table_exists()?;
 
         let mut files = RevisionFile::all_from_disk(revision_dir)?;

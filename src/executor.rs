@@ -107,6 +107,8 @@ impl Executor {
         Ok(revisions)
     }
 
+
+    #[allow(clippy::expect_fun_call)]
     pub fn run_revision(&mut self, revision: &AnnotatedRevision) -> Result<()> {
         let insert_revision = INSERT_REVISION
             .replace("$$schema$$", &self.schema)
@@ -115,9 +117,11 @@ impl Executor {
         let statements = revision
             .contents
             .as_ref()
-            .expect(format!("No content for {}", revision.filename).as_str());
+            // FIXME: This should bubble an error up rather than panic
+            // Once fixed, removed the allow[clippy(..)] attribute
+            .expect(&format!("No content for {}", revision.filename));
 
-        let _ = self.client.batch_execute(statements.as_str())?;
+        self.client.batch_execute(statements.as_str())?;
 
         let _ = self.client.execute(
             insert_revision.as_str(),

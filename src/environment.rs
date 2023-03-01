@@ -24,7 +24,7 @@ impl Environment {
             return Err(Error::FileNotValid(envpath.display().to_string()));
         }
 
-        let contents = fs::read_to_string(&envpath)?;
+        let contents = fs::read_to_string(envpath)?;
         let env: Result<Self> = toml::from_str(&contents)
             .map_err(|e| Error::TomlInvalid(e, envpath.display().to_string()));
 

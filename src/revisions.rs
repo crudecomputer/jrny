@@ -3,7 +3,7 @@ use sha2::{Digest, Sha256};
 use std::cmp::Ordering;
 use std::convert::TryFrom;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::{Error, Result};
 
@@ -27,8 +27,8 @@ pub struct RevisionFile {
 impl RevisionFile {
     /// Attempts to read revision directory to convert all entries (assumed to be SQL files)
     /// into metadata objects with contents stored.
-    pub fn all_from_disk(revisions: &PathBuf) -> Result<Vec<Self>> {
-        let mut entries = fs::read_dir(revisions.as_path())?
+    pub fn all_from_disk(revisions: &Path) -> Result<Vec<Self>> {
+    let mut entries = fs::read_dir(revisions)?
             .map(|res| res.map(|e| e.path()).map_err(Error::IoError))
             .collect::<Result<Vec<_>>>()?;
 
@@ -44,8 +44,7 @@ impl TryFrom<&PathBuf> for RevisionFile {
     fn try_from(p: &PathBuf) -> std::result::Result<Self, Self::Error> {
         let filename = p
             .file_name()
-            .map(|os_str| os_str.to_str())
-            .flatten()
+            .and_then(|os_str| os_str.to_str())
             .ok_or_else(|| Error::FileNotValid(p.display().to_string()))?;
 
         let title = RevisionTitle::try_from(filename)?;

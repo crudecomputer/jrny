@@ -66,10 +66,13 @@ struct CliConfig {
     filepath: Option<PathBuf>,
 }
 
-impl CliConfig {
-    fn to_cfg(self) -> JrnyResult<Config> {
-        let confpath = self.filepath.unwrap_or_else(|| PathBuf::from(CONF));
-        Config::from_filepath(&confpath)
+impl TryFrom<CliConfig> for Config {
+    type Error = JrnyError;
+
+    fn try_from(cli_cfg: CliConfig) -> Result<Self, Self::Error> {
+        let confpath = cli_cfg.filepath.unwrap_or_else(|| PathBuf::from(CONF));
+
+        Self::from_filepath(&confpath)
     }
 }
 
@@ -88,7 +91,7 @@ struct CliEnvironment {
 
 // Can't implement from/into traits if `Config` is involved, since it's technically foreign
 impl CliEnvironment {
-    fn to_env(self, cfg: &Config) -> JrnyResult<Environment> {
+    fn jrny_environment(self, cfg: &Config) -> JrnyResult<Environment> {
         let envpath = self
             .filepath
             .unwrap_or_else(|| cfg.revisions.directory.parent().unwrap().join(ENV));
@@ -139,21 +142,21 @@ fn begin(cmd: Begin) -> JrnyResult<()> {
 }
 
 fn plan(cmd: Plan) -> JrnyResult<()> {
-    let cfg = cmd.cfg.to_cfg()?;
+    let cfg: Config = cmd.cfg.try_into()?;
 
     jrny::plan(&cfg, &cmd.name)
 }
 
 fn review(cmd: Review) -> JrnyResult<()> {
-    let cfg = cmd.cfg.to_cfg()?;
-    let env = cmd.env.to_env(&cfg)?;
+    let cfg: Config = cmd.cfg.try_into()?;
+    let env = cmd.env.jrny_environment(&cfg)?;
 
     jrny::review(&cfg, &env)
 }
 
 fn embark(cmd: Embark) -> JrnyResult<()> {
-    let cfg = cmd.cfg.to_cfg()?;
-    let env = cmd.env.to_env(&cfg)?;
+    let cfg: Config = cmd.cfg.try_into()?;
+    let env = cmd.env.jrny_environment(&cfg)?;
 
     jrny::embark(&cfg, &env)
 }
