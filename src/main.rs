@@ -1,17 +1,9 @@
 use std::path::PathBuf;
 
-use clap::{Parser, crate_version};
+use clap::{crate_version, Parser};
 use log::{warn, LevelFilter};
 
-use jrny::{
-    CONF,
-    ENV,
-    Config,
-    Environment,
-    Error as JrnyError,
-    Logger,
-    Result as JrnyResult,
-};
+use jrny::{Config, Environment, Error as JrnyError, Logger, Result as JrnyResult, CONF, ENV};
 
 /// PostgreSQL schema revisions made easy - just add SQL!
 #[derive(Parser, Debug)]
@@ -53,7 +45,7 @@ struct Review {
     cfg: CliConfig,
 
     #[clap(flatten)]
-    env: CliEnvironment
+    env: CliEnvironment,
 }
 
 /// Applies pending revisions upon successful review
@@ -74,10 +66,13 @@ struct CliConfig {
     filepath: Option<PathBuf>,
 }
 
-impl CliConfig {
-    fn to_cfg(self) -> JrnyResult<Config> {
-        let confpath = self.filepath.unwrap_or_else(|| PathBuf::from(CONF));
-        Config::from_filepath(&confpath)
+impl TryFrom<CliConfig> for Config {
+    type Error = JrnyError;
+
+    fn try_from(cli_cfg: CliConfig) -> Result<Self, Self::Error> {
+        let confpath = cli_cfg.filepath.unwrap_or_else(|| PathBuf::from(CONF));
+
+        Self::from_filepath(&confpath)
     }
 }
 
@@ -96,13 +91,10 @@ struct CliEnvironment {
 
 // Can't implement from/into traits if `Config` is involved, since it's technically foreign
 impl CliEnvironment {
-    fn to_env(self, cfg: &Config) -> JrnyResult<Environment> {
-        let envpath = self.filepath
-            .unwrap_or_else(|| cfg.revisions.directory
-                .parent()
-                .unwrap()
-                .join(ENV)
-            );
+    fn jrny_environment(self, cfg: &Config) -> JrnyResult<Environment> {
+        let envpath = self
+            .filepath
+            .unwrap_or_else(|| cfg.revisions.directory.parent().unwrap().join(ENV));
 
         // This validates the env file, even if someone overrides it with the
         // database url flag. The file itself is optional as long as the
@@ -112,7 +104,7 @@ impl CliEnvironment {
             Err(err) => match err {
                 JrnyError::EnvNotFound => Ok(None),
                 e => Err(e),
-            }
+            },
         })?;
 
         match self.database_url {
@@ -120,7 +112,7 @@ impl CliEnvironment {
             None => match env_file {
                 Some(env) => Ok(env),
                 None => Err(JrnyError::EnvNotFound),
-            }
+            },
         }
     }
 }
@@ -130,12 +122,12 @@ fn main() {
         .map(|()| log::set_max_level(LevelFilter::Info))
         .map_err(|e| e.to_string())
         .unwrap();
-    
+
     let opts: Opts = Opts::parse();
 
     let result = match opts.subcmd {
-        SubCommand::Begin(cmd)  => begin(cmd),
-        SubCommand::Plan(cmd)   => plan(cmd),
+        SubCommand::Begin(cmd) => begin(cmd),
+        SubCommand::Plan(cmd) => plan(cmd),
         SubCommand::Review(cmd) => review(cmd),
         SubCommand::Embark(cmd) => embark(cmd),
     };
@@ -150,21 +142,21 @@ fn begin(cmd: Begin) -> JrnyResult<()> {
 }
 
 fn plan(cmd: Plan) -> JrnyResult<()> {
-    let cfg = cmd.cfg.to_cfg()?;
+    let cfg: Config = cmd.cfg.try_into()?;
 
     jrny::plan(&cfg, &cmd.name)
 }
 
 fn review(cmd: Review) -> JrnyResult<()> {
-    let cfg = cmd.cfg.to_cfg()?;
-    let env = cmd.env.to_env(&cfg)?;
+    let cfg: Config = cmd.cfg.try_into()?;
+    let env = cmd.env.jrny_environment(&cfg)?;
 
     jrny::review(&cfg, &env)
 }
 
 fn embark(cmd: Embark) -> JrnyResult<()> {
-    let cfg = cmd.cfg.to_cfg()?;
-    let env = cmd.env.to_env(&cfg)?;
+    let cfg: Config = cmd.cfg.try_into()?;
+    let env = cmd.env.jrny_environment(&cfg)?;
 
     jrny::embark(&cfg, &env)
 }

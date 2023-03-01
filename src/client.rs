@@ -1,11 +1,7 @@
-use std::{
-    convert::TryFrom,
-    str::FromStr,
-    time::Duration,
-};
+use std::{convert::TryFrom, str::FromStr, time::Duration};
 
-use postgres::{config::Config, NoTls};
 pub use postgres::Client;
+use postgres::{config::Config, NoTls};
 
 use crate::Environment;
 

@@ -1,13 +1,7 @@
 use log::info;
 
 use super::Review;
-use crate::{
-    executor::Executor,
-    revisions::AnnotatedRevision,
-    Config,
-    Error,
-    Result,
-};
+use crate::{executor::Executor, revisions::AnnotatedRevision, Config, Error, Result};
 
 pub struct Embark {
     pub to_apply: Vec<AnnotatedRevision>,
@@ -15,10 +9,8 @@ pub struct Embark {
 
 impl Embark {
     pub fn prepare(cfg: &Config, exec: &mut Executor) -> Result<Self> {
-        let Review { mut revisions, .. } = Review::annotated_revisions(
-            exec,
-            &cfg.revisions.directory,
-        )?;
+        let Review { mut revisions, .. } =
+            Review::annotated_revisions(exec, &cfg.revisions.directory)?;
 
         // TODO this is copypasta
         let mut last_applied_index = -1;
@@ -77,7 +69,7 @@ impl Embark {
 
         for revision in &self.to_apply {
             info!("  {}", revision.filename);
-            exec.run_revision(&revision)?;
+            exec.run_revision(revision)?;
         }
 
         Ok(())

@@ -1,16 +1,6 @@
-use std::{
-    fs,
-    io::Write,
-    path::PathBuf,
-};
+use std::{fs, io::Write, path::{Path, PathBuf}};
 
-use crate::{
-    CONF,
-    ENV,
-    ENV_EX,
-    Error,
-    Result,
-};
+use crate::{Error, Result, CONF, ENV, ENV_EX};
 
 const CONF_TEMPLATE: &str = r#"# jrny config
 
@@ -76,10 +66,9 @@ const ENV_EX_TEMPLATE: &str = r#"# jrny environment EXAMPLE FILE
 url = "postgresql://user:password@host:port/dbname"
 "#;
 
-fn is_empty_dir(p: &PathBuf) -> Result<bool> {
+fn is_empty_dir(p: &Path) -> Result<bool> {
     Ok(p.is_dir() && p.read_dir()?.next().is_none())
 }
-
 
 #[derive(Debug)]
 pub(super) struct BeginPaths {
@@ -91,8 +80,8 @@ pub(super) struct BeginPaths {
 }
 
 impl BeginPaths {
-    pub fn new(root_dir: &PathBuf) -> Result<Self> {
-        let root_dir = root_dir.clone();
+    pub fn new(root_dir: &Path) -> Result<Self> {
+        let root_dir = root_dir.to_path_buf();
 
         let paths = Self {
             conf_file: root_dir.join(CONF),
@@ -118,7 +107,9 @@ impl BeginPaths {
         }
 
         if self.revisions_dir.exists() && !is_empty_dir(&self.revisions_dir)? {
-            return Err(PathNotEmptyDirectory(self.revisions_dir.display().to_string()));
+            return Err(PathNotEmptyDirectory(
+                self.revisions_dir.display().to_string(),
+            ));
         }
 
         for f in [&self.conf_file, &self.env_file, &self.env_ex_file] {
@@ -142,7 +133,7 @@ pub(super) struct Begin {
 }
 
 impl Begin {
-    pub(super) fn new(project_directory: &PathBuf) -> Result<Self> {
+    pub(super) fn new(project_directory: &Path) -> Result<Self> {
         let paths = BeginPaths::new(project_directory)?;
 
         Ok(Self {

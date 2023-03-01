@@ -1,14 +1,8 @@
-use std::{
-    fs,
-    path::PathBuf,
-};
+use std::{fs, path::PathBuf};
 
 use serde::Deserialize;
 
-use crate::{
-    error::Error,
-    Result,
-};
+use crate::{error::Error, Result};
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct DatabaseEnvironment {
@@ -30,7 +24,7 @@ impl Environment {
             return Err(Error::FileNotValid(envpath.display().to_string()));
         }
 
-        let contents = fs::read_to_string(&envpath)?;
+        let contents = fs::read_to_string(envpath)?;
         let env: Result<Self> = toml::from_str(&contents)
             .map_err(|e| Error::TomlInvalid(e, envpath.display().to_string()));
 

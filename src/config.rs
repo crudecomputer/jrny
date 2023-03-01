@@ -1,14 +1,8 @@
-use std::{
-    fs,
-    path::PathBuf,
-};
+use std::{fs, path::PathBuf};
 
 use serde::Deserialize;
 
-use crate::{
-    Error,
-    Result,
-};
+use crate::{Error, Result};
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct RevisionsSettings {
@@ -37,15 +31,13 @@ impl Config {
             return Err(Error::FileNotValid(confpath.display().to_string()));
         }
 
-        let contents = fs::read_to_string(&confpath)?;
+        let contents = fs::read_to_string(confpath)?;
         let mut config: Self = toml::from_str(&contents)
             .map_err(|e| Error::TomlInvalid(e, confpath.display().to_string()))?;
 
         // The revisions directory is relative to the config file itself,
         // not the current working directory.
-        config.revisions.directory = confpath
-            .parent().unwrap()
-            .join(&config.revisions.directory);
+        config.revisions.directory = confpath.parent().unwrap().join(&config.revisions.directory);
 
         Ok(config)
     }
