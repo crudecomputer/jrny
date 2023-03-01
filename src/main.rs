@@ -1,17 +1,9 @@
 use std::path::PathBuf;
 
-use clap::{Parser, crate_version};
+use clap::{crate_version, Parser};
 use log::{warn, LevelFilter};
 
-use jrny::{
-    CONF,
-    ENV,
-    Config,
-    Environment,
-    Error as JrnyError,
-    Logger,
-    Result as JrnyResult,
-};
+use jrny::{Config, Environment, Error as JrnyError, Logger, Result as JrnyResult, CONF, ENV};
 
 /// PostgreSQL schema revisions made easy - just add SQL!
 #[derive(Parser, Debug)]
@@ -53,7 +45,7 @@ struct Review {
     cfg: CliConfig,
 
     #[clap(flatten)]
-    env: CliEnvironment
+    env: CliEnvironment,
 }
 
 /// Applies pending revisions upon successful review
@@ -97,12 +89,9 @@ struct CliEnvironment {
 // Can't implement from/into traits if `Config` is involved, since it's technically foreign
 impl CliEnvironment {
     fn to_env(self, cfg: &Config) -> JrnyResult<Environment> {
-        let envpath = self.filepath
-            .unwrap_or_else(|| cfg.revisions.directory
-                .parent()
-                .unwrap()
-                .join(ENV)
-            );
+        let envpath = self
+            .filepath
+            .unwrap_or_else(|| cfg.revisions.directory.parent().unwrap().join(ENV));
 
         // This validates the env file, even if someone overrides it with the
         // database url flag. The file itself is optional as long as the
@@ -112,7 +101,7 @@ impl CliEnvironment {
             Err(err) => match err {
                 JrnyError::EnvNotFound => Ok(None),
                 e => Err(e),
-            }
+            },
         })?;
 
         match self.database_url {
@@ -120,7 +109,7 @@ impl CliEnvironment {
             None => match env_file {
                 Some(env) => Ok(env),
                 None => Err(JrnyError::EnvNotFound),
-            }
+            },
         }
     }
 }
@@ -130,12 +119,12 @@ fn main() {
         .map(|()| log::set_max_level(LevelFilter::Info))
         .map_err(|e| e.to_string())
         .unwrap();
-    
+
     let opts: Opts = Opts::parse();
 
     let result = match opts.subcmd {
-        SubCommand::Begin(cmd)  => begin(cmd),
-        SubCommand::Plan(cmd)   => plan(cmd),
+        SubCommand::Begin(cmd) => begin(cmd),
+        SubCommand::Plan(cmd) => plan(cmd),
         SubCommand::Review(cmd) => review(cmd),
         SubCommand::Embark(cmd) => embark(cmd),
     };
