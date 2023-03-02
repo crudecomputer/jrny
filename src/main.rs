@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, process::ExitCode};
 
 use clap::{crate_version, Parser};
 use log::{warn, LevelFilter};
@@ -117,7 +117,7 @@ impl CliEnvironment {
     }
 }
 
-fn main() {
+fn main() -> ExitCode {
     log::set_logger(&Logger)
         .map(|()| log::set_max_level(LevelFilter::Info))
         .map_err(|e| e.to_string())
@@ -132,8 +132,20 @@ fn main() {
         SubCommand::Embark(cmd) => embark(cmd),
     };
 
-    if let Err(e) = result {
-        warn!("Error: {}", e);
+    // Returning the result directly would debugs print the error and exit with an
+    // appropriate code, but return an ExitCode instead so that there is
+    // greater control over logging and formatting messages.
+    //
+    // See: https://doc.rust-lang.org/std/process/struct.ExitCode.html#impl-ExitCode
+    match result {
+        Ok(_) => ExitCode::SUCCESS,
+        Err(e) => {
+            warn!("Error: {}", e);
+
+            // TODO: More fine-grained error-dependent codes?
+            // See: https://github.com/kevlarr/jrny/issues/33
+            ExitCode::FAILURE
+        }
     }
 }
 
