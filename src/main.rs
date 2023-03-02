@@ -143,6 +143,7 @@ fn main() -> ExitCode {
             warn!("Error: {}", e);
 
             // TODO: More fine-grained error-dependent codes?
+            // See: https://github.com/kevlarr/jrny/issues/33
             ExitCode::FAILURE
         }
     }
