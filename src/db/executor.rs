@@ -1,8 +1,9 @@
 use log::info;
 use postgres::Client;
 
+use crate::context::{Config, Environment};
 use crate::revisions::{AnnotatedRevision, RevisionRecord};
-use crate::{Config, Environment, Result};
+use crate::Result;
 
 const CREATE_SCHEMA: &str = "
 CREATE SCHEMA $$schema$$

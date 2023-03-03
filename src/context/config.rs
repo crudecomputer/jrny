@@ -16,6 +16,8 @@ pub struct TableSettings {
     pub name: String,
 }
 
+/// Project-specific settings that do not contain sensitive information and
+/// are likely to be consistent across environments.
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
     pub revisions: RevisionsSettings,

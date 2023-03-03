@@ -4,7 +4,8 @@ use std::process::ExitCode;
 use clap::{crate_version, Parser};
 use log::{warn, LevelFilter};
 
-use jrny::{Config, Environment, Error as JrnyError, Logger, Result as JrnyResult, CONF, ENV};
+use jrny::{Error as JrnyError, Logger, Result as JrnyResult, CONF, ENV};
+use jrny::context::{Config, Environment};
 
 /// PostgreSQL schema revisions made easy - just add SQL!
 #[derive(Parser, Debug)]
@@ -157,7 +158,8 @@ fn begin(cmd: Begin) -> JrnyResult<()> {
 fn plan(cmd: Plan) -> JrnyResult<()> {
     let cfg: Config = cmd.cfg.try_into()?;
 
-    jrny::plan(&cfg, &cmd.name)
+    // TODO: Allow passing in file contents via command-line?
+    jrny::plan(&cfg, &cmd.name, None)
 }
 
 fn review(cmd: Review) -> JrnyResult<()> {

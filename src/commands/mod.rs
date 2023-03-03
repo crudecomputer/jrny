@@ -5,8 +5,9 @@ use std::path::Path;
 use chrono::{DateTime, Local, Utc};
 use log::{info, warn};
 
+use crate::context::{Config, Environment};
 use crate::revisions::RevisionFile;
-use crate::{Config, Environment, Executor, Result};
+use crate::{Executor, Result};
 
 mod begin;
 mod embark;
@@ -51,7 +52,7 @@ pub fn begin(dirpath: &Path) -> Result<()> {
 
 /// Generates a new empty revision file with the given name in the
 /// revisions directory specified by the provided config.
-pub fn plan(cfg: &Config, name: &str) -> Result<()> {
+pub fn plan(cfg: &Config, name: &str, contents: Option<&str>) -> Result<()> {
     let timestamp = Utc::now().timestamp();
     let next_id = RevisionFile::all_from_disk(&cfg.revisions.directory)?
         .iter()
@@ -62,7 +63,9 @@ pub fn plan(cfg: &Config, name: &str) -> Result<()> {
     let new_filename = format!("{:03}.{}.{}.sql", next_id, timestamp, name);
     let new_path = cfg.revisions.directory.join(new_filename);
 
-    let contents = format!(
+    let contents = contents
+        .map(|c| c.to_owned())
+        .unwrap_or_else(|| format!(
         "-- Revision: {name}
 --
 -- Add description here
@@ -74,7 +77,7 @@ begin;
 commit;
 ",
         name = name
-    );
+    ));
 
     fs::File::create(&new_path)?.write_all(contents.as_bytes())?;
 

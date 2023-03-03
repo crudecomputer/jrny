@@ -10,6 +10,8 @@ pub struct DatabaseEnvironment {
     pub url: String,
 }
 
+/// Project-specific settings that do contain sensitive information or
+/// vary across environments.
 #[derive(Clone, Debug, Deserialize)]
 pub struct Environment {
     pub database: DatabaseEnvironment,
