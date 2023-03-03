@@ -14,6 +14,21 @@ This project also attempts to adhere to [Semantic Versioning](https://semver.org
 
 ---
 
+## [2.0.0-beta.7] - 2023-03-03
+
+### Added
+- Added doc comments to all public modules, types, and functions
+- Basic instructions for using `jrny` as a library instead of an executable
+
+### Changed
+- `crate::config` and `crate::environment` moved inside of `crate::context` with all types re-exported
+- `crate::client` and `crate::executor` moved inside of `crate::db` and re-exported
+- `jrny::plan` has a new `contents: Option<&str>` parameter to allow programmatically
+writing a new, non-empty revision file
+
+### Removed
+- `Logger` moved from `crate::logger` to `main`
+
 ## [2.0.0-beta.6] - 2023-03-01
 
 ### Changed
