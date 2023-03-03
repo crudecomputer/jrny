@@ -1,5 +1,3 @@
-use std::convert::TryFrom;
-
 use log::info;
 use postgres::Client;
 
