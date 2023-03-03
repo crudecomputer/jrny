@@ -41,19 +41,19 @@ but it can also be used [as a library](#library-usage).
 Assuming `cargo` is installed (easiest is using [rustup](<https://rustup.rs/>)) then simply run:
 
 ```bash
-$ cargo install jrny --version 2.0.0-beta.5
+$ cargo install jrny --version 2.0.0-beta.7
 
     Updating crates.io index
-  Downloaded jrny v2.0.0-beta.5
+  Downloaded jrny v2.0.0-beta.7
   Downloaded 1 crate (28.6 KB) in 0.39s
-  Installing jrny v2.0.0-beta.5
+  Installing jrny v2.0.0-beta.7
    ...
    ...
    ...
-   Compiling jrny v1.3.0
+   Compiling jrny v2.0.0-beta.7
     Finished release [optimized] target(s) in 2m 03s
   Installing /Users/<user>/.cargo/bin/jrny
-   Installed package `jrny v2.0.0-beta.5` (executable `jrny`)
+   Installed package `jrny v2.0.0-beta.7` (executable `jrny`)
 ```
 
 ### Usage
