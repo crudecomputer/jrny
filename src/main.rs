@@ -1,4 +1,5 @@
-use std::{path::PathBuf, process::ExitCode};
+use std::path::PathBuf;
+use std::process::ExitCode;
 
 use clap::{crate_version, Parser};
 use log::{warn, LevelFilter};

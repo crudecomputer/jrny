@@ -1,16 +1,16 @@
 pub mod commands;
 
+mod context;
 mod db;
 mod error;
 mod logger;
 mod revisions;
-mod context;
 
 pub use commands::*;
-pub use error::Error;
-pub use logger::Logger;
 pub use context::config::Config;
 pub use context::environment::Environment;
+pub use error::Error;
+pub use logger::Logger;
 
 pub(crate) use db::executor::Executor;
 

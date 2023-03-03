@@ -1,10 +1,9 @@
-use std::{collections::HashMap, path::Path, rc::Rc};
+use std::collections::HashMap;
+use std::path::Path;
+use std::rc::Rc;
 
-use crate::{
-    Executor,
-    revisions::{AnnotatedRevision, RevisionFile, RevisionRecord},
-    Result,
-};
+use crate::revisions::{AnnotatedRevision, RevisionFile, RevisionRecord};
+use crate::{Executor, Result};
 
 pub(super) struct Review {
     pub(super) revisions: Vec<AnnotatedRevision>,

@@ -1,4 +1,8 @@
-use std::{env, fmt, io, num};
+use std::env;
+use std::fmt;
+use std::io;
+use std::num;
+
 use toml::de::Error as TomlError;
 
 // TODO This has gotten a bit unwieldy.

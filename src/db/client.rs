@@ -1,4 +1,6 @@
-use std::{convert::TryFrom, str::FromStr, time::Duration};
+use std::convert::TryFrom;
+use std::str::FromStr;
+use std::time::Duration;
 
 pub use postgres::Client;
 use postgres::{config::Config, NoTls};

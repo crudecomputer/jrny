@@ -1,8 +1,9 @@
-use std::{fs, path::PathBuf};
+use std::fs;
+use std::path::PathBuf;
 
 use serde::Deserialize;
 
-use crate::{error::Error, Result};
+use crate::{Error, Result};
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct DatabaseEnvironment {

@@ -1,8 +1,9 @@
 //! Basic implementation of a Log, as none of the complexity of
 //! common crates is particularly necessary here.
 //! See: <https://docs.rs/log/0.4.11/log/#implementing-a-logger>
-use log::{Level, Log, Metadata, Record};
 use std::io::Write;
+
+use log::{Level, Log, Metadata, Record};
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 pub struct Logger;

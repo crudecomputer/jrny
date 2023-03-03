@@ -1,9 +1,12 @@
-use std::{fs, io::Write, path::Path};
+use std::fs;
+use std::io::Write;
+use std::path::Path;
 
 use chrono::{DateTime, Local, Utc};
 use log::{info, warn};
 
-use crate::{Executor, revisions::RevisionFile, Config, Environment, Result};
+use crate::revisions::RevisionFile;
+use crate::{Config, Environment, Executor, Result};
 
 mod begin;
 mod embark;
