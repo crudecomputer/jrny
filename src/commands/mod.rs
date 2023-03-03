@@ -3,7 +3,7 @@ use std::{fs, io::Write, path::Path};
 use chrono::{DateTime, Local, Utc};
 use log::{info, warn};
 
-use crate::{executor::Executor, revisions::RevisionFile, Config, Environment, Result};
+use crate::{Executor, revisions::RevisionFile, Config, Environment, Result};
 
 mod begin;
 mod embark;

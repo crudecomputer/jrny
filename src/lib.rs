@@ -1,21 +1,21 @@
 pub mod commands;
 
-mod client;
-mod config;
-mod environment;
+mod db;
 mod error;
-mod executor;
 mod logger;
 mod revisions;
+mod context;
 
 pub use commands::*;
-pub use config::Config;
-pub use environment::Environment;
 pub use error::Error;
 pub use logger::Logger;
+pub use context::config::Config;
+pub use context::environment::Environment;
+
+pub(crate) use db::executor::Executor;
 
 // Crate result type
-pub type Result<T> = std::result::Result<T, error::Error>;
+pub type Result<T> = std::result::Result<T, Error>;
 
 /// The default name of the config file
 pub const CONF: &str = "jrny.toml";

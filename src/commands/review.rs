@@ -1,7 +1,7 @@
 use std::{collections::HashMap, path::Path, rc::Rc};
 
 use crate::{
-    executor::Executor,
+    Executor,
     revisions::{AnnotatedRevision, RevisionFile, RevisionRecord},
     Result,
 };

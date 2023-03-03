@@ -1,7 +1,7 @@
 use log::info;
 
 use super::Review;
-use crate::{executor::Executor, revisions::AnnotatedRevision, Config, Error, Result};
+use crate::{Executor, revisions::AnnotatedRevision, Config, Error, Result};
 
 pub struct Embark {
     pub to_apply: Vec<AnnotatedRevision>,
