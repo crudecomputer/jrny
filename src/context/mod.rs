@@ -1,3 +1,5 @@
+//! Structs to represent the project configuration and environment
+//! in which to run the commands.
 mod config;
 mod environment;
 

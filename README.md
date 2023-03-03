@@ -366,11 +366,7 @@ fn main() {
             name: "jrny_revision".to_owned(),
         },
     };
-    let env = ctx::Environment {
-        database: ctx::DatabaseEnvironment {
-            url: env::var("DATABASE_URL").unwrap(),
-        },
-    };
+    let env = ctx::Environment::from_database_url(&env::var("DATABASE_URL").unwrap());
 
     // Create a new empty migration
     jrny::plan(&cfg, "my first migration", None).unwrap();

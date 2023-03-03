@@ -5,14 +5,19 @@ use serde::Deserialize;
 
 use crate::{Error, Result};
 
+/// Configuration values specific to the revision files on disk.
 #[derive(Clone, Debug, Deserialize)]
 pub struct RevisionsSettings {
+    /// The directory containing the SQL revision files
     pub directory: PathBuf,
 }
 
+/// Configuration values indicating the database table in which to store revision metadata.
 #[derive(Clone, Debug, Deserialize)]
 pub struct TableSettings {
+    /// The name of the database schema containing the revisions table
     pub schema: String,
+    /// The name of the table to hold revisions metadata
     pub name: String,
 }
 
@@ -25,6 +30,8 @@ pub struct Config {
 }
 
 impl Config {
+    /// Attempts to load a TOML file from the given path and serialize it
+    /// into a `Config` instance.
     pub fn from_filepath(confpath: &PathBuf) -> Result<Self> {
         if !confpath.exists() {
             return Err(Error::ConfigNotFound(confpath.display().to_string()));
