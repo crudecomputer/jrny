@@ -63,10 +63,9 @@ pub fn plan(cfg: &Config, name: &str, contents: Option<&str>) -> Result<()> {
     let new_filename = format!("{:03}.{}.{}.sql", next_id, timestamp, name);
     let new_path = cfg.revisions.directory.join(new_filename);
 
-    let contents = contents
-        .map(|c| c.to_owned())
-        .unwrap_or_else(|| format!(
-        "-- Revision: {name}
+    let contents = contents.map(|c| c.to_owned()).unwrap_or_else(|| {
+        format!(
+            "-- Revision: {name}
 --
 -- Add description here
 
@@ -76,8 +75,9 @@ begin;
 
 commit;
 ",
-        name = name
-    ));
+            name = name
+        )
+    });
 
     fs::File::create(&new_path)?.write_all(contents.as_bytes())?;
 

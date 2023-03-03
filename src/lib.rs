@@ -3,12 +3,10 @@ mod commands;
 pub mod context;
 mod db;
 mod error;
-mod logger;
 mod revisions;
 
-pub use commands::{begin, plan, review, embark};
+pub use commands::{begin, embark, plan, review};
 pub use error::Error;
-pub use logger::Logger;
 
 pub(crate) use db::executor::Executor;
 

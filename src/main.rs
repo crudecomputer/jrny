@@ -1,11 +1,13 @@
+use std::io::Write;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{crate_version, Parser};
-use log::{warn, LevelFilter};
+use log::{warn, Level, LevelFilter, Log, Metadata, Record};
+use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
-use jrny::{Error as JrnyError, Logger, Result as JrnyResult, CONF, ENV};
 use jrny::context::{Config, Environment};
+use jrny::{Error as JrnyError, Result as JrnyResult, CONF, ENV};
 
 /// PostgreSQL schema revisions made easy - just add SQL!
 #[derive(Parser, Debug)]
@@ -117,6 +119,43 @@ impl CliEnvironment {
             },
         }
     }
+}
+
+// Basic implementation of a Log, as none of the complexity of
+// common crates is particularly necessary here and the CLI tool
+// just wants to print info! and warn! as basic messages
+//
+// See: https://docs.rs/log/0.4.11/log/#implementing-a-logger
+struct Logger;
+
+impl Log for Logger {
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= Level::Info
+    }
+
+    fn log(&self, record: &Record) {
+        if !self.enabled(record.metadata()) {
+            return;
+        }
+
+        if record.metadata().level() == Level::Warn {
+            let mut stderr = StandardStream::stderr(ColorChoice::Always);
+
+            stderr
+                .set_color(ColorSpec::new().set_fg(Some(Color::Red)))
+                .unwrap();
+            write!(&mut stderr, "{}", record.args()).unwrap();
+
+            stderr.set_color(ColorSpec::new().set_fg(None)).unwrap();
+            writeln!(&mut stderr).unwrap();
+
+            return;
+        }
+
+        println!("{}", record.args());
+    }
+
+    fn flush(&self) {}
 }
 
 fn main() -> ExitCode {
