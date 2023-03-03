@@ -1,9 +1,9 @@
-use chrono::{DateTime, TimeZone, Utc};
-use sha2::{Digest, Sha256};
 use std::cmp::Ordering;
-use std::convert::TryFrom;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+use chrono::{DateTime, TimeZone, Utc};
+use sha2::{Digest, Sha256};
 
 use crate::{Error, Result};
 
@@ -28,7 +28,7 @@ impl RevisionFile {
     /// Attempts to read revision directory to convert all entries (assumed to be SQL files)
     /// into metadata objects with contents stored.
     pub fn all_from_disk(revisions: &Path) -> Result<Vec<Self>> {
-    let mut entries = fs::read_dir(revisions)?
+        let mut entries = fs::read_dir(revisions)?
             .map(|res| res.map(|e| e.path()).map_err(Error::IoError))
             .collect::<Result<Vec<_>>>()?;
 

@@ -1,9 +1,10 @@
-use std::{convert::TryFrom, str::FromStr, time::Duration};
+use std::str::FromStr;
+use std::time::Duration;
 
 pub use postgres::Client;
 use postgres::{config::Config, NoTls};
 
-use crate::Environment;
+use crate::context::Environment;
 
 impl TryFrom<&Environment> for Client {
     type Error = crate::Error;

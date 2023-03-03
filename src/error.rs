@@ -1,11 +1,16 @@
-use std::{env, fmt, io, num};
+use std::env;
+use std::fmt;
+use std::io;
+use std::num;
+
 use toml::de::Error as TomlError;
 
-// TODO This has gotten a bit unwieldy.
-// Should these just be individual structs now to avoid
-// big matches anywhere?
+/// The canonical error type used throughout the crate.
 #[derive(Debug)]
 pub enum Error {
+    // TODO This has gotten a bit unwieldy.
+    // Should these just be individual structs now to avoid
+    // big matches anywhere, or module-leel enums?
     BadEnvVar(env::VarError, String),
     ConfigNotFound(String),
     DatabaseError(postgres::Error),

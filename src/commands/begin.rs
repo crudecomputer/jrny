@@ -1,4 +1,6 @@
-use std::{fs, io::Write, path::{Path, PathBuf}};
+use std::fs;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 
 use crate::{Error, Result, CONF, ENV, ENV_EX};
 

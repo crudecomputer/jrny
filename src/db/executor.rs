@@ -1,12 +1,9 @@
-use std::convert::TryFrom;
-
 use log::info;
 use postgres::Client;
 
-use crate::{
-    revisions::{AnnotatedRevision, RevisionRecord},
-    Config, Environment, Result,
-};
+use crate::context::{Config, Environment};
+use crate::revisions::{AnnotatedRevision, RevisionRecord};
+use crate::Result;
 
 const CREATE_SCHEMA: &str = "
 CREATE SCHEMA $$schema$$
@@ -106,7 +103,6 @@ impl Executor {
 
         Ok(revisions)
     }
-
 
     #[allow(clippy::expect_fun_call)]
     pub fn run_revision(&mut self, revision: &AnnotatedRevision) -> Result<()> {

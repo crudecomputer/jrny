@@ -6,14 +6,12 @@
 
 In other words: **USE WITH DISCRETION**
 
----
-
 ## Overview
 
-A lot of great schema migration tools already exist (like [dbmate](https://github.com/amacneil/dbmate)),
-but there is still room for others.
+Other SQL-based schema migration tools already exist (like [dbmate](<https://github.com/amacneil/dbmate>)),
+but there is still room for another.
 
-`jrny` offers an alternative for people who...
+`jrny` is an option for people who...
 
 * ... think database revision files should be an immutable record and are **guaranteed to represent** what was applied to database
 
@@ -21,7 +19,7 @@ but there is still room for others.
 
 * ... would **rather write SQL** than translate it to method calls or YAML entries that are often more verbose and less documented
 
-* ... want **explicit control of transactions** and ignore them or leverage them across multiple revisions
+* ... want **explicit control of transactions** and the ability to easily ignore them or leverage them across multiple revisions
 
 * ... prefer to **install compiled binaries** rather than manage a language and dependencies on whatever system(s) run migrations
 
@@ -29,30 +27,18 @@ but there is still room for others.
 
 * ... believe that **separating migrations from application deploys** encourages one to write non-breaking migrations and helps enable zero-downtime updates
 
-* ... think **down-migrations are unnecessary**<sup>1</sup> at best and dangerous at worst, especially as they make it trivially easy to 'change' history by forgetting to add a preexisting index, check constraint, etc. during the upgrade/downgrade/edit/upgrade cycle.
+* ... prefer to **avoid reverse migrations**, especially as they make it trivially easy to 'change' history by forgetting to add a preexisting index, check constraint, etc. during a typical upgrade/downgrade/edit/upgrade cycle. (Feel free to add your thoughts on this subject [here](<https://github.com/kevlarr/jrny/issues/25>))
 
-> <sup>1</sup> Down-migrations are great for iteratively developing complex schema changes,
-> as it lets the developer make a small change, roll it back, add another change, etc. until
-> the migration performs as intended.
->
-> *One alternative*, especially for those of us who prefer SQL,
-> is to **iterate on statements within a transaction** in another client (eg. `psql`) and then just
-> add the final statements to a revision & apply. Using a transaction and another client to test SQL
-> statements *also* means the developer can explore schema changes interactively. *Rollbacks are great, m'kay.*
->
-> A *second* alternative is to drop the local database and re-create it if a revisions needs
-> to be adjusted. This strongly encourages setting up seed files, too, which is huge for
-> having easily set-up developer environments.
->
-> Okay, okay, down migrations are useful in development. They'll probably be supported in the future.
+## CLI Usage
 
----
+`jrny` is primarily intended to be used as a precompiled, standalone CLI tool,
+but it can also be used [as a library](#library-usage).
 
-## Installation
+### Installation
 
-### From source
+#### From source
 
-Assuming `cargo` is installed (easiest is using [rustup](https://rustup.rs/)) then simply run:
+Assuming `cargo` is installed (easiest is using [rustup](<https://rustup.rs/>)) then simply run:
 
 ```bash
 $ cargo install jrny --version 2.0.0-beta.5
@@ -70,9 +56,7 @@ $ cargo install jrny --version 2.0.0-beta.5
    Installed package `jrny v2.0.0-beta.5` (executable `jrny`)
 ```
 
----
-
-## Usage
+### Usage
 
 There are **4 steps** to managing schema changes with `jrny`:
 
@@ -81,7 +65,7 @@ There are **4 steps** to managing schema changes with `jrny`:
 3. `review`
 4. `embark`
 
-### Begin the journey
+#### Begin the journey
 
 Project setup is simple - all that is required is a config file and an empty revisions directory alongside it.
 These can be created manually or via `jrny begin`.
@@ -137,7 +121,7 @@ but changing their names (or running `jrny` outside of the
 project directory) will require passing in their paths via
 `-c [or --config]` and `-e [or --environment]` respectively.
 
-### Plan the journey
+#### Plan the journey
 
 To create a new SQL revision, run `jrny plan [-c <path-to-config>]` either specifying the path to the
 config file via `-c` or (if ommitted) by looking for `jrny.toml` in the current directory.
@@ -179,12 +163,12 @@ Revision filenames follow the pattern of `[id].[timestamp].[name].sql`.
 Timestamps are just great metadata to capture, and `jrny` assigns a sequential id to each file.
 The reason being this enforces a stricter revision order than simply using timestamps can,
 all without needing pointers between files.
-(For more information, see https://github.com/kevlarr/jrny/issues/17)
+(For more information, see the [rational behind sequencing](<https://github.com/kevlarr/jrny/issues/17>).)
 
 Gaps in the id sequence are fine (eg. if you create two new revisions, remove the first one, and then apply the second),
 and ids can be manually changed as long as the revision hasn't been applied.
 
-### Review the journey
+#### Review the journey
 
 To summarize the state of revisions, run `jrny review`.
 If you are outside of the project directory, you'll need to
@@ -229,7 +213,7 @@ The journey thus far
 
 Additionally, `jrny` performs several checks during review to guarantee that...
 
-#### ... all applied revisions are still present on disk
+##### ... all applied revisions are still present on disk
 
 If any revision files that have been applied are removed, review will fail with...
 
@@ -243,7 +227,7 @@ The journey thus far
     2  another-change                             14-Apr-2021 21:42:34     14-Apr-2021 22:32:35     No corresponding file could not be found
 ```
 
-#### ... all applied revision files have not changed since application (compared by SHA-256 checksum)
+##### ... all applied revision files have not changed since application (compared by SHA-256 checksum)
 
 Guaranteeing that revision files are still all present isn't useful without an additional
 guarantee that they haven't *changed* since being applied.
@@ -261,7 +245,7 @@ The journey thus far
 **Note:** This will fail with even the addition of whitespace or comments; there is currently
 no attempt to scrub those out prior to generating the checksums.
 
-#### ... all revisions have unique ids
+##### ... all revisions have unique ids
 
 Self-explanatory; an id isn't much of an id if it isn't unique.
 This is performed prior to applying to database,
@@ -289,7 +273,7 @@ The journey thus far
     3  yet-another-change                         14-Apr-2021 21:22:43     14-Apr-2021 21:37:17
 ```
 
-### Embark on the journey!
+#### Embark on the journey!
 
 To apply pending revisions, run `jrny embark`.
 
@@ -342,7 +326,70 @@ $ jrny embark
 No revisions to apply
 ```
 
----
+## Library Usage
+
+The `jrny` CLI tool is a thin wrapper around several structs and functions that can
+alternatively be imported into a Rust application, if one wants to manage revisions
+more programmatically.
+
+The library functions make no assumptions about configuration and environment, however;
+you must explicitly create those objects as necessary, which is admittedly
+not very ergonomic at the moment.
+
+For a complete (basic) example:
+
+```rust
+use std::env;
+use std::path::PathBuf;
+
+use jrny::context as ctx;
+
+
+fn main() {
+    // Initialize a new `jrny` setup in the `./jrny-test` subdirectory.
+    //
+    // Note: In addition to creating the necessary revisions directory, this *also*
+    // creates the `jrny.toml`, etc files that, when using `jrny` as a library,
+    // are entirely unnecessary.
+    //
+    // See: https://github.com/kevlarr/jrny/issues/35
+    jrny::begin(&PathBuf::from("jrny-test")).unwrap();
+
+    // The rest of the commands will need to know the project configuration
+    // and potentially other environment details as well.
+    let cfg = ctx::Config {
+        revisions: ctx::RevisionsSettings {
+            directory: PathBuf::from("jrny-test/revisions"),
+        },
+        table: ctx::TableSettings {
+            schema: "public".to_owned(),
+            name: "jrny_revision".to_owned(),
+        },
+    };
+    let env = ctx::Environment::from_database_url(&env::var("DATABASE_URL").unwrap());
+
+    // Create a new empty migration
+    jrny::plan(&cfg, "my first migration", None).unwrap();
+
+    // Create another migration with some contents
+    jrny::plan(&cfg, "a more useful migration", Some("
+        create table my_cool_table (
+            id bigint
+                primary key
+                generated always as identity
+        )
+    ")).unwrap();
+
+    // Review the migrations
+    //
+    // This SHOULD return an error if any revisions fail review but currently does not.
+    // See: https://github.com/kevlarr/jrny/issues/31
+    jrny::review(&cfg, &env).unwrap();
+
+    // Run the migrations
+    jrny::embark(&cfg, &env).unwrap();
+}
+```
 
 ## Planned improvements, or "things that are missing"
 
