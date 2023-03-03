@@ -152,7 +152,8 @@ impl Log for Logger {
             return;
         }
 
-        println!("{}", record.args());
+        let mut stdout = StandardStream::stdout(ColorChoice::Always);
+        writeln!(&mut stdout, "{}", record.args()).unwrap();
     }
 
     fn flush(&self) {}
