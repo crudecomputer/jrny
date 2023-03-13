@@ -95,7 +95,7 @@ impl fmt::Display for Error {
                 }
 
                 // It takes at least two revisions to have "duplicate" ids
-                if summary.duplicate_ids > 0 {
+                if summary.duplicate_ids > 1 {
                     errs.push_str(&format!("{sol} {} revisions have duplicate ids", summary.duplicate_ids));
                 }
 

@@ -123,7 +123,7 @@ impl RevisionCheck {
             .find(|rev| rev.meta.applied_on.is_some())
             .map(|rev| rev.meta.id);
 
-        let mut previous_id = None;
+        let mut previous: Option<&mut RevisionCheck> = None;
 
         for rev in &mut checked {
             if let Some(last_applied) = id_last_applied {
@@ -131,14 +131,15 @@ impl RevisionCheck {
                     rev.problems.insert(RevisionProblem::PrecedesApplied);
                 }
             }
-            match previous_id {
+            match &mut previous {
                 Some(prev) => {
-                    if prev == rev.meta.id {
+                    if prev.meta.id == rev.meta.id {
+                        prev.problems.insert(RevisionProblem::DuplicateId);
                         rev.problems.insert(RevisionProblem::DuplicateId);
                     }
                 },
                 None => {
-                    previous_id = Some(rev.meta.id);
+                    previous = Some(rev);
                 },
             }
         }

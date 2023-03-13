@@ -100,7 +100,7 @@ pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
     }
 
     info!("The journey thus far:");
-    
+
     for rev in &review.revisions {
         info!("");
         info!("  [{}] {}", rev.meta.id, rev.meta.name);
