@@ -5,6 +5,8 @@ use std::num;
 
 use toml::de::Error as TomlError;
 
+use crate::commands::RevisionSummary;
+
 /// The canonical error type used throughout the crate.
 #[derive(Debug)]
 pub enum Error {
@@ -24,12 +26,7 @@ pub enum Error {
     RevisionNameInvalid(String),
     RevisionTimestampInvalid(num::ParseIntError, String),
     RevisionTimestampOutOfRange(String),
-    RevisionsFailedReview {
-        changed: usize,
-        duplicate_ids: usize,
-        missing: usize,
-        predate_applied: usize,
-    },
+    RevisionsFailedReview(RevisionSummary),
     TomlInvalid(TomlError, String),
     TransactionCommandFound(String),
 }
@@ -86,39 +83,37 @@ impl fmt::Display for Error {
                     filename
                 )
             }
-            RevisionsFailedReview {
-                changed,
-                duplicate_ids,
-                missing,
-                predate_applied,
-            } => {
+            RevisionsFailedReview(summary) => {
                 let mut errs = String::new();
+                let sol = "\n  -";
 
-                if *changed > 0 {
-                    errs.push_str(&format!("\n\t{} changed since being applied", changed));
+                if summary.files_changed > 0 {
+                    errs.push_str(&match summary.files_changed {
+                        1 => format!("{sol} 1 revision has been changed after being applied"),
+                        count => format!("{sol} {count} revisions have changed after being applied")
+                    });
                 }
 
-                if *duplicate_ids > 0 {
-                    let (verb, id) = if *duplicate_ids > 1 {
-                        ("have", "ids")
-                    } else {
-                        ("has a", "id")
-                    };
-                    errs.push_str(&format!("\n\t{} {} duplicate {}", duplicate_ids, verb, id));
+                // It takes at least two revisions to have "duplicate" ids
+                if summary.duplicate_ids > 0 {
+                    errs.push_str(&format!("{sol} {} revisions have duplicate ids", summary.duplicate_ids));
                 }
 
-                if *missing > 0 {
-                    errs.push_str(&format!("\n\t{} applied no longer present", missing));
+                if summary.files_not_found > 0 {
+                    errs.push_str(&match summary.files_not_found {
+                        1 => format!("{sol} 1 revision file could not be found"),
+                        count => format!("{sol} {count} revision files could not be found")
+                    });
                 }
 
-                if *predate_applied > 0 {
-                    errs.push_str(&format!(
-                        "\n\t{} pending occur before applied revisions",
-                        predate_applied
-                    ));
+                if summary.preceding_applied > 0 {
+                    errs.push_str(&match summary.preceding_applied {
+                        1 => format!("{sol} 1 pending revision occurs before applied revisions"),
+                        count => format!("{sol} {count} pending revisions occur before applied revisions")
+                    });
                 }
 
-                write!(f, "Revisions review failed:{}", errs)
+                write!(f, "The journey has problems:{}", errs)
             }
             TomlInvalid(err, pathstr) => {
                 write!(f, "`{}` is invalid - {}", pathstr, err)

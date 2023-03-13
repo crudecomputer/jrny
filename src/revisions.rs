@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -7,113 +6,8 @@ use sha2::{Digest, Sha256};
 
 use crate::{Error, Result};
 
-/// Metadata and contents for a revision loaded from disk.
-#[derive(Debug)]
-pub struct RevisionFile {
-    /// The file id of the revision
-    pub id: i32,
-    /// The hash of the contents
-    pub checksum: String,
-    /// Contents of revision file, if present
-    pub contents: String,
-    /// Moment the revision was created
-    pub created_at: DateTime<Utc>,
-    /// The full name of the file, including id, timestamp, and extension
-    pub filename: String,
-    /// The name of the file, excluding id, timestamp, and extension
-    pub name: String,
-}
 
-impl RevisionFile {
-    /// Attempts to read revision directory to convert all entries (assumed to be SQL files)
-    /// into metadata objects with contents stored.
-    pub fn all_from_disk(revisions: &Path) -> Result<Vec<Self>> {
-        let mut entries = fs::read_dir(revisions)?
-            .map(|res| res.map(|e| e.path()).map_err(Error::IoError))
-            .collect::<Result<Vec<_>>>()?;
-
-        entries.sort();
-        entries.iter().map(Self::try_from).collect()
-    }
-}
-
-impl TryFrom<&PathBuf> for RevisionFile {
-    type Error = crate::Error;
-
-    /// Attempts to gather appropriate metadata for and read contents of given path buf.
-    fn try_from(p: &PathBuf) -> std::result::Result<Self, Self::Error> {
-        let filename = p
-            .file_name()
-            .and_then(|os_str| os_str.to_str())
-            .ok_or_else(|| Error::FileNotValid(p.display().to_string()))?;
-
-        let title = RevisionTitle::try_from(filename)?;
-        let contents = fs::read_to_string(p)?;
-
-        Ok(Self {
-            id: title.id,
-            checksum: to_checksum(&contents),
-            contents,
-            created_at: title.created_at,
-            filename: filename.to_string(),
-            name: title.name,
-        })
-    }
-}
-
-/// Metadata stored for a revision that has already been applied.
-#[derive(Debug)]
-pub struct RevisionRecord {
-    /// The database id of the revision
-    pub id: i32,
-    /// Moment the revision was applied to the database
-    pub applied_on: DateTime<Utc>,
-    /// The hash of the contents
-    pub checksum: String,
-    /// Moment the revision was created
-    pub created_at: DateTime<Utc>,
-    /// The full name of the file, including timestamp and extension
-    pub filename: String,
-    /// The name of the file, excluding timestamp and extension
-    pub name: String,
-}
-
-/// Comprehensive metadata for a revision detected on disk or in the database.
-#[derive(Debug, PartialEq, Eq)]
-pub struct AnnotatedRevision {
-    /// The id of both the record and the revision file
-    pub id: i32,
-    /// Moment the revision was applied to the database
-    pub applied_on: Option<DateTime<Utc>>,
-    /// Checksum of the revision file on disk, if present
-    pub checksum: Option<String>,
-    /// Whether or not checksums for file and record match, if both are present
-    pub checksums_match: Option<bool>,
-    /// Contents of revision file, if present
-    pub contents: Option<String>,
-    /// Moment the revision was created
-    pub created_at: DateTime<Utc>,
-    /// The full name of the file, including id, timestamp, and extension
-    pub filename: String,
-    /// The name of the file, excluding id, timestamp, and extension
-    pub name: String,
-    /// Whether or not the file for an applied revision is found on disk
-    pub on_disk: bool,
-}
-
-impl Ord for AnnotatedRevision {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.id.cmp(&other.id)
-    }
-}
-
-impl PartialOrd for AnnotatedRevision {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-/// Creation date and extension-less name extracted from a revision filename.
+// Creation date and extension-less name extracted from a revision filename.
 #[derive(Debug, PartialEq)]
 struct RevisionTitle {
     /// The numeric id extracted from the filename
@@ -167,6 +61,83 @@ impl TryFrom<&str> for RevisionTitle {
         })
     }
 }
+
+
+/// Metadata and contents for a revision loaded from disk.
+#[derive(Debug)]
+pub struct RevisionFile {
+    /// The file id of the revision
+    pub id: i32,
+    /// The hash of the contents
+    pub checksum: String,
+    /// Contents of revision file, if present
+    pub contents: String,
+    /// Moment the revision was created
+    pub created_at: DateTime<Utc>,
+    /// The full name of the file, including id, timestamp, and extension
+    pub filename: String,
+    /// The name of the file, excluding id, timestamp, and extension
+    pub name: String,
+    /// Full path to the revision file
+    pub path: PathBuf,
+}
+
+impl RevisionFile {
+    /// Attempts to read revision directory to convert all entries (assumed to be SQL files)
+    /// into metadata objects with contents stored.
+    pub fn all(revisions: &Path) -> Result<Vec<Self>> {
+        let mut entries = fs::read_dir(revisions)?
+            .map(|res| res.map(|e| e.path()).map_err(Error::IoError))
+            .collect::<Result<Vec<_>>>()?;
+
+        entries.sort();
+        entries.iter().map(Self::try_from).collect()
+    }
+}
+
+impl TryFrom<&PathBuf> for RevisionFile {
+    type Error = crate::Error;
+
+    /// Attempts to gather appropriate metadata for and read contents of given path buf.
+    fn try_from(p: &PathBuf) -> std::result::Result<Self, Self::Error> {
+        let filename = p
+            .file_name()
+            .and_then(|os_str| os_str.to_str())
+            .ok_or_else(|| Error::FileNotValid(p.display().to_string()))?;
+
+        let title = RevisionTitle::try_from(filename)?;
+        let contents = fs::read_to_string(p)?;
+
+        Ok(Self {
+            id: title.id,
+            checksum: to_checksum(&contents),
+            contents,
+            created_at: title.created_at,
+            filename: filename.to_string(),
+            name: title.name,
+            path: p.to_owned(),
+        })
+    }
+}
+
+
+/// Metadata stored for a revision that has already been applied.
+#[derive(Debug)]
+pub struct RevisionRecord {
+    /// The database id of the revision
+    pub id: i32,
+    /// Moment the revision was applied to the database
+    pub applied_on: DateTime<Utc>,
+    /// The hash of the contents
+    pub checksum: String,
+    /// Moment the revision was created
+    pub created_at: DateTime<Utc>,
+    /// The full name of the file, including timestamp and extension
+    pub filename: String,
+    /// The name of the file, excluding timestamp and extension
+    pub name: String,
+}
+
 
 fn to_checksum(s: &str) -> String {
     // See: https://users.rust-lang.org/t/sha256-result-to-string/49391/3

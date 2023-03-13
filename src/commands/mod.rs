@@ -7,15 +7,17 @@ use log::{info, warn};
 
 use crate::context::{Config, Environment};
 use crate::revisions::RevisionFile;
-use crate::{Executor, Result};
+use crate::{Error, Executor, Result};
 
 mod begin;
-mod embark;
+// mod embark;
 mod review;
 
 use begin::Begin;
-use embark::Embark;
-use review::Review;
+// use embark::Embark;
+use review::check_revisions;
+
+pub use review::RevisionSummary;
 
 /// Accepts a path string targeting a directory to set up project files:
 /// The directory will be created if it does not exist or will fail if
@@ -54,7 +56,7 @@ pub fn begin(dirpath: &Path) -> Result<()> {
 /// revisions directory specified by the provided config.
 pub fn plan(cfg: &Config, name: &str, contents: Option<&str>) -> Result<()> {
     let timestamp = Utc::now().timestamp();
-    let next_id = RevisionFile::all_from_disk(&cfg.revisions.directory)?
+    let next_id = RevisionFile::all(&cfg.revisions.directory)?
         .iter()
         .reduce(|rf1, rf2| if rf1.id > rf2.id { rf1 } else { rf2 })
         .map_or(0, |rf| rf.id)
@@ -90,69 +92,34 @@ commit;
 /// their status in the database.
 pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
     let mut exec = Executor::new(cfg, env)?;
-    let cmd = Review::annotated_revisions(&mut exec, &cfg.revisions.directory)?;
+    let review = check_revisions(&mut exec, &cfg.revisions.directory)?;
 
-    if cmd.revisions.is_empty() {
+    if review.revisions.is_empty() {
         info!("No revisions found. Create your first revision with `jrny plan <some-name>`.");
         return Ok(());
     }
 
-    info!("The journey thus far\n");
-    info!(
-        "  {:3}  {:43}{:25}{:25}",
-        "Id", "Revision", "Created", "Applied"
-    );
+    info!("The journey thus far:");
+    
+    for rev in &review.revisions {
+        info!("");
+        info!("  [{}] {}", rev.meta.id, rev.meta.name);
+        info!("    Created on {}", format_local(rev.meta.created_at));
 
-    let format_local = |dt: DateTime<Utc>| DateTime::<Local>::from(dt).format("%v %X").to_string();
+        if let Some(applied_on) = rev.meta.applied_on {
+            info!("    Applied on {}", format_local(applied_on));
+        }
 
-    let mut last_applied_index = -1;
-
-    for (i, revision) in cmd.revisions.iter().enumerate() {
-        if revision.applied_on.is_some() {
-            last_applied_index = i as isize;
+        if !rev.problems.is_empty() {
+            warn!("    Errors:");
+            for prob in &rev.problems {
+                warn!("      - {}", prob);
+            }
         }
     }
 
-    // TODO clean up? this isn't elegant
-    let mut previous_id = None;
-
-    for (i, revision) in cmd.revisions.iter().enumerate() {
-        let applied_on = match revision.applied_on {
-            Some(a) => format_local(a),
-            _ => "--".to_string(),
-        };
-
-        let error = if let Some(false) = revision.checksums_match {
-            Some("The file has changed after being applied")
-        } else if !revision.on_disk {
-            Some("No corresponding file could not be found")
-        } else if revision.applied_on.is_none() && (i as isize) < last_applied_index {
-            Some("Later revisions have already been applied")
-        } else if previous_id == Some(revision.id) {
-            Some("Revision has duplicate id")
-        } else {
-            None
-        };
-
-        match error {
-            Some(error) => warn!(
-                "  {:3}  {:43}{:25}{:25}{}",
-                revision.id,
-                revision.name,
-                format_local(revision.created_at),
-                applied_on,
-                error,
-            ),
-            None => info!(
-                "  {:3}  {:43}{:25}{:25}",
-                revision.id,
-                revision.name,
-                format_local(revision.created_at),
-                applied_on,
-            ),
-        }
-
-        previous_id = Some(revision.id);
+    if review.failed() {
+        return Err(Error::RevisionsFailedReview(review.summary));
     }
 
     Ok(())
@@ -184,4 +151,8 @@ fn log_path(prefix: &str, path: &Path, created: bool) {
         path.display(),
         if created { " [created]" } else { "" },
     );
+}
+
+fn format_local(dt: DateTime<Utc>) -> String {
+    DateTime::<Local>::from(dt).format("%v %X").to_string()
 }
