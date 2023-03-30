@@ -6,7 +6,6 @@ use sha2::{Digest, Sha256};
 
 use crate::{Error, Result};
 
-
 /// The components that make up a revision title, excluding extension
 #[derive(Debug, PartialEq)]
 struct RevisionTitle {
@@ -61,7 +60,6 @@ impl TryFrom<&str> for RevisionTitle {
         })
     }
 }
-
 
 /// Metadata and contents for a revision loaded from disk.
 #[derive(Debug)]
@@ -120,7 +118,6 @@ impl TryFrom<&PathBuf> for RevisionFile {
     }
 }
 
-
 /// Metadata stored for a revision that has already been applied.
 #[derive(Debug)]
 pub struct RevisionRecord {
@@ -137,7 +134,6 @@ pub struct RevisionRecord {
     /// The name of the file, excluding timestamp and extension
     pub name: String,
 }
-
 
 fn to_checksum(s: &str) -> String {
     // See: https://users.rust-lang.org/t/sha256-result-to-string/49391/3

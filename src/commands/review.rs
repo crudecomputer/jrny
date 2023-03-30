@@ -7,7 +7,6 @@ use chrono::{DateTime, Utc};
 use crate::revisions::{RevisionFile, RevisionRecord};
 use crate::{Executor, Result};
 
-
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub enum RevisionProblem {
     DuplicateId,
@@ -20,17 +19,20 @@ impl fmt::Display for RevisionProblem {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use RevisionProblem::*;
 
-        write!(f, "{}", match self {
-            DuplicateId => "Revision has a duplicate id",
-            FileChanged => "File has changed after being applied",
-            FileNotFound => "File could not be found",
-            PrecedesApplied => "Later revisions have already been applied",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                DuplicateId => "Revision has a duplicate id",
+                FileChanged => "File has changed after being applied",
+                FileNotFound => "File could not be found",
+                PrecedesApplied => "Later revisions have already been applied",
+            }
+        )
     }
-} 
+}
 
 type RevisionProblems = HashSet<RevisionProblem>;
-
 
 #[derive(Debug)]
 enum ReviewItemSource {
@@ -40,7 +42,6 @@ enum ReviewItemSource {
 }
 
 use ReviewItemSource::*;
-
 
 #[derive(Debug)]
 pub struct ReviewItem {
@@ -76,7 +77,7 @@ impl ReviewItem {
     pub fn problems(&self) -> &RevisionProblems {
         &self.problems
     }
-    
+
     pub fn applied_on(&self) -> Option<&DateTime<Utc>> {
         match &self.source {
             RecordOnly(record) => Some(&record.applied_on),
@@ -102,18 +103,25 @@ impl ReviewItem {
     }
 
     fn file_only(file: RevisionFile, problems: RevisionProblems) -> Self {
-        Self { source: ReviewItemSource::FileOnly(file), problems }
+        Self {
+            source: ReviewItemSource::FileOnly(file),
+            problems,
+        }
     }
 
     fn record_only(record: RevisionRecord, problems: RevisionProblems) -> Self {
-        Self { source: ReviewItemSource::RecordOnly(record), problems }
+        Self {
+            source: ReviewItemSource::RecordOnly(record),
+            problems,
+        }
     }
 
     fn from_sources(files: Vec<RevisionFile>, records: Vec<RevisionRecord>) -> Vec<Self> {
         let mut items = Vec::new();
 
         // For extracting the equivalent record when iterating through files
-        let mut records: HashMap<String, RevisionRecord> = records.into_iter()
+        let mut records: HashMap<String, RevisionRecord> = records
+            .into_iter()
             .map(|record| (record.name.clone(), record))
             .collect();
 
@@ -126,9 +134,7 @@ impl ReviewItem {
                     }
                     Self::file_and_record(file, problems)
                 }
-                None => {
-                    Self::file_only(file, problems)
-                },
+                None => Self::file_only(file, problems),
             };
 
             items.push(item);
@@ -143,10 +149,7 @@ impl ReviewItem {
 
         // Sort the items now to look for other problems, like duplicate ids
         // or pending revisions existing in sequence before applied ones
-        items.sort_by_key(|item| (
-            item.id(),
-            item.created_at().to_owned(),
-        ));
+        items.sort_by_key(|item| (item.id(), item.created_at().to_owned()));
 
         let id_last_applied = items
             .iter()
@@ -169,10 +172,10 @@ impl ReviewItem {
                         prev.problems.insert(RevisionProblem::DuplicateId);
                         item.problems.insert(RevisionProblem::DuplicateId);
                     }
-                },
+                }
                 None => {
                     previous = Some(item);
-                },
+                }
             }
         }
 
@@ -214,10 +217,10 @@ pub struct Review {
 
 impl Review {
     pub fn failed(&self) -> bool {
-        self.summary.duplicate_ids > 0 ||
-        self.summary.files_changed > 0 ||
-        self.summary.files_not_found > 0 ||
-        self.summary.preceding_applied > 0
+        self.summary.duplicate_ids > 0
+            || self.summary.files_changed > 0
+            || self.summary.files_not_found > 0
+            || self.summary.preceding_applied > 0
     }
 
     pub fn items(&self) -> &Vec<ReviewItem> {
@@ -227,9 +230,10 @@ impl Review {
     pub fn summary(&self) -> &ReviewSummary {
         &self.summary
     }
-    
+
     pub fn pending_revisions(&self) -> Vec<&RevisionFile> {
-        self.items.iter()
+        self.items
+            .iter()
             .filter_map(|item| match &item.source {
                 FileOnly(file) => Some(file),
                 _ => None,

@@ -90,26 +90,33 @@ impl fmt::Display for Error {
                 if summary.files_changed() > 0 {
                     errs.push_str(&match summary.files_changed() {
                         1 => format!("{sol} 1 revision has been changed after being applied"),
-                        count => format!("{sol} {count} revisions have changed after being applied")
+                        count => {
+                            format!("{sol} {count} revisions have changed after being applied")
+                        }
                     });
                 }
 
                 // It takes at least two revisions to have "duplicate" ids
                 if summary.duplicate_ids() > 1 {
-                    errs.push_str(&format!("{sol} {} revisions have duplicate ids", summary.duplicate_ids()));
+                    errs.push_str(&format!(
+                        "{sol} {} revisions have duplicate ids",
+                        summary.duplicate_ids()
+                    ));
                 }
 
                 if summary.files_not_found() > 0 {
                     errs.push_str(&match summary.files_not_found() {
                         1 => format!("{sol} 1 revision file could not be found"),
-                        count => format!("{sol} {count} revision files could not be found")
+                        count => format!("{sol} {count} revision files could not be found"),
                     });
                 }
 
                 if summary.preceding_applied() > 0 {
                     errs.push_str(&match summary.preceding_applied() {
                         1 => format!("{sol} 1 pending revision occurs before applied revisions"),
-                        count => format!("{sol} {count} pending revisions occur before applied revisions")
+                        count => format!(
+                            "{sol} {count} pending revisions occur before applied revisions"
+                        ),
                     });
                 }
 
