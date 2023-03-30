@@ -182,7 +182,8 @@ fn main() -> ExitCode {
     match result {
         Ok(_) => ExitCode::SUCCESS,
         Err(e) => {
-            warn!("Error: {}", e);
+            warn!("");
+            warn!("{}", e);
 
             // TODO: More fine-grained error-dependent codes?
             // See: https://github.com/kevlarr/jrny/issues/33

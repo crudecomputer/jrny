@@ -203,75 +203,76 @@ This will list all ordered revisions, each with time of creation as well as time
 ```bash
 $ jrny review
 
-The journey thus far
+The journey thus far:
 
-  Id   Revision                                   Created                  Applied
-    1  my first revision                          13-Apr-2021 23:18:18     15-Apr-2021 22:19:07
-    2  another-change                             14-Apr-2021 21:22:43     15-Apr-2021 22:19:07
-    3  yet-another-change                         14-Apr-2021 21:42:34     --
+  [1] my-first-revision
+    Created on 30-Mar-2023 09:10:22
+    Applied on 30-Mar-2023 09:11:06
+
+  [2] another-revision
+    Created on 30-Mar-2023 09:10:32
+    Applied on 30-Mar-2023 09:11:06
+
+  [3] YET-another-revision
+    Created on 30-Mar-2023 09:27:58
 ```
 
 Additionally, `jrny` performs several checks during review to guarantee that...
 
-##### ... all applied revisions are still present on disk
-
-If any revision files that have been applied are removed, review will fail with...
-
-```bash
-$ jrny review
-
-The journey thus far
-
-  Id   Revision                                   Created                  Applied
-    1  my first revision                          13-Apr-2021 23:18:18     13-Apr-2021 23:29:37
-    2  another-change                             14-Apr-2021 21:42:34     14-Apr-2021 22:32:35     No corresponding file could not be found
-```
-
-##### ... all applied revision files have not changed since application (compared by SHA-256 checksum)
-
-Guaranteeing that revision files are still all present isn't useful without an additional
-guarantee that they haven't *changed* since being applied.
+- Applied revisions' files have not been changed after having been applied
+- Applied revisions' files have not been removed
+- Pending revisions have not been inserted into the sequence prior to applied revisions
+- All revisions in the sequence (pending and applied) have unique ids
 
 ```bash
-$ jrny review
+The journey thus far:
 
-The journey thus far
+  [1] revision-that-gets-changed
+    Created on 30-Mar-2023 09:31:05
+    Applied on 30-Mar-2023 10:17:33
+    Errors:
+      - File has changed after being applied
 
-  Id   Revision                                   Created                  Applied
-    1  my first revision                          13-Apr-2021 23:18:18     15-Apr-2021 22:22:23
-    2  another-change                             14-Apr-2021 21:22:43     15-Apr-2021 22:22:23     The file has changed after being applied
+  [2] revision-that-gets-removed
+    Created on 30-Mar-2023 09:57:56
+    Applied on 30-Mar-2023 10:17:33
+    Errors:
+      - File could not be found
+
+  [3] a-revision-added-in-between
+    Created on 30-Mar-2023 10:18:58
+    Errors:
+      - Later revisions have already been applied
+
+  [4] some-revision-that-is-fine
+    Created on 30-Mar-2023 09:58:19
+    Applied on 30-Mar-2023 10:17:33
+
+  [5] a-revision-that-was-fine
+    Created on 30-Mar-2023 10:17:24
+    Applied on 30-Mar-2023 10:17:33
+    Errors:
+      - Revision has a duplicate id
+
+  [5] revision-with-duplicate-id
+    Created on 30-Mar-2023 10:19:57
+    Errors:
+      - Revision has a duplicate id
+
+The journey has problems:
+  - 1 revision has been changed after being applied
+  - 2 revisions have duplicate ids
+  - 1 revision file could not be found
+  - 1 pending revision has been inserted before revisions already applied
 ```
 
-**Note:** This will fail with even the addition of whitespace or comments; there is currently
-no attempt to scrub those out prior to generating the checksums.
+These checks are not necessarily mutually-exclusive, either, meaning a single revision
+can potentially have multiple errors, eg. having been changed after being applied AND
+having a duplicate id, if the sequence has been altered as well.
 
-##### ... all revisions have unique ids
-
-Self-explanatory; an id isn't much of an id if it isn't unique.
-This is performed prior to applying to database,
-so that if there are 3 revisions to run and 1 has a duplicate id,
-no revisions will be attempted.
-
-```bash
-$ jrny review
-
-The journey thus far
-
-  Id   Revision                                   Created                  Applied
-    1  my first revision                          13-Apr-2021 23:18:18     --
-    1  another-change                             14-Apr-2021 21:42:34     --                       Revision has duplicate id
-```
-
-#### ... no unapplied revisions can occur earlier in the sequence than applied ones
-
-```bash
-The journey thus far
-
-  Id   Revision                                   Created                  Applied
-    1  my first revision                          13-Apr-2021 23:18:18     13-Apr-2021 23:29:37
-    2  another-change                             14-Apr-2021 21:42:34     --                       Later revisions have already been applied
-    3  yet-another-change                         14-Apr-2021 21:22:43     14-Apr-2021 21:37:17
-```
+**Note:** Review will fail with even the addition (or removal) of whitespace or comments;
+there is currently no attempt to scrub those out prior to generating the checksums used to
+determine if a file has been changed after being applied.
 
 #### Embark on the journey!
 
@@ -283,47 +284,22 @@ but either can be overridden and, again, the database URL can be supplied direct
 Revisions will be reviewed prior to applying any pending, and if files have changed, are no longer
 present on disk, etc., then `jrny` will issue an error and exit without applying any new revisions.
 
-For instance, combining the examples of failed review above, you might see any or all of the following
-when attempting to embark.
+Otherwise, `jrny` will simply either list the names of the revisions applied...
 
 ```bash
 $ jrny embark
 
-Error: Failed to run revisions:
-	1 changed since being applied
-  1 pending occur before applied revisions
-	1 no longer present on disk
-  1 has a duplicate id
+Applying 1 revision(s)
+
+  003.1680182878.YET-another-revision.sql
 ```
 
-If the files were restored, changes re`jrny` would move forward with applying `1606749809.so many things.sql` and you would instead see...
-
-If the errors were resolved...
-
-* changed files were reverted
-* missing files were restored
-* duplicate ids were fixed
-* unapplied revisions 'moved' after applied ones (by adjusting ids)
-
-... then you would see successful revision application.
+... or a message indicating that no pending revisions were found.
 
 ```bash
 $ jrny embark
 
-Applying 4 revision(s)
-
-  001.1618370298.my first revision.sql
-  003.1618449763.another-change.sql
-  004.1618450954.YET-another-change.sql
-  005.1618370304.my first revision.sql
-```
-
-Attempting to apply revisions again would simply find none available.
-
-```bash
-$ jrny embark
-
-No revisions to apply
+No pending revisions
 ```
 
 ## Library Usage

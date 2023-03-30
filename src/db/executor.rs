@@ -2,7 +2,7 @@ use log::info;
 use postgres::Client;
 
 use crate::context::{Config, Environment};
-use crate::revisions::{AnnotatedRevision, RevisionRecord};
+use crate::revisions::{RevisionFile, RevisionRecord};
 use crate::Result;
 
 const CREATE_SCHEMA: &str = "
@@ -104,20 +104,12 @@ impl Executor {
         Ok(revisions)
     }
 
-    #[allow(clippy::expect_fun_call)]
-    pub fn run_revision(&mut self, revision: &AnnotatedRevision) -> Result<()> {
+    pub fn run_revision(&mut self, revision: &RevisionFile) -> Result<()> {
         let insert_revision = INSERT_REVISION
             .replace("$$schema$$", &self.schema)
             .replace("$$table$$", &self.table);
 
-        let statements = revision
-            .contents
-            .as_ref()
-            // FIXME: This should bubble an error up rather than panic
-            // Once fixed, removed the allow[clippy(..)] attribute
-            .expect(&format!("No content for {}", revision.filename));
-
-        self.client.batch_execute(statements.as_str())?;
+        self.client.batch_execute(&revision.contents)?;
 
         let _ = self.client.execute(
             insert_revision.as_str(),

@@ -1,4 +1,3 @@
-#![doc = include_str!("../README.md")]
 mod commands;
 pub mod context;
 mod db;

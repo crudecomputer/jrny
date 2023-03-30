@@ -7,15 +7,15 @@ use log::{info, warn};
 
 use crate::context::{Config, Environment};
 use crate::revisions::RevisionFile;
-use crate::{Executor, Result};
+use crate::{Error, Executor, Result};
 
 mod begin;
-mod embark;
 mod review;
 
 use begin::Begin;
-use embark::Embark;
 use review::Review;
+
+pub use review::ReviewSummary;
 
 /// Accepts a path string targeting a directory to set up project files:
 /// The directory will be created if it does not exist or will fail if
@@ -54,7 +54,7 @@ pub fn begin(dirpath: &Path) -> Result<()> {
 /// revisions directory specified by the provided config.
 pub fn plan(cfg: &Config, name: &str, contents: Option<&str>) -> Result<()> {
     let timestamp = Utc::now().timestamp();
-    let next_id = RevisionFile::all_from_disk(&cfg.revisions.directory)?
+    let next_id = RevisionFile::all(&cfg.revisions.directory)?
         .iter()
         .reduce(|rf1, rf2| if rf1.id > rf2.id { rf1 } else { rf2 })
         .map_or(0, |rf| rf.id)
@@ -90,69 +90,34 @@ commit;
 /// their status in the database.
 pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
     let mut exec = Executor::new(cfg, env)?;
-    let cmd = Review::annotated_revisions(&mut exec, &cfg.revisions.directory)?;
+    let review = Review::new(&mut exec, &cfg.revisions.directory)?;
 
-    if cmd.revisions.is_empty() {
+    if review.items().is_empty() {
         info!("No revisions found. Create your first revision with `jrny plan <some-name>`.");
         return Ok(());
     }
 
-    info!("The journey thus far\n");
-    info!(
-        "  {:3}  {:43}{:25}{:25}",
-        "Id", "Revision", "Created", "Applied"
-    );
+    info!("The journey thus far:");
 
-    let format_local = |dt: DateTime<Utc>| DateTime::<Local>::from(dt).format("%v %X").to_string();
+    for item in review.items() {
+        info!("");
+        info!("  [{}] {}", item.id(), item.name());
+        info!("    Created on {}", format_local(*item.created_at()));
 
-    let mut last_applied_index = -1;
+        if let Some(applied_on) = item.applied_on() {
+            info!("    Applied on {}", format_local(*applied_on));
+        }
 
-    for (i, revision) in cmd.revisions.iter().enumerate() {
-        if revision.applied_on.is_some() {
-            last_applied_index = i as isize;
+        if !item.problems().is_empty() {
+            warn!("    Errors:");
+            for prob in item.problems() {
+                warn!("      - {}", prob);
+            }
         }
     }
 
-    // TODO clean up? this isn't elegant
-    let mut previous_id = None;
-
-    for (i, revision) in cmd.revisions.iter().enumerate() {
-        let applied_on = match revision.applied_on {
-            Some(a) => format_local(a),
-            _ => "--".to_string(),
-        };
-
-        let error = if let Some(false) = revision.checksums_match {
-            Some("The file has changed after being applied")
-        } else if !revision.on_disk {
-            Some("No corresponding file could not be found")
-        } else if revision.applied_on.is_none() && (i as isize) < last_applied_index {
-            Some("Later revisions have already been applied")
-        } else if previous_id == Some(revision.id) {
-            Some("Revision has duplicate id")
-        } else {
-            None
-        };
-
-        match error {
-            Some(error) => warn!(
-                "  {:3}  {:43}{:25}{:25}{}",
-                revision.id,
-                revision.name,
-                format_local(revision.created_at),
-                applied_on,
-                error,
-            ),
-            None => info!(
-                "  {:3}  {:43}{:25}{:25}",
-                revision.id,
-                revision.name,
-                format_local(revision.created_at),
-                applied_on,
-            ),
-        }
-
-        previous_id = Some(revision.id);
+    if review.failed() {
+        return Err(Error::RevisionsFailedReview(review.summary().to_owned()));
     }
 
     Ok(())
@@ -162,15 +127,24 @@ pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
 /// database specified by the environment.
 pub fn embark(cfg: &Config, env: &Environment) -> Result<()> {
     let mut exec = Executor::new(cfg, env)?;
+    let review = Review::new(&mut exec, &cfg.revisions.directory)?;
 
-    let cmd = Embark::prepare(cfg, &mut exec)?;
-
-    if cmd.to_apply.is_empty() {
-        info!("No revisions to apply");
-        return Ok(());
+    if review.failed() {
+        return Err(Error::RevisionsFailedReview(review.summary().to_owned()));
     }
 
-    cmd.apply(&mut exec)?;
+    let pending = review.pending_revisions();
+
+    if pending.is_empty() {
+        info!("No pending revisions");
+    } else {
+        info!("Applying {} revision(s)", pending.len());
+        info!("");
+        for revision in &pending {
+            info!("  {}", revision.filename);
+            exec.run_revision(revision)?;
+        }
+    }
 
     Ok(())
 }
@@ -184,4 +158,8 @@ fn log_path(prefix: &str, path: &Path, created: bool) {
         path.display(),
         if created { " [created]" } else { "" },
     );
+}
+
+fn format_local(dt: DateTime<Utc>) -> String {
+    DateTime::<Local>::from(dt).format("%v %X").to_string()
 }
