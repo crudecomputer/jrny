@@ -70,7 +70,7 @@ pub struct RevisionFile {
     pub id: i32,
     /// The hash of the contents
     pub checksum: String,
-    /// Contents of revision file, if present
+    /// Contents of revision file
     pub contents: String,
     /// Moment the revision was created
     pub created_at: DateTime<Utc>,

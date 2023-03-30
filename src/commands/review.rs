@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::path::Path;
-use std::rc::Rc;
 
 use chrono::{DateTime, Utc};
 
@@ -30,6 +29,8 @@ impl fmt::Display for RevisionProblem {
     }
 } 
 
+type RevisionProblems = HashSet<RevisionProblem>;
+
 /// Comprehensive metadata for a revision detected on disk or in the database.
 #[derive(Debug)]
 pub struct RevisionMeta {
@@ -46,119 +47,183 @@ pub struct RevisionMeta {
     pub name: String,
 }
 
+
 #[derive(Debug)]
-pub struct RevisionCheck {
-    pub meta: RevisionMeta,
-    pub problems: HashSet<RevisionProblem>,
+enum ReviewItemSource {
+    FileAndRecord(RevisionFile),
+    FileOnly(RevisionFile),
+    RecordOnly(RevisionRecord),
 }
 
-impl RevisionCheck {
-    pub fn all(exec: &mut Executor, revision_dir: &Path) -> Result<Vec<Self>> {
-        let mut files = RevisionFile::all(revision_dir)?;
-        let mut records = exec.load_revisions()?;
+use ReviewItemSource::*;
 
-        // TODO: Rc shouldn't be necessary
-        let files: Vec<Rc<RevisionFile>> = files.drain(..).map(Rc::new).collect();
-        let files_map: HashMap<String, Rc<RevisionFile>> = files
-            .iter()
-            .map(|file_rc| (file_rc.filename.clone(), file_rc.clone()))
+
+#[derive(Debug)]
+pub struct ReviewItem {
+    // pub meta: RevisionMeta,
+    source: ReviewItemSource,
+
+    /// Problems identified with the revision
+    problems: HashSet<RevisionProblem>,
+}
+
+impl ReviewItem {
+    pub fn id(&self) -> i32 {
+        match &self.source {
+            FileAndRecord(file) | FileOnly(file) => file.id,
+            RecordOnly(record) => record.id,
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        match &self.source {
+            FileAndRecord(file) | FileOnly(file) => &file.name,
+            RecordOnly(record) => &record.name,
+        }
+    }
+
+    pub fn created_at(&self) -> &DateTime<Utc> {
+        match &self.source {
+            FileAndRecord(file) | FileOnly(file) => &file.created_at,
+            RecordOnly(record) => &record.created_at,
+        }
+    }
+
+    pub fn problems(&self) -> &RevisionProblems {
+        &self.problems
+    }
+    
+    pub fn applied_on(&self) -> Option<&DateTime<Utc>> {
+        match &self.source {
+            RecordOnly(record) => Some(&record.applied_on),
+            _ => None,
+        }
+    }
+
+    pub fn applied(&self) -> bool {
+        !self.pending()
+    }
+
+    pub fn pending(&self) -> bool {
+        if let FileOnly(_) = self.source { true } else { false }
+    }
+
+    fn file_and_record(file: RevisionFile, problems: RevisionProblems) -> Self {
+        Self {
+            source: ReviewItemSource::FileAndRecord(file),
+            problems,
+        }
+    }
+
+    fn file_only(file: RevisionFile, problems: RevisionProblems) -> Self {
+        Self { source: ReviewItemSource::FileOnly(file), problems }
+    }
+
+    fn record_only(record: RevisionRecord, problems: RevisionProblems) -> Self {
+        Self { source: ReviewItemSource::RecordOnly(record), problems }
+    }
+
+    fn from_sources(files: Vec<RevisionFile>, records: Vec<RevisionRecord>) -> Vec<Self> {
+        let mut items = Vec::new();
+
+        // For extracting the equivalent record when iterating through files
+        let mut records: HashMap<String, RevisionRecord> = records.into_iter()
+            .map(|record| (record.name.clone(), record))
             .collect();
 
-        let records: Vec<Rc<RevisionRecord>> = records.drain(..).map(Rc::new).collect();
-        let records_map: HashMap<String, Rc<RevisionRecord>> = records
-            .iter()
-            .map(|record_rc| (record_rc.filename.clone(), record_rc.clone()))
-            .collect();
-
-        let mut checked = Vec::new();
-
-        for file in files.iter() {
+        for file in files {
             let mut problems = HashSet::new();
-            let mut meta = RevisionMeta {
-                id: file.id,
-                applied_on: None,
-                contents: Some(file.contents.clone()),
-                created_at: file.created_at,
-                filename: file.filename.clone(),
-                name: file.name.clone(),
+            let item = match records.remove(&file.name) {
+                Some(record) => {
+                    if file.checksum != record.checksum {
+                        problems.insert(RevisionProblem::FileChanged);
+                    }
+                    Self::file_and_record(file, problems)
+                }
+                None => {
+                    Self::file_only(file, problems)
+                },
             };
 
-            if let Some(record) = records_map.get(&file.filename) {
-                meta.applied_on = Some(record.applied_on);
-
-                if file.checksum != record.checksum {
-                    problems.insert(RevisionProblem::FileChanged);
-                }
-            }
-
-            checked.push(RevisionCheck { meta, problems });
+            items.push(item);
         }
 
-        for record in records.iter() {
-            if files_map.get(&record.filename).is_some() {
-                continue;
-            }
-
+        for record in records.into_values() {
+            // Any records still present will not have a corresponding file
             let mut problems = HashSet::new();
             problems.insert(RevisionProblem::FileNotFound);
-
-            let meta = RevisionMeta {
-                id: record.id,
-                applied_on: Some(record.applied_on),
-                contents: None,
-                created_at: record.created_at,
-                filename: record.filename.clone(),
-                name: record.name.clone(),
-            };
-
-            checked.push(RevisionCheck { meta, problems });
+            items.push(Self::record_only(record, problems));
         }
 
-        checked.sort_by_key(|rev| (rev.meta.id, rev.meta.created_at));
+        // Sort the items now to look for other problems, like duplicate ids
+        // or pending revisions existing in sequence before applied ones
+        items.sort_by_key(|item| (
+            item.id(),
+            item.created_at().to_owned(),
+        ));
 
-        let id_last_applied = checked
+        let id_last_applied = items
             .iter()
             .rev()
-            .find(|rev| rev.meta.applied_on.is_some())
-            .map(|rev| rev.meta.id);
+            .find(|item| item.applied())
+            .map(|item| item.id());
 
-        let mut previous: Option<&mut RevisionCheck> = None;
+        let mut previous: Option<&mut ReviewItem> = None;
 
-        for rev in &mut checked {
+        for item in &mut items {
             if let Some(last_applied) = id_last_applied {
-                if rev.meta.id < last_applied && rev.meta.applied_on.is_none() {
-                    rev.problems.insert(RevisionProblem::PrecedesApplied);
+                // FIXME: What about when there are duplicate ids and only one is applied?
+                if item.id() < last_applied && item.pending() {
+                    item.problems.insert(RevisionProblem::PrecedesApplied);
                 }
             }
             match &mut previous {
                 Some(prev) => {
-                    if prev.meta.id == rev.meta.id {
+                    if item.id() == prev.id() {
                         prev.problems.insert(RevisionProblem::DuplicateId);
-                        rev.problems.insert(RevisionProblem::DuplicateId);
+                        item.problems.insert(RevisionProblem::DuplicateId);
                     }
                 },
                 None => {
-                    previous = Some(rev);
+                    previous = Some(item);
                 },
             }
         }
 
-        Ok(checked)
+        items
     }
 }
 
 #[derive(Copy, Clone, Debug, Default)]
-pub struct RevisionSummary {
-    pub duplicate_ids: usize,
-    pub files_changed: usize,
-    pub files_not_found: usize,
-    pub preceding_applied: usize,
+pub struct ReviewSummary {
+    duplicate_ids: usize,
+    files_changed: usize,
+    files_not_found: usize,
+    preceding_applied: usize,
+}
+
+impl ReviewSummary {
+    pub fn duplicate_ids(&self) -> usize {
+        self.duplicate_ids
+    }
+
+    pub fn files_changed(&self) -> usize {
+        self.files_changed
+    }
+
+    pub fn files_not_found(&self) -> usize {
+        self.files_not_found
+    }
+
+    pub fn preceding_applied(&self) -> usize {
+        self.preceding_applied
+    }
 }
 
 #[derive(Default)]
 pub struct Review {
-    revisions: Vec<RevisionCheck>,
-    summary: RevisionSummary,
+    items: Vec<ReviewItem>,
+    summary: ReviewSummary,
 }
 
 impl Review {
@@ -169,11 +234,11 @@ impl Review {
         self.summary.preceding_applied > 0
     }
 
-    pub fn revisions(&self) -> &Vec<RevisionCheck> {
-        &self.revisions
+    pub fn items(&self) -> &Vec<ReviewItem> {
+        &self.items
     }
 
-    pub fn summary(&self) -> &RevisionSummary {
+    pub fn summary(&self) -> &ReviewSummary {
         &self.summary
     }
 }
@@ -183,23 +248,26 @@ pub fn check_revisions(exec: &mut Executor, revision_dir: &Path) -> Result<Revie
 
     exec.ensure_table_exists()?;
 
-    let revisions = RevisionCheck::all(exec, revision_dir)?;
-    let mut summary = RevisionSummary::default();
+    let files = RevisionFile::all(revision_dir)?;
+    let records = exec.load_revisions()?;
 
-    for rev in &revisions {
-        if rev.problems.contains(&DuplicateId) {
+    let items = ReviewItem::from_sources(files, records);
+    let mut summary = ReviewSummary::default();
+
+    for item in &items {
+        if item.problems.contains(&DuplicateId) {
             summary.duplicate_ids += 1;
         }
-        if rev.problems.contains(&FileChanged) {
+        if item.problems.contains(&FileChanged) {
             summary.files_changed += 1;
         }
-        if rev.problems.contains(&FileNotFound) {
+        if item.problems.contains(&FileNotFound) {
             summary.files_not_found += 1;
         }
-        if rev.problems.contains(&PrecedesApplied) {
+        if item.problems.contains(&PrecedesApplied) {
             summary.preceding_applied += 1;
         }
     }
 
-    Ok(Review { revisions, summary })
+    Ok(Review { items, summary })
 }

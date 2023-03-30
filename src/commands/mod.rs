@@ -15,7 +15,7 @@ mod review;
 use begin::Begin;
 use review::check_revisions;
 
-pub use review::RevisionSummary;
+pub use review::ReviewSummary;
 
 /// Accepts a path string targeting a directory to set up project files:
 /// The directory will be created if it does not exist or will fail if
@@ -92,25 +92,25 @@ pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
     let mut exec = Executor::new(cfg, env)?;
     let review = check_revisions(&mut exec, &cfg.revisions.directory)?;
 
-    if review.revisions().is_empty() {
+    if review.items().is_empty() {
         info!("No revisions found. Create your first revision with `jrny plan <some-name>`.");
         return Ok(());
     }
 
     info!("The journey thus far:");
 
-    for rev in review.revisions() {
+    for item in review.items() {
         info!("");
-        info!("  [{}] {}", rev.meta.id, rev.meta.name);
-        info!("    Created on {}", format_local(rev.meta.created_at));
+        info!("  [{}] {}", item.id(), item.name());
+        info!("    Created on {}", format_local(*item.created_at()));
 
-        if let Some(applied_on) = rev.meta.applied_on {
-            info!("    Applied on {}", format_local(applied_on));
+        if let Some(applied_on) = item.applied_on() {
+            info!("    Applied on {}", format_local(*applied_on));
         }
 
-        if !rev.problems.is_empty() {
+        if !item.problems().is_empty() {
             warn!("    Errors:");
-            for prob in &rev.problems {
+            for prob in item.problems() {
                 warn!("      - {}", prob);
             }
         }
@@ -133,6 +133,7 @@ pub fn embark(cfg: &Config, env: &Environment) -> Result<()> {
         return Err(Error::RevisionsFailedReview(review.summary().to_owned()));
     }
 
+    /*
     let to_apply: Vec<_> = review.revisions().iter()
         .filter(|anno| anno.meta.applied_on.is_none())
         .collect();
@@ -141,9 +142,10 @@ pub fn embark(cfg: &Config, env: &Environment) -> Result<()> {
     info!("");
 
     for revision in &to_apply {
-        // info!("  {}", revision.filename);
-        // exec.run_revision(revision)?;
+        info!("  {}", revision.filename);
+        exec.run_revision(revision)?;
     }
+    */
 
     Ok(())
 }
