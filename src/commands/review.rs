@@ -54,7 +54,6 @@ pub struct RevisionCheck {
 
 impl RevisionCheck {
     pub fn all(exec: &mut Executor, revision_dir: &Path) -> Result<Vec<Self>> {
-        // FIXME: Clean this up
         let mut files = RevisionFile::all(revision_dir)?;
         let mut records = exec.load_revisions()?;
 
@@ -158,8 +157,8 @@ pub struct RevisionSummary {
 
 #[derive(Default)]
 pub struct Review {
-    pub revisions: Vec<RevisionCheck>,
-    pub summary: RevisionSummary,
+    revisions: Vec<RevisionCheck>,
+    summary: RevisionSummary,
 }
 
 impl Review {
@@ -168,6 +167,14 @@ impl Review {
         self.summary.files_changed > 0 ||
         self.summary.files_not_found > 0 ||
         self.summary.preceding_applied > 0
+    }
+
+    pub fn revisions(&self) -> &Vec<RevisionCheck> {
+        &self.revisions
+    }
+
+    pub fn summary(&self) -> &RevisionSummary {
+        &self.summary
     }
 }
 

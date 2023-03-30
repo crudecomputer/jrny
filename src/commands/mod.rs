@@ -10,11 +10,9 @@ use crate::revisions::RevisionFile;
 use crate::{Error, Executor, Result};
 
 mod begin;
-// mod embark;
 mod review;
 
 use begin::Begin;
-// use embark::Embark;
 use review::check_revisions;
 
 pub use review::RevisionSummary;
@@ -94,14 +92,14 @@ pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
     let mut exec = Executor::new(cfg, env)?;
     let review = check_revisions(&mut exec, &cfg.revisions.directory)?;
 
-    if review.revisions.is_empty() {
+    if review.revisions().is_empty() {
         info!("No revisions found. Create your first revision with `jrny plan <some-name>`.");
         return Ok(());
     }
 
     info!("The journey thus far:");
 
-    for rev in &review.revisions {
+    for rev in review.revisions() {
         info!("");
         info!("  [{}] {}", rev.meta.id, rev.meta.name);
         info!("    Created on {}", format_local(rev.meta.created_at));
@@ -119,7 +117,7 @@ pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
     }
 
     if review.failed() {
-        return Err(Error::RevisionsFailedReview(review.summary));
+        return Err(Error::RevisionsFailedReview(review.summary().to_owned()));
     }
 
     Ok(())
@@ -129,15 +127,23 @@ pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
 /// database specified by the environment.
 pub fn embark(cfg: &Config, env: &Environment) -> Result<()> {
     let mut exec = Executor::new(cfg, env)?;
+    let review = check_revisions(&mut exec, &cfg.revisions.directory)?;
 
-    let cmd = Embark::prepare(cfg, &mut exec)?;
-
-    if cmd.to_apply.is_empty() {
-        info!("No revisions to apply");
-        return Ok(());
+    if review.failed() {
+        return Err(Error::RevisionsFailedReview(review.summary().to_owned()));
     }
 
-    cmd.apply(&mut exec)?;
+    let to_apply: Vec<_> = review.revisions().iter()
+        .filter(|anno| anno.meta.applied_on.is_none())
+        .collect();
+
+    info!("Applying {} revision(s)", to_apply.len());
+    info!("");
+
+    for revision in &to_apply {
+        // info!("  {}", revision.filename);
+        // exec.run_revision(revision)?;
+    }
 
     Ok(())
 }

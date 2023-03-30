@@ -7,7 +7,7 @@ use sha2::{Digest, Sha256};
 use crate::{Error, Result};
 
 
-// Creation date and extension-less name extracted from a revision filename.
+/// The components that make up a revision title, excluding extension
 #[derive(Debug, PartialEq)]
 struct RevisionTitle {
     /// The numeric id extracted from the filename
@@ -27,7 +27,7 @@ impl TryFrom<&str> for RevisionTitle {
         // Regex would work too, but not sure it's worth the dependencies and
         // binary size increase.
         //
-        // TODO maybe just use nightly? Eg.
+        // TODO: maybe just use nightly? Eg.
         //
         //     let (timestamp, name) = match parts.as_slice() {
         //         [timestamp, .. name, "sql"] => (timestamp, name.join(".")),
