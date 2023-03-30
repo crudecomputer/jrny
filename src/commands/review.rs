@@ -31,22 +31,6 @@ impl fmt::Display for RevisionProblem {
 
 type RevisionProblems = HashSet<RevisionProblem>;
 
-/// Comprehensive metadata for a revision detected on disk or in the database.
-#[derive(Debug)]
-pub struct RevisionMeta {
-    pub id: i32,
-    /// Moment the revision was applied to the database
-    pub applied_on: Option<DateTime<Utc>>,
-    /// Contents of revision file, if present
-    pub contents: Option<String>,
-    /// Moment the revision was created
-    pub created_at: DateTime<Utc>,
-    /// The full name of the file, including id, timestamp, and extension
-    pub filename: String,
-    /// The name of the file, excluding id, timestamp, and extension
-    pub name: String,
-}
-
 
 #[derive(Debug)]
 enum ReviewItemSource {
@@ -105,7 +89,9 @@ impl ReviewItem {
     }
 
     pub fn pending(&self) -> bool {
-        if let FileOnly(_) = self.source { true } else { false }
+        // Wow, clippy.. impressive
+        // if let FileOnly(_) = self.source { true } else { false }
+        matches!(self.source, FileOnly(_))
     }
 
     fn file_and_record(file: RevisionFile, problems: RevisionProblems) -> Self {
@@ -241,33 +227,42 @@ impl Review {
     pub fn summary(&self) -> &ReviewSummary {
         &self.summary
     }
-}
-
-pub fn check_revisions(exec: &mut Executor, revision_dir: &Path) -> Result<Review> {
-    use RevisionProblem::*;
-
-    exec.ensure_table_exists()?;
-
-    let files = RevisionFile::all(revision_dir)?;
-    let records = exec.load_revisions()?;
-
-    let items = ReviewItem::from_sources(files, records);
-    let mut summary = ReviewSummary::default();
-
-    for item in &items {
-        if item.problems.contains(&DuplicateId) {
-            summary.duplicate_ids += 1;
-        }
-        if item.problems.contains(&FileChanged) {
-            summary.files_changed += 1;
-        }
-        if item.problems.contains(&FileNotFound) {
-            summary.files_not_found += 1;
-        }
-        if item.problems.contains(&PrecedesApplied) {
-            summary.preceding_applied += 1;
-        }
+    
+    pub fn pending_revisions(&self) -> Vec<&RevisionFile> {
+        self.items.iter()
+            .filter_map(|item| match &item.source {
+                FileOnly(file) => Some(file),
+                _ => None,
+            })
+            .collect()
     }
 
-    Ok(Review { items, summary })
+    pub fn new(exec: &mut Executor, revision_dir: &Path) -> Result<Self> {
+        use RevisionProblem::*;
+
+        exec.ensure_table_exists()?;
+
+        let files = RevisionFile::all(revision_dir)?;
+        let records = exec.load_revisions()?;
+
+        let items = ReviewItem::from_sources(files, records);
+        let mut summary = ReviewSummary::default();
+
+        for item in &items {
+            if item.problems.contains(&DuplicateId) {
+                summary.duplicate_ids += 1;
+            }
+            if item.problems.contains(&FileChanged) {
+                summary.files_changed += 1;
+            }
+            if item.problems.contains(&FileNotFound) {
+                summary.files_not_found += 1;
+            }
+            if item.problems.contains(&PrecedesApplied) {
+                summary.preceding_applied += 1;
+            }
+        }
+
+        Ok(Review { items, summary })
+    }
 }

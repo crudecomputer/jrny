@@ -13,7 +13,7 @@ mod begin;
 mod review;
 
 use begin::Begin;
-use review::check_revisions;
+use review::Review;
 
 pub use review::ReviewSummary;
 
@@ -90,7 +90,7 @@ commit;
 /// their status in the database.
 pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
     let mut exec = Executor::new(cfg, env)?;
-    let review = check_revisions(&mut exec, &cfg.revisions.directory)?;
+    let review = Review::new(&mut exec, &cfg.revisions.directory)?;
 
     if review.items().is_empty() {
         info!("No revisions found. Create your first revision with `jrny plan <some-name>`.");
@@ -127,25 +127,21 @@ pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
 /// database specified by the environment.
 pub fn embark(cfg: &Config, env: &Environment) -> Result<()> {
     let mut exec = Executor::new(cfg, env)?;
-    let review = check_revisions(&mut exec, &cfg.revisions.directory)?;
+    let review = Review::new(&mut exec, &cfg.revisions.directory)?;
 
     if review.failed() {
         return Err(Error::RevisionsFailedReview(review.summary().to_owned()));
     }
 
-    /*
-    let to_apply: Vec<_> = review.revisions().iter()
-        .filter(|anno| anno.meta.applied_on.is_none())
-        .collect();
+    let pending = review.pending_revisions();
 
-    info!("Applying {} revision(s)", to_apply.len());
+    info!("Applying {} revision(s)", pending.len());
     info!("");
 
-    for revision in &to_apply {
+    for revision in &pending {
         info!("  {}", revision.filename);
         exec.run_revision(revision)?;
     }
-    */
 
     Ok(())
 }
