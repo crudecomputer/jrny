@@ -113,9 +113,9 @@ impl fmt::Display for Error {
 
                 if summary.preceding_applied() > 0 {
                     errs.push_str(&match summary.preceding_applied() {
-                        1 => format!("{sol} 1 pending revision occurs before applied revisions"),
+                        1 => format!("{sol} 1 pending revision has been inserted before revisions already applied"),
                         count => format!(
-                            "{sol} {count} pending revisions occur before applied revisions"
+                            "{sol} {count} pending revisions have been inserted before revisions already applied"
                         ),
                     });
                 }

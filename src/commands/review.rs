@@ -173,17 +173,14 @@ impl ReviewItem {
                     item.problems.insert(RevisionProblem::PrecedesApplied);
                 }
             }
-            match &mut previous {
-                Some(prev) => {
-                    if item.id() == prev.id() {
-                        prev.problems.insert(RevisionProblem::DuplicateId);
-                        item.problems.insert(RevisionProblem::DuplicateId);
-                    }
-                }
-                None => {
-                    previous = Some(item);
+            if let Some(prev) = previous {
+                if item.id() == prev.id() {
+                    prev.problems.insert(RevisionProblem::DuplicateId);
+                    item.problems.insert(RevisionProblem::DuplicateId);
                 }
             }
+
+            previous = Some(item);
         }
 
         items
