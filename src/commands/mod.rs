@@ -135,12 +135,15 @@ pub fn embark(cfg: &Config, env: &Environment) -> Result<()> {
 
     let pending = review.pending_revisions();
 
-    info!("Applying {} revision(s)", pending.len());
-    info!("");
-
-    for revision in &pending {
-        info!("  {}", revision.filename);
-        exec.run_revision(revision)?;
+    if pending.is_empty() {
+        info!("No pending revisions");
+    } else {
+        info!("Applying {} revision(s)", pending.len());
+        info!("");
+        for revision in &pending {
+            info!("  {}", revision.filename);
+            exec.run_revision(revision)?;
+        }
     }
 
     Ok(())

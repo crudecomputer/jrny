@@ -36,7 +36,10 @@ type RevisionProblems = HashSet<RevisionProblem>;
 
 #[derive(Debug)]
 enum ReviewItemSource {
-    FileAndRecord(RevisionFile),
+    FileAndRecord {
+        file: RevisionFile,
+        record: RevisionRecord,
+    },
     FileOnly(RevisionFile),
     RecordOnly(RevisionRecord),
 }
@@ -55,21 +58,21 @@ pub struct ReviewItem {
 impl ReviewItem {
     pub fn id(&self) -> i32 {
         match &self.source {
-            FileAndRecord(file) | FileOnly(file) => file.id,
+            FileAndRecord { file, .. } | FileOnly(file) => file.id,
             RecordOnly(record) => record.id,
         }
     }
 
     pub fn name(&self) -> &str {
         match &self.source {
-            FileAndRecord(file) | FileOnly(file) => &file.name,
+            FileAndRecord { file, .. } | FileOnly(file) => &file.name,
             RecordOnly(record) => &record.name,
         }
     }
 
     pub fn created_at(&self) -> &DateTime<Utc> {
         match &self.source {
-            FileAndRecord(file) | FileOnly(file) => &file.created_at,
+            FileAndRecord { file, .. } | FileOnly(file) => &file.created_at,
             RecordOnly(record) => &record.created_at,
         }
     }
@@ -80,7 +83,7 @@ impl ReviewItem {
 
     pub fn applied_on(&self) -> Option<&DateTime<Utc>> {
         match &self.source {
-            RecordOnly(record) => Some(&record.applied_on),
+            FileAndRecord { record, .. } | RecordOnly(record) => Some(&record.applied_on),
             _ => None,
         }
     }
@@ -95,9 +98,13 @@ impl ReviewItem {
         matches!(self.source, FileOnly(_))
     }
 
-    fn file_and_record(file: RevisionFile, problems: RevisionProblems) -> Self {
+    fn file_and_record(
+        file: RevisionFile,
+        record: RevisionRecord,
+        problems: RevisionProblems,
+    ) -> Self {
         Self {
-            source: ReviewItemSource::FileAndRecord(file),
+            source: ReviewItemSource::FileAndRecord { file, record },
             problems,
         }
     }
@@ -132,7 +139,7 @@ impl ReviewItem {
                     if file.checksum != record.checksum {
                         problems.insert(RevisionProblem::FileChanged);
                     }
-                    Self::file_and_record(file, problems)
+                    Self::file_and_record(file, record, problems)
                 }
                 None => Self::file_only(file, problems),
             };
