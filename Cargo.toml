@@ -12,13 +12,13 @@ readme = "README.md"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-chrono = "0.4.19"
-log = "0.4.14"
-postgres = { version = "0.19.2", features = ["with-chrono-0_4"] }
-serde = { version = "1.0.130", features = ["derive"] }
-sha2 = "0.9.8"
-termcolor = "1.1.2"
-toml = "0.5.8"
+chrono = "0.4"
+log = "0.4"
+postgres = { version = "0.19", features = ["with-chrono-0_4"] }
+serde = { version = "1", features = ["derive"] }
+sha2 = "0.10"
+termcolor = "1.2"
+toml = "0.7"
 
 [dependencies.clap]
 version = "4.2"
