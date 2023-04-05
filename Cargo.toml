@@ -22,5 +22,6 @@ toml = "0.5.8"
 
 [dependencies.clap]
 version = "4.2"
-default-features = false
-features = ["std", "color", "derive", "help", "suggestions", "usage", "wrap_help"]
+# default: std, color, error-context, help, suggestions, usage
+default-features = true
+features = ["derive", "wrap_help"]
