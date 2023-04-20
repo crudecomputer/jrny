@@ -302,7 +302,7 @@ $ jrny embark
 No revisions to apply
 ```
 
-Additionally, instead of applying all pending revisions, you can apply all pending revisions
+Additionally, instead of applying all pending revisions, you can apply only those
 up through a specified id using `--through` or `-t`.
 
 For instance, given a review like:
@@ -395,9 +395,6 @@ fn main() {
     ")).unwrap();
 
     // Review the migrations
-    //
-    // This SHOULD return an error if any revisions fail review but currently does not.
-    // See: https://github.com/kevlarr/jrny/issues/31
     jrny::review(&cfg, &env).unwrap();
 
     // Run the migrations
