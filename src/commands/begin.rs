@@ -1,5 +1,5 @@
-use std::fs;
 use std::ffi::OsStr;
+use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -76,10 +76,11 @@ fn is_empty_dir(p: &Path) -> Result<bool> {
         return Ok(false);
     }
 
-    let sql_file_count = p.read_dir()?
+    let sql_file_count = p
+        .read_dir()?
         .filter_map(|entry_result| entry_result.ok())
         .filter_map(|entry| entry.path().extension().map(|ext| ext.to_owned()))
-        .filter(|ext| ext == &OsStr::new("sql"))
+        .filter(|ext| ext == OsStr::new("sql"))
         .count();
 
     Ok(sql_file_count == 0)

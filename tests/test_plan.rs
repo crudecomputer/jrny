@@ -1,6 +1,4 @@
 use jrny::plan;
 
 #[test]
-fn it_works() {
-
-}
+fn it_works() {}

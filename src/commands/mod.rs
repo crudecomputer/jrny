@@ -142,28 +142,43 @@ pub fn embark(cfg: &Config, env: &Environment, through_id: Option<i32>) -> Resul
 
     let to_apply = match through_id {
         Some(through_id) => {
-            let to_apply: Vec<&RevisionFile> = pending.iter().filter(|rev| rev.id <= through_id).copied().collect();
-            let to_skip: Vec<&RevisionFile> = pending.iter().filter(|rev| rev.id > through_id).copied().collect();
+            let to_apply: Vec<&RevisionFile> = pending
+                .iter()
+                .filter(|rev| rev.id <= through_id)
+                .copied()
+                .collect();
+            let to_skip: Vec<&RevisionFile> = pending
+                .iter()
+                .filter(|rev| rev.id > through_id)
+                .copied()
+                .collect();
 
             match (to_apply.as_slice(), to_skip.as_slice()) {
                 ([], []) => unreachable!("pending revisions should not be empty"),
                 (_, []) => {
                     info!("Applying {} revision(s)", to_apply.len());
-                },
+                }
                 ([], _) => {
-                    info!("No revisions to apply, skipping {} revision(s)", to_skip.len());
-                },
+                    info!(
+                        "No revisions to apply, skipping {} revision(s)",
+                        to_skip.len()
+                    );
+                }
                 _ => {
-                    info!("Applying {} revision(s), skipping {}", to_apply.len(), to_skip.len());
-                },
+                    info!(
+                        "Applying {} revision(s), skipping {}",
+                        to_apply.len(),
+                        to_skip.len()
+                    );
+                }
             }
 
             to_apply
-        },
+        }
         None => {
             info!("Applying {} revision(s)", pending.len());
             pending
-        },
+        }
     };
 
     if !to_apply.is_empty() {

@@ -1,13 +1,13 @@
-use std::fs::remove_dir_all;
-use std::ffi::OsString;
 use jrny::{begin, Error};
+use std::ffi::OsString;
+use std::fs::remove_dir_all;
 
 mod helpers {
-    use std::ffi::OsString;
-    use std::fs::{DirEntry, read_to_string, remove_file};
-    use std::path::{Path, PathBuf};
     use super::remove_dir_all;
     use jrny::{CONF, ENV, ENV_EX};
+    use std::ffi::OsString;
+    use std::fs::{read_to_string, remove_file, DirEntry};
+    use std::path::{Path, PathBuf};
 
     // The contents of the generated files should be tested, but there isn't
     // really a need to expose these publicly from the crate
@@ -41,7 +41,7 @@ schema = "public"
 name = "jrny_revision"
 "#;
 
-const ENV_TEMPLATE: &str = r#"# jrny environment
+    const ENV_TEMPLATE: &str = r#"# jrny environment
 
 # Environment-specific configuration options, including secrets such as database
 # authentication. Runtime command flags will take precedence over any values provided.
@@ -56,7 +56,7 @@ const ENV_TEMPLATE: &str = r#"# jrny environment
 url = ""
 "#;
 
-const ENV_EX_TEMPLATE: &str = r#"# jrny environment EXAMPLE FILE
+    const ENV_EX_TEMPLATE: &str = r#"# jrny environment EXAMPLE FILE
 
 # This is an example file specifying optional environment-specific to include within
 # a `jrny-env.toml` file. If that file is not present, `jrny` will require
@@ -80,8 +80,7 @@ url = "postgresql://user:password@host:port/dbname"
     }
 
     pub fn dir_entries(dir: &Path) -> Vec<DirEntry> {
-        dir
-            .read_dir()
+        dir.read_dir()
             .unwrap()
             .map(|e| e.unwrap())
             .filter(|entry| entry.file_name() != OsString::from(".gitkeep"))
@@ -89,21 +88,14 @@ url = "postgresql://user:password@host:port/dbname"
     }
 
     pub fn assert_empty_directory(dir: &Path) {
-        assert!(
-            dir.is_dir(),
-            "{} should be a directory",
-            dir.display(),
-        );
+        assert!(dir.is_dir(), "{} should be a directory", dir.display(),);
 
         let entries = dir_entries(&dir);
         assert_eq!(entries.len(), 0);
     }
 
     pub fn assert_file_contents_match(path: &Path, contents: &str) {
-        assert_eq!(
-            read_to_string(&path).unwrap(),
-            contents,
-        )
+        assert_eq!(read_to_string(&path).unwrap(), contents,)
     }
 
     pub fn assert_expected_structure(dir: &Path) {
@@ -116,16 +108,16 @@ url = "postgresql://user:password@host:port/dbname"
             match filename.as_str() {
                 CONF => {
                     assert_file_contents_match(&path, CONF_TEMPLATE);
-                },
+                }
                 ENV => {
                     assert_file_contents_match(&path, ENV_TEMPLATE);
-                },
+                }
                 ENV_EX => {
                     assert_file_contents_match(&path, ENV_EX_TEMPLATE);
-                },
+                }
                 "revisions" => {
                     assert_empty_directory(&entry.path());
-                },
+                }
                 _ => {}
             }
         }
@@ -137,17 +129,15 @@ url = "postgresql://user:password@host:port/dbname"
             let path = entry.path();
 
             let result = match filename.as_str() {
-                CONF | ENV | ENV_EX => {
-                    remove_file(&path)
-                },
+                CONF | ENV | ENV_EX => remove_file(&path),
                 "revisions" => {
                     if remove_revisions_dir {
                         remove_dir_all(&path)
                     } else {
                         Ok(())
                     }
-                },
-                _ => Ok(())
+                }
+                _ => Ok(()),
             };
 
             result.expect(&format!("Failed to remove {}", path.display()))
@@ -214,11 +204,8 @@ fn existing_directory_with_nonempty_revisions_directory_fails() {
     // crate error type is a mess and can't implement PartialEq
     match begin(&dir) {
         Err(Error::PathNotEmptyDirectory(path)) => {
-            assert_eq!(
-                "tests/fixtures/dirs/03-nonempty-revisions/revisions",
-                path,
-            )
-        },
+            assert_eq!("tests/fixtures/dirs/03-nonempty-revisions/revisions", path,)
+        }
         res => panic!("unexpected result {:#?}", res),
     }
 }
@@ -237,10 +224,7 @@ fn existing_nonempty_directory_works() {
         names
     };
 
-    assert_eq!(entry_names(), vec![
-        "another-file.toml",
-        "some-file.json",
-    ]);
+    assert_eq!(entry_names(), vec!["another-file.toml", "some-file.json",]);
 
     begin(&dir).unwrap();
     assert_expected_structure(&dir);
@@ -248,10 +232,7 @@ fn existing_nonempty_directory_works() {
 
     clean_directory(&dir, true);
 
-    assert_eq!(entry_names(), vec![
-        "another-file.toml",
-        "some-file.json",
-    ]);
+    assert_eq!(entry_names(), vec!["another-file.toml", "some-file.json",]);
 }
 
 #[test]
@@ -260,11 +241,8 @@ fn existing_nonempty_directory_with_existing_config_fails() {
 
     match begin(&dir) {
         Err(Error::PathAlreadyExists(path)) => {
-            assert_eq!(
-                "tests/fixtures/dirs/05-existing-config/jrny.toml",
-                path,
-            )
-        },
+            assert_eq!("tests/fixtures/dirs/05-existing-config/jrny.toml", path,)
+        }
         res => panic!("unexpected result {:#?}", res),
     }
 }
@@ -275,11 +253,8 @@ fn existing_nonempty_directory_with_existing_env_fails() {
 
     match begin(&dir) {
         Err(Error::PathAlreadyExists(path)) => {
-            assert_eq!(
-                "tests/fixtures/dirs/06-existing-env/jrny-env.toml",
-                path,
-            )
-        },
+            assert_eq!("tests/fixtures/dirs/06-existing-env/jrny-env.toml", path,)
+        }
         res => panic!("unexpected result {:#?}", res),
     }
 }
