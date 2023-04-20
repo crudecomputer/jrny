@@ -404,23 +404,8 @@ fn main() {
 
 ## Planned improvements, or "things that are missing"
 
-### Code cleanup
+See [enhancements](https://github.com/kevlarr/jrny/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement)
+for a running list of planned new features.
 
-Refactoring in Rust is fun - which is good, because there's a lot of room in this project
-for clearer patterns and modules, better code, etc.
-
-### Revision archiving
-
-Revisions are great, but we don't normally need revisions from 2 years ago sitting in the directory cluttering up the screen.
-
-This could take several forms but could possible involve concatenating all files into a single 'base' revision and resetting the revision
-table to mark that base as applied.
-
-### Revision 'bundling'
-
-Sometimes revisions are logically-related (ie. when developing a given feature) and it could make
-sense to group them together in a folder, just to help keep the files a little easier to browse.
-
-### Tests and automation
-
-No description necessary; there's barely any test coverage, and there's hardly any CI.
+More importantly, there is currently zero test coverage; fixing this is part of the
+[v2.0.0 milestone](https://github.com/kevlarr/jrny/issues?q=is%3Aopen+is%3Aissue+milestone%3Av2.0.0).
