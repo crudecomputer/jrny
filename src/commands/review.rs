@@ -93,8 +93,7 @@ impl ReviewItem {
     }
 
     pub fn pending(&self) -> bool {
-        // Wow, clippy.. impressive
-        // if let FileOnly(_) = self.source { true } else { false }
+        // Eg. `if let FileOnly(_) = self.source { true } else { false }`
         matches!(self.source, FileOnly(_))
     }
 
