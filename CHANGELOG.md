@@ -9,25 +9,36 @@ This project also attempts to adhere to [Semantic Versioning](https://semver.org
 
 ---
 
-## [Unreleased]
+## [2.0.0-beta.8] - 2023-04-19
 
 ### Added
 - Only embark up through a specific revision with `embark --through`
-- Added doc comments to all public modules, types, and functions
-- Basic instructions for using `jrny` as a library instead of an executable
 
 ### Fixed
-- `review` and `embark` now appropriately exit with an error code when errors are found
+- `review` and `embark` now appropriately exit with an error code when revision errors are found
 
 ### Changed
 - All subcommand and option help messages have been rewritten and improved
+
+### Removed
+- `Logger` moved from `crate::logger` to `main`
+
+## [2.0.0-beta.7] - 2023-03-03
+
+### Added
+- Added doc comments to all public modules, types, and functions
+- Basic instructions for using `jrny` as a library instead of an executable
+
+### Changed
 - `crate::config` and `crate::environment` moved inside of `crate::context` with all types re-exported
 - `crate::client` and `crate::executor` moved inside of `crate::db` and re-exported
 - `jrny::plan` has a new `contents: Option<&str>` parameter to allow programmatically
 writing a new, non-empty revision file
 
-### Removed
-- `Logger` moved from `crate::logger` to `main`
+## [2.0.0-beta.6] - 2023-03-01
+
+### Changed
+- Code cleanup
 
 ## [2.0.0-beta.5] - 2021-10-25
 
