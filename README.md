@@ -276,7 +276,7 @@ determine if a file has been changed after being applied.
 
 #### Embark on the journey!
 
-To apply pending revisions, run `jrny embark`.
+To apply all pending revisions, run `jrny embark`.
 
 As with `jrny review`, applying revisions looks for default config & environment files in the current directory,
 but either can be overridden and, again, the database URL can be supplied directly.
@@ -299,7 +299,45 @@ Applying 1 revision(s)
 ```bash
 $ jrny embark
 
-No pending revisions
+No revisions to apply
+```
+
+Additionally, instead of applying all pending revisions, you can apply all pending revisions
+up through a specified id using `--through` or `-t`.
+
+For instance, given a review like:
+
+```bash
+$ jrny review
+
+The journey thus far:
+
+  [1] my-first-revision
+    Created on 30-Mar-2023 09:10:22
+    Applied on 30-Mar-2023 09:11:06
+
+  [2] another-revision
+    Created on 30-Mar-2023 09:10:32
+
+  [3] YET-another-revision
+    Created on 30-Mar-2023 09:27:58
+
+  [4] shocker-a-revision
+    Created on 19-Apr-2023 15:42:29
+
+  [5] surprise-another-revision
+    Created on 19-Apr-2023 15:42:36
+```
+
+If you only wanted to run up through `YET-another-revision` you would just pass the id `3`:
+
+```bash
+$ jrny embark --through 3
+
+Applying 2 revision(s), skipping 2
+
+  002.1680181832.another-revision.sql
+  008.1681952321.YET another revision.sql
 ```
 
 ## Library Usage
