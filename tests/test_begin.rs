@@ -1,6 +1,6 @@
 use std::fs::remove_dir_all;
 use std::ffi::OsString;
-use jrny::begin;
+use jrny::{begin, Error};
 
 mod helpers {
     use std::ffi::OsString;
@@ -109,8 +109,6 @@ url = "postgresql://user:password@host:port/dbname"
     pub fn assert_expected_structure(dir: &Path) {
         let entries = dir_entries(&dir);
 
-        assert_eq!(entries.len(), 4);
-
         for entry in entries {
             let filename = entry.file_name().into_string().unwrap();
             let path = entry.path();
@@ -128,7 +126,7 @@ url = "postgresql://user:password@host:port/dbname"
                 "revisions" => {
                     assert_empty_directory(&entry.path());
                 },
-                _ => panic!("Unexpected file {}", filename)
+                _ => {}
             }
         }
     }
@@ -168,6 +166,7 @@ fn new_project_directory_works() {
 
     begin(&dir).unwrap();
     assert_expected_structure(&dir);
+    assert_eq!(dir_entries(&dir).len(), 4);
 
     // Clean up
     remove_dir_all(&dir).unwrap();
@@ -183,6 +182,7 @@ fn existing_empty_directory_works() {
 
     begin(&dir).unwrap();
     assert_expected_structure(&dir);
+    assert_eq!(dir_entries(&dir).len(), 4);
 
     clean_directory(&dir, true);
     assert_empty_directory(&dir);
@@ -202,26 +202,84 @@ fn existing_directory_with_empty_revisions_directory_works() {
 
     begin(&dir).unwrap();
     assert_expected_structure(&dir);
+    assert_eq!(dir_entries(&dir).len(), 4);
 
     clean_directory(&dir, false);
 }
 
 #[test]
 fn existing_directory_with_nonempty_revisions_directory_fails() {
-    // dirs/03
+    let dir = test_dir("03-nonempty-revisions");
+
+    // crate error type is a mess and can't implement PartialEq
+    match begin(&dir) {
+        Err(Error::PathNotEmptyDirectory(path)) => {
+            assert_eq!(
+                "tests/fixtures/dirs/03-nonempty-revisions/revisions",
+                path,
+            )
+        },
+        res => panic!("unexpected result {:#?}", res),
+    }
 }
 
 #[test]
 fn existing_nonempty_directory_works() {
-    // dirs/04
+    let dir = test_dir("04-nonempty");
+
+    let entry_names = || {
+        let mut names = dir_entries(&dir)
+            .iter()
+            .map(|e| e.file_name().into_string().unwrap())
+            .collect::<Vec<String>>();
+
+        names.sort();
+        names
+    };
+
+    assert_eq!(entry_names(), vec![
+        "another-file.toml",
+        "some-file.json",
+    ]);
+
+    begin(&dir).unwrap();
+    assert_expected_structure(&dir);
+    assert_eq!(dir_entries(&dir).len(), 6);
+
+    clean_directory(&dir, true);
+
+    assert_eq!(entry_names(), vec![
+        "another-file.toml",
+        "some-file.json",
+    ]);
 }
 
 #[test]
 fn existing_nonempty_directory_with_existing_config_fails() {
-    // dirs/05
+    let dir = test_dir("05-existing-config");
+
+    match begin(&dir) {
+        Err(Error::PathAlreadyExists(path)) => {
+            assert_eq!(
+                "tests/fixtures/dirs/05-existing-config/jrny.toml",
+                path,
+            )
+        },
+        res => panic!("unexpected result {:#?}", res),
+    }
 }
 
 #[test]
 fn existing_nonempty_directory_with_existing_env_fails() {
-    // dirs/06
+    let dir = test_dir("06-existing-env");
+
+    match begin(&dir) {
+        Err(Error::PathAlreadyExists(path)) => {
+            assert_eq!(
+                "tests/fixtures/dirs/06-existing-env/jrny-env.toml",
+                path,
+            )
+        },
+        res => panic!("unexpected result {:#?}", res),
+    }
 }
