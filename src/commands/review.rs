@@ -93,8 +93,7 @@ impl ReviewItem {
     }
 
     pub fn pending(&self) -> bool {
-        // Wow, clippy.. impressive
-        // if let FileOnly(_) = self.source { true } else { false }
+        // Eg. `if let FileOnly(_) = self.source { true } else { false }`
         matches!(self.source, FileOnly(_))
     }
 
@@ -129,12 +128,12 @@ impl ReviewItem {
         // For extracting the equivalent record when iterating through files
         let mut records: HashMap<String, RevisionRecord> = records
             .into_iter()
-            .map(|record| (record.name.clone(), record))
+            .map(|record| (record.filename.clone(), record))
             .collect();
 
         for file in files {
             let mut problems = HashSet::new();
-            let item = match records.remove(&file.name) {
+            let item = match records.remove(&file.filename) {
                 Some(record) => {
                     if file.checksum != record.checksum {
                         problems.insert(RevisionProblem::FileChanged);

@@ -23,16 +23,6 @@ impl TryFrom<&str> for RevisionTitle {
     fn try_from(filename: &str) -> std::result::Result<Self, Self::Error> {
         let parts: Vec<&str> = filename.split('.').collect();
 
-        // Regex would work too, but not sure it's worth the dependencies and
-        // binary size increase.
-        //
-        // TODO: maybe just use nightly? Eg.
-        //
-        //     let (timestamp, name) = match parts.as_slice() {
-        //         [timestamp, .. name, "sql"] => (timestamp, name.join(".")),
-        //         _ => return Err(err()),
-        //     };
-
         if parts.len() < 4 || parts.last() != Some(&"sql") {
             return Err(Error::RevisionNameInvalid(filename.to_string()));
         }
@@ -45,7 +35,7 @@ impl TryFrom<&str> for RevisionTitle {
             .parse()
             .map_err(|e| Error::RevisionTimestampInvalid(e, filename.to_string()))?;
 
-        // Utc.timestamp can panic, hence `timestamp_opt`
+        // `Utc.timestamp` can panic, hence `timestamp_opt`
         let created_at = Utc
             .timestamp_opt(timestamp, 0)
             .single()

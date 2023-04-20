@@ -125,7 +125,7 @@ pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
 
 /// Applies all pending revisions specified by the given config to the
 /// database specified by the environment.
-pub fn embark(cfg: &Config, env: &Environment) -> Result<()> {
+pub fn embark(cfg: &Config, env: &Environment, through_id: Option<i32>) -> Result<()> {
     let mut exec = Executor::new(cfg, env)?;
     let review = Review::new(&mut exec, &cfg.revisions.directory)?;
 
@@ -136,11 +136,39 @@ pub fn embark(cfg: &Config, env: &Environment) -> Result<()> {
     let pending = review.pending_revisions();
 
     if pending.is_empty() {
-        info!("No pending revisions");
-    } else {
-        info!("Applying {} revision(s)", pending.len());
+        info!("No revisions to apply");
+        return Ok(());
+    }
+
+    let to_apply = match through_id {
+        Some(through_id) => {
+            let to_apply: Vec<&RevisionFile> = pending.iter().filter(|rev| rev.id <= through_id).copied().collect();
+            let to_skip: Vec<&RevisionFile> = pending.iter().filter(|rev| rev.id > through_id).copied().collect();
+
+            match (to_apply.as_slice(), to_skip.as_slice()) {
+                ([], []) => unreachable!("pending revisions should not be empty"),
+                (_, []) => {
+                    info!("Applying {} revision(s)", to_apply.len());
+                },
+                ([], _) => {
+                    info!("No revisions to apply, skipping {} revision(s)", to_skip.len());
+                },
+                _ => {
+                    info!("Applying {} revision(s), skipping {}", to_apply.len(), to_skip.len());
+                },
+            }
+
+            to_apply
+        },
+        None => {
+            info!("Applying {} revision(s)", pending.len());
+            pending
+        },
+    };
+
+    if !to_apply.is_empty() {
         info!("");
-        for revision in &pending {
+        for revision in &to_apply {
             info!("  {}", revision.filename);
             exec.run_revision(revision)?;
         }

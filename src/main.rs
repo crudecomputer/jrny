@@ -103,7 +103,7 @@ struct Review {
 #[command(
     about = "Reviews existing revisions for errors and applies pending revisions",
     long_about = "\
-Reviews existing revisions for errors. Applies pending revisions only if \
+Reviews existing revisions for errors and applies pending revisions if \
 no errors with existing revisions were found.",
 
 )]
@@ -113,6 +113,13 @@ struct Embark {
 
     #[command(flatten)]
     env: CliEnvironment,
+
+    #[arg(
+        help = "The id of the last revision to run, defaulting to the latest revision",
+        short,
+        long,
+    )]
+    through: Option<i32>,
 }
 
 #[derive(Parser, Debug)]
@@ -278,5 +285,5 @@ fn embark(cmd: Embark) -> JrnyResult<()> {
     let cfg: Config = cmd.cfg.try_into()?;
     let env = cmd.env.jrny_environment(&cfg)?;
 
-    jrny::embark(&cfg, &env)
+    jrny::embark(&cfg, &env, cmd.through)
 }

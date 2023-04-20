@@ -276,7 +276,7 @@ determine if a file has been changed after being applied.
 
 #### Embark on the journey!
 
-To apply pending revisions, run `jrny embark`.
+To apply all pending revisions, run `jrny embark`.
 
 As with `jrny review`, applying revisions looks for default config & environment files in the current directory,
 but either can be overridden and, again, the database URL can be supplied directly.
@@ -299,7 +299,45 @@ Applying 1 revision(s)
 ```bash
 $ jrny embark
 
-No pending revisions
+No revisions to apply
+```
+
+Additionally, instead of applying all pending revisions, you can apply only those
+up through a specified id using `--through` or `-t`.
+
+For instance, given a review like:
+
+```bash
+$ jrny review
+
+The journey thus far:
+
+  [1] my-first-revision
+    Created on 30-Mar-2023 09:10:22
+    Applied on 30-Mar-2023 09:11:06
+
+  [2] another-revision
+    Created on 30-Mar-2023 09:10:32
+
+  [3] YET-another-revision
+    Created on 30-Mar-2023 09:27:58
+
+  [4] shocker-a-revision
+    Created on 19-Apr-2023 15:42:29
+
+  [5] surprise-another-revision
+    Created on 19-Apr-2023 15:42:36
+```
+
+If you only wanted to run up through `YET-another-revision` you would just pass the id `3`:
+
+```bash
+$ jrny embark --through 3
+
+Applying 2 revision(s), skipping 2
+
+  002.1680181832.another-revision.sql
+  008.1681952321.YET another revision.sql
 ```
 
 ## Library Usage
@@ -357,9 +395,6 @@ fn main() {
     ")).unwrap();
 
     // Review the migrations
-    //
-    // This SHOULD return an error if any revisions fail review but currently does not.
-    // See: https://github.com/kevlarr/jrny/issues/31
     jrny::review(&cfg, &env).unwrap();
 
     // Run the migrations
@@ -369,23 +404,8 @@ fn main() {
 
 ## Planned improvements, or "things that are missing"
 
-### Code cleanup
+See [enhancements](https://github.com/kevlarr/jrny/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement)
+for a running list of planned new features.
 
-Refactoring in Rust is fun - which is good, because there's a lot of room in this project
-for clearer patterns and modules, better code, etc.
-
-### Revision archiving
-
-Revisions are great, but we don't normally need revisions from 2 years ago sitting in the directory cluttering up the screen.
-
-This could take several forms but could possible involve concatenating all files into a single 'base' revision and resetting the revision
-table to mark that base as applied.
-
-### Revision 'bundling'
-
-Sometimes revisions are logically-related (ie. when developing a given feature) and it could make
-sense to group them together in a folder, just to help keep the files a little easier to browse.
-
-### Tests and automation
-
-No description necessary; there's barely any test coverage, and there's hardly any CI.
+More importantly, there is currently zero test coverage; fixing this is part of the
+[v2.0.0 milestone](https://github.com/kevlarr/jrny/issues?q=is%3Aopen+is%3Aissue+milestone%3Av2.0.0).
