@@ -9,10 +9,16 @@ This project also attempts to adhere to [Semantic Versioning](https://semver.org
 
 ---
 
-## [Planned]
-- Cross-platform testing and compilation
+## [Unreleased]
 
----
+### Added
+- Only embark up through a specific revision with `embark --through`
+
+### Fixed
+- `review` and `embark` now appropriately exit with an error code when errors are found
+
+### Changed
+- All subcommand and option help messages have been rewritten and improved
 
 ## [2.0.0-beta.7] - 2023-03-03
 
