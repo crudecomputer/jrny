@@ -89,7 +89,7 @@ commit;
 /// Reviews the status of all revisions specified by the config as well as
 /// their status in the database.
 pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
-    let mut exec = Executor::new(cfg, env)?;
+    let mut exec = Executor::new(&cfg.table, env)?;
     let review = Review::new(&mut exec, &cfg.revisions.directory)?;
 
     if review.items().is_empty() {
@@ -126,7 +126,7 @@ pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
 /// Applies all pending revisions specified by the given config to the
 /// database specified by the environment.
 pub fn embark(cfg: &Config, env: &Environment, through_id: Option<i32>) -> Result<()> {
-    let mut exec = Executor::new(cfg, env)?;
+    let mut exec = Executor::new(&cfg.table, env)?;
     let review = Review::new(&mut exec, &cfg.revisions.directory)?;
 
     if review.failed() {
