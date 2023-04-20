@@ -1,4 +1,5 @@
 use std::fs;
+use std::ffi::OsStr;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -68,8 +69,20 @@ const ENV_EX_TEMPLATE: &str = r#"# jrny environment EXAMPLE FILE
 url = "postgresql://user:password@host:port/dbname"
 "#;
 
+/// Whether or not the given path corresponds to a directory that contains
+/// no existing .sql files
 fn is_empty_dir(p: &Path) -> Result<bool> {
-    Ok(p.is_dir() && p.read_dir()?.next().is_none())
+    if !p.is_dir() {
+        return Ok(false);
+    }
+
+    let sql_file_count = p.read_dir()?
+        .filter_map(|entry_result| entry_result.ok())
+        .filter_map(|entry| entry.path().extension().map(|ext| ext.to_owned()))
+        .filter(|ext| ext == &OsStr::new("sql"))
+        .count();
+
+    Ok(sql_file_count == 0)
 }
 
 #[derive(Debug)]

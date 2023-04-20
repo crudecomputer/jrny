@@ -1,4 +1,5 @@
 use std::fs::remove_dir_all;
+use std::ffi::OsString;
 use jrny::begin;
 
 mod helpers {
@@ -6,7 +7,10 @@ mod helpers {
     use std::fs::{DirEntry, read_to_string, remove_file};
     use std::path::{Path, PathBuf};
     use super::remove_dir_all;
+    use jrny::{CONF, ENV, ENV_EX};
 
+    // The contents of the generated files should be tested, but there isn't
+    // really a need to expose these publicly from the crate
     const CONF_TEMPLATE: &str = r#"# jrny config
 
 # Project-level configuration options that should not change across environments
@@ -112,13 +116,13 @@ url = "postgresql://user:password@host:port/dbname"
             let path = entry.path();
 
             match filename.as_str() {
-                "jrny.toml" => {
+                CONF => {
                     assert_file_contents_match(&path, CONF_TEMPLATE);
                 },
-                "jrny-env.toml" => {
+                ENV => {
                     assert_file_contents_match(&path, ENV_TEMPLATE);
                 },
-                "jrny-env.example.toml" => {
+                ENV_EX => {
                     assert_file_contents_match(&path, ENV_EX_TEMPLATE);
                 },
                 "revisions" => {
@@ -129,23 +133,31 @@ url = "postgresql://user:password@host:port/dbname"
         }
     }
 
-    pub fn clean_directory(dir: &Path) {
+    pub fn clean_directory(dir: &Path, remove_revisions_dir: bool) {
         for entry in dir_entries(dir) {
+            let filename = entry.file_name().into_string().unwrap();
             let path = entry.path();
-            let result = if path.is_file() {
-                remove_file(&path)
-            } else {
-                remove_dir_all(&path)
+
+            let result = match filename.as_str() {
+                CONF | ENV | ENV_EX => {
+                    remove_file(&path)
+                },
+                "revisions" => {
+                    if remove_revisions_dir {
+                        remove_dir_all(&path)
+                    } else {
+                        Ok(())
+                    }
+                },
+                _ => Ok(())
             };
 
             result.expect(&format!("Failed to remove {}", path.display()))
         }
-        assert_empty_directory(dir);
     }
 }
 
 use helpers::*;
-
 
 #[test]
 fn new_project_directory_works() {
@@ -172,12 +184,26 @@ fn existing_empty_directory_works() {
     begin(&dir).unwrap();
     assert_expected_structure(&dir);
 
-    clean_directory(&dir);
+    clean_directory(&dir, true);
+    assert_empty_directory(&dir);
 }
 
 #[test]
 fn existing_directory_with_empty_revisions_directory_works() {
-    // dirs/02
+    let dir = test_dir("02-empty-revisions");
+    let mut entries = dir_entries(&dir);
+
+    assert_eq!(entries.len(), 1);
+
+    let entry = entries.pop().unwrap();
+
+    assert_eq!(entry.file_name(), OsString::from("revisions"));
+    assert_empty_directory(&entry.path());
+
+    begin(&dir).unwrap();
+    assert_expected_structure(&dir);
+
+    clean_directory(&dir, false);
 }
 
 #[test]
