@@ -80,7 +80,7 @@ fn invalid_project_config_fails() {
 fn no_existing_revisions() {
     let title = "a-revision-file";
 
-    let dir = test_dir("plan/02-empty-revisions-dir/revisions");
+    let dir = test_dir("plan/02a-empty-revisions-dir/revisions");
     let cfg = Config::build()
         .revision_directory(&dir)
         .finish();
@@ -108,6 +108,35 @@ fn no_existing_revisions() {
 
 #[test]
 fn no_existing_revisions_and_pass_contents() {
+    let title = "different-revision-file";
+
+    let dir = test_dir("plan/02b-empty-revisions-dir/revisions");
+    let cfg = Config::build()
+        .revision_directory(&dir)
+        .finish();
+
+    assert_empty_directory(&dir);
+
+    let start = Utc::now().timestamp();
+    sleep(Duration::from_secs(1));
+
+    let created = plan(
+        &cfg,
+        title,
+        Some("drop database haha;"),
+    ).unwrap();
+
+    sleep(Duration::from_secs(1));
+    let end = Utc::now().timestamp();
+
+    assert_revision(
+        &created,
+        "001",
+        start..end,
+        title,
+        "drop database haha;",
+    );
+    remove_file(&created).unwrap();
 }
 
 #[test]
