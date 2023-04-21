@@ -269,7 +269,8 @@ fn plan(cmd: Plan) -> JrnyResult<()> {
     let cfg: Config = cmd.cfg.try_into()?;
 
     // TODO: Allow passing in file contents via command-line?
-    jrny::plan(&cfg, &cmd.name, None)
+    jrny::plan(&cfg, &cmd.name, None)?;
+    Ok(())
 }
 
 fn review(cmd: Review) -> JrnyResult<()> {

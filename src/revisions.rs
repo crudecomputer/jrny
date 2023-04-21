@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::ffi::OsStr;
 
 use chrono::{DateTime, TimeZone, Utc};
 use sha2::{Digest, Sha256};
@@ -23,7 +24,7 @@ impl TryFrom<&str> for RevisionTitle {
     fn try_from(filename: &str) -> std::result::Result<Self, Self::Error> {
         let parts: Vec<&str> = filename.split('.').collect();
 
-        if parts.len() < 4 || parts.last() != Some(&"sql") {
+        if parts.len() < 4 || parts.last().map(|ext| ext.to_lowercase()).as_deref() != Some(&"sql") {
             return Err(Error::RevisionNameInvalid(filename.to_string()));
         }
 
@@ -71,15 +72,26 @@ pub struct RevisionFile {
 }
 
 impl RevisionFile {
-    /// Attempts to read revision directory to convert all entries (assumed to be SQL files)
+    /// Attempts to read revision directory to convert all .sql entries
     /// into metadata objects with contents stored.
     pub fn all(revisions: &Path) -> Result<Vec<Self>> {
-        let mut entries = fs::read_dir(revisions)?
-            .map(|res| res.map(|e| e.path()).map_err(Error::IoError))
+        // Try to collect all paths in the directory or fail with any IO errors
+        let paths = fs::read_dir(revisions)?
+            .map(|entry_res| entry_res.map(|e| e.path()).map_err(Error::IoError))
             .collect::<Result<Vec<_>>>()?;
 
-        entries.sort();
-        entries.iter().map(Self::try_from).collect()
+        // Now filter out any non-.sql files
+        let mut paths = paths
+            .into_iter()
+            .filter(|path| Some("sql") == path.extension()
+                .and_then(|os_str| os_str.to_str())
+                .map(|s| s.to_lowercase())
+                .as_deref()
+            )
+            .collect::<Vec<PathBuf>>();
+
+        paths.sort();
+        paths.iter().map(Self::try_from).collect()
     }
 }
 

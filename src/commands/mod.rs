@@ -1,6 +1,6 @@
 use std::fs;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Local, Utc};
 use log::{info, warn};
@@ -52,7 +52,8 @@ pub fn begin(dirpath: &Path) -> Result<()> {
 
 /// Generates a new empty revision file with the given name in the
 /// revisions directory specified by the provided config.
-pub fn plan(cfg: &Config, name: &str, contents: Option<&str>) -> Result<()> {
+pub fn plan(cfg: &Config, name: &str, contents: Option<&str>) -> Result<PathBuf> {
+    // TODO: Is second-precision good enough?
     let timestamp = Utc::now().timestamp();
     let next_id = RevisionFile::all(&cfg.revisions.directory)?
         .iter()
@@ -82,8 +83,7 @@ commit;
     fs::File::create(&new_path)?.write_all(contents.as_bytes())?;
 
     info!("Created {}", new_path.display());
-
-    Ok(())
+    Ok(new_path)
 }
 
 /// Reviews the status of all revisions specified by the config as well as
