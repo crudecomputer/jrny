@@ -51,4 +51,47 @@ impl Config {
 
         Ok(config)
     }
+
+    pub fn build() -> ConfigBuilder {
+        ConfigBuilder::default()
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct ConfigBuilder {
+    revision_directory: Option<PathBuf>,
+    schema_name: Option<String>,
+    table_name: Option<String>,
+}
+
+impl ConfigBuilder {
+    pub fn revision_directory(mut self, dir: impl Into<PathBuf>) -> Self {
+        self.revision_directory = Some(dir.into());
+        self
+    }
+
+    pub fn schema_name(mut self, schema: String) -> Self {
+        self.schema_name = Some(schema);
+        self
+    }
+
+    pub fn table_name(mut self, table: String) -> Self {
+        self.table_name = Some(table);
+        self
+    }
+
+    pub fn finish(self) -> Config {
+        Config {
+            revisions: RevisionsSettings {
+                directory: self.revision_directory
+                    .unwrap_or_else(|| PathBuf::from("revisions")),
+            },
+            table: TableSettings {
+                schema: self.schema_name
+                    .unwrap_or_else(|| "public".to_owned()),
+                name: self.table_name
+                    .unwrap_or_else(|| "jrny_revision".to_owned())
+            }
+        }
+    }
 }
