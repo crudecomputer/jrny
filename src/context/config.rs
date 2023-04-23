@@ -83,15 +83,16 @@ impl ConfigBuilder {
     pub fn finish(self) -> Config {
         Config {
             revisions: RevisionsSettings {
-                directory: self.revision_directory
+                directory: self
+                    .revision_directory
                     .unwrap_or_else(|| PathBuf::from("revisions")),
             },
             table: TableSettings {
-                schema: self.schema_name
-                    .unwrap_or_else(|| "public".to_owned()),
-                name: self.table_name
-                    .unwrap_or_else(|| "jrny_revision".to_owned())
-            }
+                schema: self.schema_name.unwrap_or_else(|| "public".to_owned()),
+                name: self
+                    .table_name
+                    .unwrap_or_else(|| "jrny_revision".to_owned()),
+            },
         }
     }
 }

@@ -1,6 +1,5 @@
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::ffi::OsStr;
 
 use chrono::{DateTime, TimeZone, Utc};
 use sha2::{Digest, Sha256};
@@ -24,7 +23,7 @@ impl TryFrom<&str> for RevisionTitle {
     fn try_from(filename: &str) -> std::result::Result<Self, Self::Error> {
         let parts: Vec<&str> = filename.split('.').collect();
 
-        if parts.len() < 4 || parts.last().map(|ext| ext.to_lowercase()).as_deref() != Some(&"sql") {
+        if parts.len() < 4 || parts.last().map(|ext| ext.to_lowercase()).as_deref() != Some("sql") {
             return Err(Error::RevisionNameInvalid(filename.to_string()));
         }
 
@@ -83,11 +82,14 @@ impl RevisionFile {
         // Now filter out any non-.sql files
         let mut paths = paths
             .into_iter()
-            .filter(|path| Some("sql") == path.extension()
-                .and_then(|os_str| os_str.to_str())
-                .map(|s| s.to_lowercase())
-                .as_deref()
-            )
+            .filter(|path| {
+                Some("sql")
+                    == path
+                        .extension()
+                        .and_then(|os_str| os_str.to_str())
+                        .map(|s| s.to_lowercase())
+                        .as_deref()
+            })
             .collect::<Vec<PathBuf>>();
 
         paths.sort();

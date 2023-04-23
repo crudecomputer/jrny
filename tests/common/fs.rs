@@ -1,7 +1,7 @@
+use jrny::{CONF, ENV, ENV_EX};
 use std::ffi::OsString;
 use std::fs::{read_to_string, remove_dir_all, remove_file, DirEntry};
 use std::path::{Path, PathBuf};
-use jrny::{CONF, ENV, ENV_EX};
 
 // The contents of the generated files should be tested, but there isn't
 // really a need to expose these publicly from the crate
