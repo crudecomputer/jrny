@@ -1,5 +1,5 @@
 use std::fs::remove_file;
-use std::io::ErrorKind;
+use std::io::ErrorKind as IoErrorKind;
 use std::ops::Range;
 use std::path::Path;
 use std::thread::sleep;
@@ -54,10 +54,9 @@ fn invalid_project_config_fails() {
     let cfg = Config::build().revision_directory(&dir).finish();
 
     match plan(&cfg, "some-revision", None) {
-        Err(Error::IoError(e)) => match e.kind() {
-            ErrorKind::NotFound => {}
-            _ => panic!("unexpected error kind {:#?}", e),
-        },
+        Err(Error::IoError(e)) => {
+            assert_eq!(e.kind(), IoErrorKind::NotFound);
+        }
         res => panic!("unexpected result {:#?}", res),
     }
 }

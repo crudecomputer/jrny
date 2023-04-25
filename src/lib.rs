@@ -5,7 +5,7 @@ mod error;
 mod revisions;
 
 pub use commands::{begin, embark, plan, review};
-pub use context::Config;
+pub use context::{Config, Environment};
 pub use error::Error;
 
 pub(crate) use db::executor::Executor;
