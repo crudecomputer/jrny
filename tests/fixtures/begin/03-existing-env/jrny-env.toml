@@ -1,0 +1,13 @@
+# jrny environment
+
+# Environment-specific configuration options, including secrets such as database
+# authentication. Runtime command flags will take precedence over any values provided.
+#
+# This file MUST BE EXCULUDED from version control.
+
+# General environment settings for the database connection.
+[database]
+
+# Database connection string - for permissible formats and options see:
+# https://docs.rs/postgres/0.19.1/postgres/config/struct.Config.html
+url = ""

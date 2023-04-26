@@ -9,7 +9,6 @@ use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 use jrny::context::{Config, Environment};
 use jrny::{Error as JrnyError, Result as JrnyResult, CONF, ENV};
 
-
 #[derive(Parser, Debug)]
 #[command(
     about = "PostgreSQL schema revisions made simple - just add SQL!",
@@ -52,15 +51,15 @@ enum SubCommand {
     about = "Creates files and directories for a new journey",
     long_about = "\
 Starts a new journey in the target directory, creating the configuration and environment \
-files as well as the directory to hold revisions.",
+files as well as the directory to hold revisions."
 )]
 struct Begin {
     #[arg(
         help = "The directory in which to create project resources",
-        long_help ="\
+        long_help = "\
 The directory in which to create project resources - will be created if it does not exist. \
 The directory can be non-empty as long as it does not already contain Journey .toml files. \
-Additionally, the revisions directory can exist already as long as it itself is empty.",
+Additionally, the revisions directory can exist already as long as it itself is empty."
     )]
     dir_path: PathBuf,
 }
@@ -69,7 +68,7 @@ Additionally, the revisions directory can exist already as long as it itself is 
 #[command(
     about = "Creates a new .sql revision file",
     long_about = "\
-Creates a new .sql revision file with a unique sequential id, timestamp, and given title.",
+Creates a new .sql revision file with a unique sequential id, timestamp, and given title."
 )]
 struct Plan {
     #[command(flatten)]
@@ -104,8 +103,7 @@ struct Review {
     about = "Reviews existing revisions for errors and applies pending revisions",
     long_about = "\
 Reviews existing revisions for errors and applies pending revisions if \
-no errors with existing revisions were found.",
-
+no errors with existing revisions were found."
 )]
 struct Embark {
     #[command(flatten)]
@@ -117,7 +115,7 @@ struct Embark {
     #[arg(
         help = "The id of the last revision to run, defaulting to the latest revision",
         short,
-        long,
+        long
     )]
     through: Option<i32>,
 }
@@ -129,7 +127,7 @@ struct CliConfig {
 Path to required .toml configuration file, defaulting to `jrny.toml` in the \
 current directory",
         short,
-        long,
+        long
     )]
     conf_file: Option<PathBuf>,
 }
@@ -151,7 +149,7 @@ struct CliEnvironment {
 Path to optional .toml environment file, defaulting to `jrny-env.toml` in the \
 same directory as the configuration file",
         short,
-        long,
+        long
     )]
     env_file: Option<PathBuf>,
 
@@ -159,7 +157,7 @@ same directory as the configuration file",
         help = "\
 Database connection string if overriding value from (or not using) an environment file",
         short,
-        long,
+        long
     )]
     db_url: Option<String>,
 }
@@ -271,7 +269,8 @@ fn plan(cmd: Plan) -> JrnyResult<()> {
     let cfg: Config = cmd.cfg.try_into()?;
 
     // TODO: Allow passing in file contents via command-line?
-    jrny::plan(&cfg, &cmd.name, None)
+    jrny::plan(&cfg, &cmd.name, None)?;
+    Ok(())
 }
 
 fn review(cmd: Review) -> JrnyResult<()> {

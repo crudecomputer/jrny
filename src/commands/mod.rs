@@ -1,6 +1,6 @@
 use std::fs;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use chrono::{DateTime, Local, Utc};
 use log::{info, warn};
@@ -52,7 +52,8 @@ pub fn begin(dirpath: &Path) -> Result<()> {
 
 /// Generates a new empty revision file with the given name in the
 /// revisions directory specified by the provided config.
-pub fn plan(cfg: &Config, name: &str, contents: Option<&str>) -> Result<()> {
+pub fn plan(cfg: &Config, name: &str, contents: Option<&str>) -> Result<PathBuf> {
+    // TODO: Is second-precision good enough?
     let timestamp = Utc::now().timestamp();
     let next_id = RevisionFile::all(&cfg.revisions.directory)?
         .iter()
@@ -82,14 +83,13 @@ commit;
     fs::File::create(&new_path)?.write_all(contents.as_bytes())?;
 
     info!("Created {}", new_path.display());
-
-    Ok(())
+    Ok(new_path)
 }
 
 /// Reviews the status of all revisions specified by the config as well as
 /// their status in the database.
 pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
-    let mut exec = Executor::new(cfg, env)?;
+    let mut exec = Executor::new(&cfg.table, env)?;
     let review = Review::new(&mut exec, &cfg.revisions.directory)?;
 
     if review.items().is_empty() {
@@ -126,7 +126,7 @@ pub fn review(cfg: &Config, env: &Environment) -> Result<()> {
 /// Applies all pending revisions specified by the given config to the
 /// database specified by the environment.
 pub fn embark(cfg: &Config, env: &Environment, through_id: Option<i32>) -> Result<()> {
-    let mut exec = Executor::new(cfg, env)?;
+    let mut exec = Executor::new(&cfg.table, env)?;
     let review = Review::new(&mut exec, &cfg.revisions.directory)?;
 
     if review.failed() {
@@ -142,28 +142,43 @@ pub fn embark(cfg: &Config, env: &Environment, through_id: Option<i32>) -> Resul
 
     let to_apply = match through_id {
         Some(through_id) => {
-            let to_apply: Vec<&RevisionFile> = pending.iter().filter(|rev| rev.id <= through_id).copied().collect();
-            let to_skip: Vec<&RevisionFile> = pending.iter().filter(|rev| rev.id > through_id).copied().collect();
+            let to_apply: Vec<&RevisionFile> = pending
+                .iter()
+                .filter(|rev| rev.id <= through_id)
+                .copied()
+                .collect();
+            let to_skip: Vec<&RevisionFile> = pending
+                .iter()
+                .filter(|rev| rev.id > through_id)
+                .copied()
+                .collect();
 
             match (to_apply.as_slice(), to_skip.as_slice()) {
                 ([], []) => unreachable!("pending revisions should not be empty"),
                 (_, []) => {
                     info!("Applying {} revision(s)", to_apply.len());
-                },
+                }
                 ([], _) => {
-                    info!("No revisions to apply, skipping {} revision(s)", to_skip.len());
-                },
+                    info!(
+                        "No revisions to apply, skipping {} revision(s)",
+                        to_skip.len()
+                    );
+                }
                 _ => {
-                    info!("Applying {} revision(s), skipping {}", to_apply.len(), to_skip.len());
-                },
+                    info!(
+                        "Applying {} revision(s), skipping {}",
+                        to_apply.len(),
+                        to_skip.len()
+                    );
+                }
             }
 
             to_apply
-        },
+        }
         None => {
             info!("Applying {} revision(s)", pending.len());
             pending
-        },
+        }
     };
 
     if !to_apply.is_empty() {

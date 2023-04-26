@@ -1,7 +1,7 @@
 use log::info;
 use postgres::Client;
 
-use crate::context::{Config, Environment};
+use crate::context::{Environment, TableSettings};
 use crate::revisions::{RevisionFile, RevisionRecord};
 use crate::Result;
 
@@ -61,13 +61,13 @@ pub struct Executor {
 }
 
 impl Executor {
-    pub fn new(config: &Config, env: &Environment) -> Result<Self> {
+    pub fn new(table: &TableSettings, env: &Environment) -> Result<Self> {
         let client = Client::try_from(env)?;
 
         Ok(Self {
             client,
-            schema: config.table.schema.clone(),
-            table: config.table.name.clone(),
+            schema: table.schema.clone(),
+            table: table.name.clone(),
         })
     }
 

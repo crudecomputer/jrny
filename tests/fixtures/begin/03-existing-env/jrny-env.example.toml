@@ -1,0 +1,17 @@
+# jrny environment EXAMPLE FILE
+
+# This is an example file specifying optional environment-specific to include within
+# a `jrny-env.toml` file. If that file is not present, `jrny` will require
+# that necessary secrets are passed in via command flags.
+#
+# If `jrny-secret.toml` is present, runtime command flags will take precedence
+# over any values contained within the file.
+#
+# This file SHOULD BE INCLUDED in version control.
+
+# General environment settings for the database connection.
+[database]
+
+# Database connection string - for permissible formats and options see:
+# https://docs.rs/postgres/0.19.1/postgres/config/struct.Config.html
+url = "postgresql://user:password@host:port/dbname"
