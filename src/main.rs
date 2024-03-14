@@ -256,6 +256,10 @@ fn main() -> ExitCode {
             warn!("");
             warn!("{}", e);
 
+            if cfg!(debug_assertions) {
+                warn!("\n{:#?}", e);
+            }
+
             // TODO: More fine-grained error-dependent codes?
             // See: https://github.com/kevlarr/jrny/issues/33
             ExitCode::FAILURE
